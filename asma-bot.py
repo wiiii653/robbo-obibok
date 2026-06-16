@@ -150,7 +150,7 @@ def load_queue(guild_id: int) -> dict | None:
 
 # ── Audio Capture ───────────────────────────────────────────────
 class MonitorAudioSource(discord.AudioSource):
-    FRAME_SIZE = 1920  # 20ms @ 48kHz mono s16le
+    FRAME_SIZE = 3840  # 20ms @ 48kHz stereo s16le
 
     def __init__(self, sink_name: str):
         self.buffer = b""

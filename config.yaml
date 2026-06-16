@@ -24,7 +24,7 @@ asma:
 audio:
   sink_name: "asma_bot"         # PulseAudio null-sink name
   sample_rate: 48000            # output sample rate
-  channels: 1                   # mono (Discord silk encoder wymaga mono)
+  channels: 2                   # stereo
   format: "s16le"               # PCM format
 
 # Playback
