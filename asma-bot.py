@@ -827,6 +827,26 @@ async def refresh(ctx: commands.Context):
 
 
 @bot.command()
+async def reindex(ctx: commands.Context):
+    """Re-fetch metadata for all tracks (search index)."""
+    state = get_state(ctx.guild.id)
+    if not state.tracks:
+        return await ctx.send("No tracks loaded. Use !play first.")
+    
+    missing = [url for url in state.tracks if url not in metadata_index]
+    if not missing:
+        await ctx.send(f"✅ Metadata index complete: **{len(metadata_index)}** tracks.")
+        return
+    
+    await ctx.send(f"🔍 Indexing metadata for **{len(missing)}** tracks... this may take a few minutes.")
+    connector = aiohttp.TCPConnector(limit=5, limit_per_host=3)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        await fetch_metadata_batch(session, missing)
+    
+    await ctx.send(f"✅ Metadata indexed: **{len(metadata_index)}** tracks total.")
+
+
+@bot.command()
 async def stats(ctx: commands.Context):
     """Show radio stats."""
     state = get_state(ctx.guild.id)

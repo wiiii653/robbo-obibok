@@ -39,6 +39,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!stats` | Show radio stats (total tracks, queue position, loop status) |
 | `!search <query>` | Search tracks by name, directory, or author |
 | `!refresh` | Re-crawl ASMA and rebuild playlist |
+| `!reindex` | Re-fetch metadata for search index |
 
 ## Installation
 
