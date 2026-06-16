@@ -20,17 +20,67 @@ import json
 import re
 import time
 import aiohttp
+import yaml
 from urllib.parse import urljoin
 
-BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-SINK_NAME = "asma_bot"
+# ── Config Loader ────────────────────────────────────────────────
+def load_config() -> dict:
+    """Load config.yaml from the same directory as this script.
+    Returns a dict with all keys present (missing keys get defaults)."""
+    defaults = {
+        "command_prefix": "!",
+        "asma": {
+            "base_url": "https://asma.atari.org/asma/",
+            "top_dirs": ["Composers/", "Games/", "Groups/", "Misc/", "Unknown/"],
+            "crawl_timeout": 15,
+            "cache_ttl": 24,
+        },
+        "audio": {
+            "sink_name": "asma_bot",
+            "sample_rate": 48000,
+            "channels": 2,
+            "format": "s16le",
+        },
+        "playback": {
+            "loop": True,
+            "shuffle": True,
+            "crossfade": 0,
+        },
+    }
+    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                user_cfg = yaml.safe_load(f) or {}
+            # Deep merge: user values override defaults
+            def deep_merge(base, override):
+                for k, v in override.items():
+                    if k in base and isinstance(base[k], dict) and isinstance(v, dict):
+                        deep_merge(base[k], v)
+                    else:
+                        base[k] = v
+            deep_merge(defaults, user_cfg)
+        except Exception as e:
+            print(f"Warning: failed to load config.yaml: {e}", flush=True)
+    return defaults
+
+CONFIG = load_config()
+
+# ── Environment / Config values ──────────────────────────────────
+BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", CONFIG.get("token", ""))
+SINK_NAME = CONFIG["audio"]["sink_name"]
 TEMP_DIR = tempfile.mkdtemp(prefix="asma_bot_")
-ASMA_BASE = "https://asma.atari.org/asma/"
+ASMA_BASE = CONFIG["asma"]["base_url"]
+CRAWL_TIMEOUT = CONFIG["asma"]["crawl_timeout"]
+CACHE_TTL = CONFIG["asma"]["cache_ttl"]
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "asma_cache.json")
+COMMAND_PREFIX = CONFIG["command_prefix"]
+PLAYBACK_LOOP = CONFIG["playback"]["loop"]
+PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 active_streams: dict[int, "MonitorAudioSource"] = {}
 
@@ -59,7 +109,9 @@ class MonitorAudioSource(discord.AudioSource):
             [
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-f", "pulse", "-i", f"{sink_name}.monitor",
-                "-f", "s16le", "-ar", "48000", "-ac", "2",
+                "-f", CONFIG["audio"]["format"],
+                "-ar", str(CONFIG["audio"]["sample_rate"]),
+                "-ac", str(CONFIG["audio"]["channels"]),
                 "pipe:1",
             ],
             stdout=subprocess.PIPE,
@@ -152,7 +204,7 @@ def is_playing() -> bool:
 SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
 DIR_RE = re.compile(r'href="([^"]+)/"')
 
-TOP_LEVEL_DIRS = ["Composers/", "Games/", "Groups/", "Misc/", "Unknown/"]
+TOP_LEVEL_DIRS = CONFIG["asma"]["top_dirs"]
 
 async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int = 0) -> list[str]:
     """Recursively crawl an ASMA directory and return .sap file URLs."""
@@ -160,7 +212,7 @@ async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int =
         return []
     
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=CRAWL_TIMEOUT)) as resp:
             if resp.status != 200:
                 print(f"  HTTP {resp.status} for {url}", flush=True)
                 return []
@@ -229,7 +281,7 @@ def load_cached_tracklist() -> list[str] | None:
         if not os.path.exists(CACHE_FILE):
             return None
         age = time.time() - os.path.getmtime(CACHE_FILE)
-        if age > 86400:  # 24h cache
+        if age > CACHE_TTL * 3600:  # cache TTL in hours
             return None
         with open(CACHE_FILE) as f:
             data = json.load(f)
@@ -324,7 +376,7 @@ async def play(ctx: commands.Context):
     playlist_state.vc = vc
     playlist_state.guild_id = ctx.guild.id
     playlist_state.ctx = ctx
-    playlist_state.loop = True
+    playlist_state.loop = PLAYBACK_LOOP
     
     await ctx.send("🎛️ **ASMA Radio starting...**")
     
@@ -350,7 +402,8 @@ async def play(ctx: commands.Context):
     
     # Shuffle and start
     playlist_state.queue = list(tracks)
-    random.shuffle(playlist_state.queue)
+    if PLAYBACK_SHUFFLE:
+        random.shuffle(playlist_state.queue)
     playlist_state.index = 0
     
     if await play_current_track(ctx):

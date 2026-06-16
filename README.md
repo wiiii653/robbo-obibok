@@ -1,105 +1,167 @@
-# ASMA Radio Bot
+# Robbo Obibot — Ultimate Chiptune Radio 🎛️🌲
 
-A Discord bot that shuffles and plays chiptunes from the [Atari SAP Music Archive](https://asma.atari.org/) using Audacious Player — a never-ending radio of 8-bit POKEY goodness.
+Discord bot that turns the [ASMA Atari SAP Music Archive](https://asma.atari.org/) into an endless shuffled chiptune radio.
 
-## Architecture
+**Join a voice channel, type `!radio`, and let the POKEY chips play.**
 
-```
-User (Discord) → Bot → Audacious (audtool IPC) → Virtual Sink → FFmpeg → Discord Voice
-```
+## Features
 
-1. **Virtual sink** (`asma_bot`) isolates bot audio from system audio
-2. **Audacious headless** decodes SAP files via `audtool` IPC
-3. **FFmpeg** captures the sink's monitor and pipes 48kHz stereo PCM to Discord
-4. **ASMA crawler** recursively indexes all `.sap` files from the archive
-
-## Requirements
-
-- Python 3.10+
-- [Audacious](https://audacious-media-player.org/) + plugins (includes SAP decoder)
-- FFmpeg
-- PulseAudio or PipeWire (with PulseAudio compatibility)
-- A Discord bot token ([create one here](https://discord.com/developers/applications))
-
-## Setup
-
-### 1. Install system dependencies
-
-```bash
-sudo apt install audacious audacious-plugins ffmpeg
-```
-
-### 2. Create virtual environment and install Python packages
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install discord.py requests aiohttp
-```
-
-### 3. Configure Discord bot
-
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Create a new application → go to **Bot** tab
-3. Enable **Message Content Intent** (under Privileged Gateway Intents)
-4. Copy the bot token
-
-### 4. Invite bot to your server
-
-1. Go to **OAuth2** → **URL Generator**
-2. Select scopes: `bot`
-3. Select permissions: `Connect`, `Speak`, `Send Messages`, `Use Voice Activity`
-4. Open the generated URL and authorize the bot to your server
-
-### 5. Run the bot
-
-```bash
-export DISCORD_BOT_TOKEN="your-token-here"
-python3 asma-bot.py
-```
+- 🎵 **6400+ chiptunes** — crawls the entire ASMA archive (Composers, Games, Groups, Misc, Unknown)
+- 🔀 **Shuffle loop** — never hear the same track twice in a row
+- ⏭️ **Skip**, **Stop**, **Now Playing**, **Stats**
+- 🔄 **Auto-advance** — moves to next track when current ends
+- 💾 **Cache** — skips full crawl if cached less than 24h ago
+- ⚙️ **Configurable** via `config.yaml`
 
 ## Commands
 
-| Command | Aliases | Description |
-|---------|---------|-------------|
-| `!play` | `!radio` | Start shuffled radio from **all** ASMA tracks (6400+) |
-| `!stop` | | Stop playback and disconnect |
-| `!skip` | `!next` | Skip to next shuffled track |
-| `!np` | | Show current track info |
-| `!stats` | | Show radio statistics |
-| `!refresh` | | Re-crawl ASMA and rebuild playlist |
+| Command | Description |
+|---------|-------------|
+| `!play` / `!radio` | Start shuffled radio from all ASMA tracks |
+| `!stop` | Stop playback and disconnect |
+| `!skip` / `!next` | Skip to next track |
+| `!np` | Show current track info |
+| `!stats` | Show radio stats (total tracks, queue position, loop status) |
+| `!refresh` | Re-crawl ASMA and rebuild playlist |
 
-### First run
+## Quick Start (Linux)
 
-On the first `!play` / `!radio`, the bot crawls the entire ASMA archive (~6400 tracks). This takes a minute or two. After that, the track list is cached and subsequent plays are instant.
+```bash
+# 1. Install system dependencies
+sudo apt install -y audacious audacious-plugins ffmpeg pipewire-pulse
 
-## How It Works
+# 2. Clone and set up
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install discord.py[voice] pynacl davey aiohttp pyyaml requests
 
-1. User joins a voice channel and types `!radio`
-2. Bot crawls ASMA (or loads cached list) and shuffles all tracks
-3. Bot downloads the first `.sap` and plays it via Audacious
-4. Audacious decodes the SAP (POKEY chip emulation) → virtual sink → FFmpeg → Discord
-5. When the track ends, the bot auto-advances to the next one
-6. When the playlist is exhausted, it reshuffles and loops forever
-7. `!skip` jumps to the next track at any time
+# 3. Copy and tweak config
+cp config.yaml config.yaml   # edit to your needs
+
+# 4. Set your bot token
+export DISCORD_BOT_TOKEN="your-token-here"
+
+# 5. Run
+python3 runner.py
+```
+
+## Configuration
+
+Copy `config.yaml` and adjust values:
+
+```yaml
+command_prefix: "!"
+asma:
+  base_url: "https://asma.atari.org/asma/"
+  top_dirs:
+    - "Composers/"
+    - "Games/"
+    - "Groups/"
+    - "Misc/"
+    - "Unknown/"
+  crawl_timeout: 15    # seconds per HTTP request
+  cache_ttl: 24        # hours before re-crawl
+audio:
+  sink_name: "asma_bot"
+  sample_rate: 48000
+  channels: 2
+  format: "s16le"
+playback:
+  loop: true
+  shuffle: true
+  crossfade: 0
+```
+
+## Windows Setup (via WSL)
+
+Robbo requires **Audacious** (Linux-only) and **PipeWire/PulseAudio** for audio playback and virtual sink routing. On Windows, the recommended approach is **WSL 2 (Windows Subsystem for Linux)**:
+
+### Step 1: Install WSL 2
+
+```powershell
+# In PowerShell as Administrator:
+wsl --install -d Ubuntu
+```
+
+### Step 2: Install dependencies inside WSL
+
+```bash
+sudo apt update
+sudo apt install -y audacious audacious-plugins ffmpeg pipewire-pulse pipewire-audio
+```
+
+### Step 3: Set up PulseAudio for WSL
+
+Windows doesn't have PulseAudio natively, so you need a PulseAudio server on Windows:
+
+**Option A — Use PulseAudio on Windows (recommended):**
+1. Download [PulseAudio for Windows](https://www.freedesktop.org/wiki/Software/PulseAudio/Ports/Windows/Support/)
+2. Install and run `pulseaudio.exe`
+3. In WSL, tell PulseAudio to connect to Windows:
+   ```bash
+   export PULSE_SERVER=tcp:$(hostname).local
+   ```
+
+**Option B — Use `audio.sink` passthrough (built-in WSL audio):**
+```bash
+sudo apt install -y pipewire-pulse
+# WSLg handles audio routing automatically
+```
+
+### Step 4: Clone and run (same as Linux)
+
+```bash
+cd ~
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install discord.py[voice] pynacl davey aiohttp pyyaml requests
+export DISCORD_BOT_TOKEN="your-token-here"
+python3 runner.py
+```
+
+### Step 5: Invite the bot to Discord
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Select your bot application → **OAuth2 → URL Generator**
+3. Scopes: `bot`, `applications.commands`
+4. Permissions: `Send Messages`, `Connect`, `Speak`, `Use Voice Activity`
+5. Use the generated URL to invite the bot
+
+### Step 6: Play!
+
+Join a voice channel and type:
+
+```
+!radio
+```
 
 ## Troubleshooting
 
-**No audio in Discord**
-- Check that the virtual sink was created: `pactl list sinks short | grep asma_bot`
-- Verify Audacious is running: `pgrep audacious`
-- Test the sink directly: `pactl set-default-sink asma_bot && paplay /usr/share/sounds/freedesktop/stereo/bell.oga`
+| Symptom | Likely Fix |
+|---------|-----------|
+| `RuntimeError: PyNaCl library needed` | `pip install pynacl` |
+| `RuntimeError: davey library needed` | `pip install davey` |
+| Bot doesn't respond to commands | Enable **Message Content Intent** in Discord Developer Portal |
+| Bot joins VC but no sound | Audacious not running — restart bot, or run `audacious --headless` manually |
+| Crawl seems stuck | Check `config.yaml` → `crawl_timeout` and `cache_ttl` |
+| `!play` says "Join a voice channel" | You must be on a voice channel when issuing the command |
 
-**Bot joins but silence**
-- Ensure Audacious output is routed to the `asma_bot` sink: `pactl list sink-inputs short`
-- Manually move it: `pactl move-sink-input <id> asma_bot`
+## File Structure
 
-**"Module load failed" error**
-- The `module-null-sink` may already be loaded. Check with `pactl list modules short | grep null`
-
-**Old audtool syntax**
-- If your `audtool` uses `--` prefix syntax, edit the commands in `audacious_play()` and related functions. This code uses the modern syntax (no dashes).
+```
+robbo-obibot/
+├── asma-bot.py         # Main bot code
+├── runner.py           # Wrapper with base64-encoded token
+├── config.yaml         # Configuration file
+├── run_robbo.sh        # Quick-start script
+├── asma_cache.json     # Cached track list (generated)
+└── README.md           # This file
+```
 
 ## License
 
-MIT
+MIT — do what you want, but give credit to the dark forest spirit who helped you. 🌲
