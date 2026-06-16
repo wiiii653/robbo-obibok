@@ -1,6 +1,6 @@
-# ASMA Discord Bot
+# ASMA Radio Bot
 
-A Discord bot that plays Atari SAP music from the [Atari SAP Music Archive](https://asma.atari.org/) using Audacious Player.
+A Discord bot that shuffles and plays chiptunes from the [Atari SAP Music Archive](https://asma.atari.org/) using Audacious Player — a never-ending radio of 8-bit POKEY goodness.
 
 ## Architecture
 
@@ -11,6 +11,7 @@ User (Discord) → Bot → Audacious (audtool IPC) → Virtual Sink → FFmpeg �
 1. **Virtual sink** (`asma_bot`) isolates bot audio from system audio
 2. **Audacious headless** decodes SAP files via `audtool` IPC
 3. **FFmpeg** captures the sink's monitor and pipes 48kHz stereo PCM to Discord
+4. **ASMA crawler** recursively indexes all `.sap` files from the archive
 
 ## Requirements
 
@@ -33,7 +34,7 @@ sudo apt install audacious audacious-plugins ffmpeg
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install discord.py requests
+pip install discord.py requests aiohttp
 ```
 
 ### 3. Configure Discord bot
@@ -59,25 +60,28 @@ python3 asma-bot.py
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `!play <url>` | Play a SAP file from ASMA |
-| `!stop` | Stop playback and disconnect |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `!play` | `!radio` | Start shuffled radio from **all** ASMA tracks (6400+) |
+| `!stop` | | Stop playback and disconnect |
+| `!skip` | `!next` | Skip to next shuffled track |
+| `!np` | | Show current track info |
+| `!stats` | | Show radio statistics |
+| `!refresh` | | Re-crawl ASMA and rebuild playlist |
 
-### Example
+### First run
 
-```
-!play https://asma.atari.org/asma/Composers/SuperJet_Spade/Acidjazzed_Evening.sap
-```
+On the first `!play` / `!radio`, the bot crawls the entire ASMA archive (~6400 tracks). This takes a minute or two. After that, the track list is cached and subsequent plays are instant.
 
 ## How It Works
 
-1. User posts an ASMA URL in Discord
-2. Bot downloads the `.sap` file to a temp directory
-3. Bot clears Audacious playlist, adds the file, and starts playback
-4. Audacious decodes the SAP (POKEY chip emulation) and outputs to a virtual PulseAudio/PipeWire sink
-5. FFmpeg captures the sink's monitor and streams raw PCM to Discord
-6. Bot auto-disconnects when playback finishes
+1. User joins a voice channel and types `!radio`
+2. Bot crawls ASMA (or loads cached list) and shuffles all tracks
+3. Bot downloads the first `.sap` and plays it via Audacious
+4. Audacious decodes the SAP (POKEY chip emulation) → virtual sink → FFmpeg → Discord
+5. When the track ends, the bot auto-advances to the next one
+6. When the playlist is exhausted, it reshuffles and loops forever
+7. `!skip` jumps to the next track at any time
 
 ## Troubleshooting
 
@@ -92,6 +96,9 @@ python3 asma-bot.py
 
 **"Module load failed" error**
 - The `module-null-sink` may already be loaded. Check with `pactl list modules short | grep null`
+
+**Old audtool syntax**
+- If your `audtool` uses `--` prefix syntax, edit the commands in `audacious_play()` and related functions. This code uses the modern syntax (no dashes).
 
 ## License
 
