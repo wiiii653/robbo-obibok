@@ -112,6 +112,7 @@ class PlaylistState:
         self.current_sap_path: str | None = None
         self.crawling: bool = False
         self.pre_downloaded: str | None = None  # next track pre-downloaded
+        self.search_results: list[str] = []     # last search results
 
 guilds: dict[int, PlaylistState] = {}
 
@@ -178,6 +179,7 @@ class MonitorAudioSource(discord.AudioSource):
     def read(self) -> bytes:
         while len(self.buffer) < self.FRAME_SIZE:
             if self.process.poll() is not None:
+                time.sleep(0.1)
                 self._restart_ffmpeg()
             chunk = self.process.stdout.read(4096)
             if not chunk:
@@ -546,11 +548,71 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 
 # ── Commands ────────────────────────────────────────────────────
 @bot.command(aliases=["radio"])
-async def play(ctx: commands.Context):
-    """Start shuffled ASMA radio. Joins your voice channel and plays all ASMA tracks shuffled."""
+async def play(ctx: commands.Context, *, query: str = ""):
+    """Start shuffled ASMA radio. Usage: !play, !play <number>, or !play <search query>"""
     if not ctx.author.voice:
         return await ctx.send("Join a voice channel first!")
-    
+
+    state = get_state(ctx.guild.id)
+
+    # Play from search results by number
+    if query.isdigit():
+        idx = int(query) - 1
+        if not state.search_results or idx < 0 or idx >= len(state.search_results):
+            return await ctx.send("Invalid number. Use !search first.")
+        url = state.search_results[idx]
+        if not state.tracks:
+            state.tracks = await refresh_tracklist()
+        if ctx.voice_client:
+            await ctx.voice_client.disconnect()
+        vc = await ctx.author.voice.channel.connect()
+        state.vc = vc
+        state.guild_id = ctx.guild.id
+        state.ctx = ctx
+        state.loop = PLAYBACK_LOOP
+        state.queue = list(state.tracks)
+        if PLAYBACK_SHUFFLE:
+            random.shuffle(state.queue)
+        try:
+            state.index = state.queue.index(url)
+        except ValueError:
+            state.queue.insert(0, url)
+            state.index = 0
+        if await play_current_track(ctx):
+            save_queue(state)
+            bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+        return
+
+    # Search and play first result
+    if query:
+        query_lower = query.lower()
+        matches = [u for u in state.tracks if query_lower in u.split("/")[-1].replace(".sap", "").replace("_", " ").lower()]
+        if matches:
+            url = matches[0]
+            if not state.tracks:
+                state.tracks = await refresh_tracklist()
+            if ctx.voice_client:
+                await ctx.voice_client.disconnect()
+            vc = await ctx.author.voice.channel.connect()
+            state.vc = vc
+            state.guild_id = ctx.guild.id
+            state.ctx = ctx
+            state.loop = PLAYBACK_LOOP
+            state.queue = list(state.tracks)
+            if PLAYBACK_SHUFFLE:
+                random.shuffle(state.queue)
+            try:
+                state.index = state.queue.index(url)
+            except ValueError:
+                state.queue.insert(0, url)
+                state.index = 0
+            if await play_current_track(ctx):
+                save_queue(state)
+                bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+            return
+        return await ctx.send(f"No tracks matching `{query}`. Try !search.")
+
+    # Default: start shuffled radio
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
     
@@ -589,7 +651,7 @@ async def play(ctx: commands.Context):
         state.loop = saved.get("loop", PLAYBACK_LOOP)
         await ctx.send("📋 Restored previous queue.")
     else:
-        state.queue = list(tracks)
+        state.queue = list(state.tracks)
         if PLAYBACK_SHUFFLE:
             random.shuffle(state.queue)
         state.index = 0
@@ -700,10 +762,13 @@ async def search(ctx: commands.Context, *, query: str):
     if not matches:
         return await ctx.send(f"No tracks matching `{query}`.")
 
+    state.search_results = matches
     lines = [f"🔍 **Results for `{query}`**"]
     for i, url in enumerate(matches, 1):
         name = url.split("/")[-1].replace(".sap", "").replace("_", " ")
-        lines.append(f"{i}. {name}")
+        lines.append(f"`{i}.` {name}")
+    lines.append("")
+    lines.append("Type `!play <number>` to play a track")
     await ctx.send("\n".join(lines))
 
 # ── Playback Monitor ────────────────────────────────────────────
