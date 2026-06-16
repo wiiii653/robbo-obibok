@@ -290,6 +290,105 @@ def parse_sap_header(filepath: str) -> dict[str, str]:
         pass
     return meta
 
+def extract_searchable_text(url: str) -> str:
+    """Extract searchable text from a SAP URL (directories + filename)."""
+    # https://asma.atari.org/asma/Composers/Krzysztof_Bryla/Track_Name.sap
+    # -> "krzysztof bryla track name"
+    path = url.replace(ASMA_BASE, "")
+    parts = path.replace(".sap", "").replace("_", " ").split("/")
+    return " ".join(parts).lower()
+
+# ── Metadata Index ──────────────────────────────────────────────
+metadata_index: dict[str, dict[str, str]] = {}  # url -> {author, name, ...}
+METADATA_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "metadata_cache.json")
+
+def load_metadata_cache() -> dict:
+    try:
+        if os.path.exists(METADATA_CACHE):
+            with open(METADATA_CACHE) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def save_metadata_cache(index: dict):
+    try:
+        with open(METADATA_CACHE, "w") as f:
+            json.dump(index, f, indent=2)
+    except Exception:
+        pass
+
+async def fetch_metadata_batch(session: aiohttp.ClientSession, urls: list[str], batch_size: int = 20):
+    """Fetch SAP headers for metadata (just first 4KB of each file)."""
+    results = {}
+    for i in range(0, len(urls), batch_size):
+        batch = urls[i:i+batch_size]
+        tasks = []
+        for url in batch:
+            if url in metadata_index:
+                continue
+            tasks.append(fetch_single_metadata(session, url))
+        if tasks:
+            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            for url, result in zip(batch, batch_results):
+                if isinstance(result, dict) and result:
+                    results[url] = result
+        if results:
+            metadata_index.update(results)
+            save_metadata_cache(metadata_index)
+    return results
+
+async def fetch_single_metadata(session: aiohttp.ClientSession, url: str) -> dict[str, str]:
+    """Fetch just the header of a SAP file for metadata."""
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            if resp.status != 200:
+                return {}
+            # Read only first 4KB for header
+            data = await resp.content.read(4096)
+            meta = {}
+            for match in SAP_HEADER_RE.finditer(data):
+                line = match.group(1).decode("ascii", errors="replace").strip()
+                if ":" in line:
+                    key, _, val = line.partition(":")
+                    meta[key.strip().upper()] = val.strip()
+            return meta
+    except Exception:
+        return {}
+
+def search_tracks(query: str, tracks: list[str], limit: int = 10) -> list[str]:
+    """Search tracks by filename, directory path, or metadata."""
+    query_lower = query.lower()
+    results = []
+    
+    for url in tracks:
+        # 1. Filename match
+        filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
+        if query_lower in filename.lower():
+            results.append(url)
+            if len(results) >= limit:
+                break
+            continue
+        
+        # 2. Directory path match
+        searchable = extract_searchable_text(url)
+        if query_lower in searchable:
+            results.append(url)
+            if len(results) >= limit:
+                break
+            continue
+        
+        # 3. Metadata match
+        meta = metadata_index.get(url, {})
+        for field in ("AUTHOR", "NAME", "SONGS"):
+            if query_lower in meta.get(field, "").lower():
+                results.append(url)
+                if len(results) >= limit:
+                    break
+                break
+    
+    return results
+
 # ── ASMA Crawler ────────────────────────────────────────────────
 SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
 DIR_RE = re.compile(r'href="([^"]+)/"')
@@ -378,6 +477,9 @@ def load_cached_tracklist() -> list[str] | None:
         return data.get("tracks", [])
     except Exception:
         return None
+
+# Pre-load metadata index on startup
+metadata_index.update(load_metadata_cache())
 
 # ── Playback control ────────────────────────────────────────────
 async def pre_download_next(state: PlaylistState):
@@ -488,6 +590,9 @@ async def on_ready():
 
     # Start health watchdog
     bot.loop.create_task(health_watchdog())
+    
+    # Start background metadata fetching
+    bot.loop.create_task(fetch_metadata_background())
 
 
 @bot.event
@@ -741,19 +846,12 @@ async def stats(ctx: commands.Context):
 
 @bot.command()
 async def search(ctx: commands.Context, *, query: str):
-    """Search tracks by name or author. Usage: !search <query>"""
+    """Search tracks by name, directory, or author. Usage: !search <query>"""
     state = get_state(ctx.guild.id)
     if not state.tracks:
         return await ctx.send("No tracks loaded. Use !play first.")
 
-    query_lower = query.lower()
-    matches = []
-    for url in state.tracks:
-        filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
-        if query_lower in filename.lower():
-            matches.append(url)
-        if len(matches) >= 10:
-            break
+    matches = search_tracks(query, state.tracks, limit=10)
 
     if not matches:
         return await ctx.send(f"No tracks matching `{query}`.")
@@ -761,8 +859,14 @@ async def search(ctx: commands.Context, *, query: str):
     state.search_results = matches
     lines = [f"🔍 **Results for `{query}`**"]
     for i, url in enumerate(matches, 1):
-        name = url.split("/")[-1].replace(".sap", "").replace("_", " ")
-        lines.append(f"`{i}.` {name}")
+        filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
+        # Show directory info if available
+        path_parts = url.replace(ASMA_BASE, "").replace(".sap", "").split("/")
+        if len(path_parts) > 1:
+            dir_name = path_parts[-2].replace("_", " ")
+            lines.append(f"`{i}.` {filename} *({dir_name})*")
+        else:
+            lines.append(f"`{i}.` {filename}")
     lines.append("")
     lines.append("Type `!play <number>` to play a track")
     await ctx.send("\n".join(lines))
@@ -817,6 +921,30 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
     if guild_id in active_streams:
         active_streams[guild_id].cleanup()
         del active_streams[guild_id]
+
+
+# ── Background Metadata Fetcher ──────────────────────────────────
+async def fetch_metadata_background():
+    """Fetch metadata for tracks in the background during idle time."""
+    await bot.wait_until_ready()
+    await asyncio.sleep(30)  # Wait for startup to complete
+    
+    cached = load_cached_tracklist()
+    if not cached:
+        return
+    
+    # Find tracks without metadata
+    missing = [url for url in cached if url not in metadata_index]
+    if not missing:
+        log.info("Metadata index complete: %d tracks", len(metadata_index))
+        return
+    
+    log.info("Fetching metadata for %d tracks...", len(missing))
+    connector = aiohttp.TCPConnector(limit=5, limit_per_host=3)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        await fetch_metadata_batch(session, missing)
+    
+    log.info("Metadata index updated: %d tracks indexed", len(metadata_index))
 
 
 # ── Health Watchdog ─────────────────────────────────────────────
