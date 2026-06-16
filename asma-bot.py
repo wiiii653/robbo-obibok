@@ -160,11 +160,16 @@ async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int =
         return []
     
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
             if resp.status != 200:
+                print(f"  HTTP {resp.status} for {url}", flush=True)
                 return []
             html = await resp.text()
-    except Exception:
+    except asyncio.TimeoutError:
+        print(f"  TIMEOUT {url}", flush=True)
+        return []
+    except Exception as e:
+        print(f"  ERROR {url}: {e}", flush=True)
         return []
     
     tracks = []
@@ -175,21 +180,24 @@ async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int =
         sap_url = urljoin(url, sap_rel)
         tracks.append(sap_url)
     
-    # Find subdirectories and recurse
+    # Find subdirectories and recurse IN PARALLEL
     seen_dirs = set()
+    sub_tasks = []
     for match in DIR_RE.finditer(html):
         subdir = match.group(1)
-        # Skip parent and special dirs
-        if subdir in ("..", "."):
+        # Skip parent traversal (absolute paths like /asma/) and special dirs
+        if subdir in ("..", ".") or subdir.startswith("/") or "?" in subdir:
             continue
         if subdir not in seen_dirs:
             seen_dirs.add(subdir)
             sub_url = urljoin(url, subdir + "/")
-            try:
-                sub_tracks = await crawl_directory(session, sub_url, depth + 1)
-                tracks.extend(sub_tracks)
-            except Exception:
-                continue
+            sub_tasks.append(crawl_directory(session, sub_url, depth + 1))
+    
+    if sub_tasks:
+        results = await asyncio.gather(*sub_tasks, return_exceptions=True)
+        for r in results:
+            if isinstance(r, list):
+                tracks.extend(r)
     
     return tracks
 
@@ -198,9 +206,11 @@ async def refresh_tracklist() -> list[str]:
     all_tracks = []
     connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
     async with aiohttp.ClientSession(connector=connector) as session:
-        for top_dir in TOP_LEVEL_DIRS:
+        for i, top_dir in enumerate(TOP_LEVEL_DIRS):
             url = urljoin(ASMA_BASE, top_dir)
+            print(f"[{i+1}/{len(TOP_LEVEL_DIRS)}] Crawling {top_dir}...", flush=True)
             tracks = await crawl_directory(session, url)
+            print(f"  -> {len(tracks)} tracks found in {top_dir}", flush=True)
             all_tracks.extend(tracks)
     
     # Save cache
@@ -322,10 +332,18 @@ async def play(ctx: commands.Context):
     if not playlist_state.tracks:
         await ctx.send("🔍 Crawling ASMA archive (6400+ tracks)... this may take a minute.")
         playlist_state.crawling = True
-        tracks = await refresh_tracklist()
-        playlist_state.tracks = tracks
+        try:
+            tracks = await refresh_tracklist()
+            playlist_state.tracks = tracks
+            print(f"ASMA crawl complete: {len(tracks)} tracks found")
+        except Exception as e:
+            print(f"CRASH during crawl: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            playlist_state.tracks = []
+            await ctx.send(f"❌ Crawl failed: {e}")
         playlist_state.crawling = False
-        await ctx.send(f"📀 Found **{len(tracks)}** tracks!")
+        await ctx.send(f"📀 Found **{len(playlist_state.tracks)}** tracks!")
     else:
         tracks = playlist_state.tracks
         await ctx.send(f"📀 Using cached playlist: **{len(tracks)}** tracks")
