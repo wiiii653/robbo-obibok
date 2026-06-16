@@ -416,19 +416,15 @@ async def play_current_track(ctx):
         
         state.current_sap_path = filepath
         
-        # Re-create voice source if needed
+        # Only create MonitorAudioSource once per guild; reuse across tracks
         if state.vc and state.vc.is_connected():
-            if state.guild_id in active_streams:
-                active_streams[state.guild_id].cleanup()
-                del active_streams[state.guild_id]
-            
-            state.vc.stop()  # stop current before playing new
-            source = MonitorAudioSource(SINK_NAME)
-            state.vc.play(
-                source,
-                after=lambda e: log.info("Stream ended: %s", e)
-            )
-            active_streams[state.guild_id] = source
+            if state.guild_id not in active_streams:
+                source = MonitorAudioSource(SINK_NAME)
+                state.vc.play(
+                    source,
+                    after=lambda e: log.info("Stream ended: %s", e)
+                )
+                active_streams[state.guild_id] = source
         
         track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
         total = len(state.queue)
