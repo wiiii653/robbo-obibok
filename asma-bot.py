@@ -775,6 +775,8 @@ async def search(ctx: commands.Context, *, query: str):
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
     """Monitor playback, auto-advance tracks, and disconnect on empty channel."""
     empty_since = None
+    not_playing_since = None
+    GRACE_SECONDS = 3
     while vc.is_connected():
         await asyncio.sleep(1)
 
@@ -796,19 +798,25 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
             empty_since = None
 
         playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
-        if not playing:
-            state = get_state(guild_id)
-            if state.loop or state.index < len(state.queue) - 1:
-                await skip_to_next(ctx)
-                continue
-            else:
-                if guild_id in active_streams:
-                    active_streams[guild_id].cleanup()
-                    del active_streams[guild_id]
-                if vc.is_connected():
-                    await vc.disconnect()
-                await ctx.send("Playlist ended. Use !play to restart.")
-                break
+        if playing:
+            not_playing_since = None
+        else:
+            if not_playing_since is None:
+                not_playing_since = time.time()
+            elif (time.time() - not_playing_since) >= GRACE_SECONDS:
+                state = get_state(guild_id)
+                if state.loop or state.index < len(state.queue) - 1:
+                    not_playing_since = None
+                    await skip_to_next(ctx)
+                    continue
+                else:
+                    if guild_id in active_streams:
+                        active_streams[guild_id].cleanup()
+                        del active_streams[guild_id]
+                    if vc.is_connected():
+                        await vc.disconnect()
+                    await ctx.send("Playlist ended. Use !play to restart.")
+                    break
     
     if guild_id in active_streams:
         active_streams[guild_id].cleanup()
