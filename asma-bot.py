@@ -420,6 +420,7 @@ async def play_current_track(ctx):
                 active_streams[state.guild_id].cleanup()
                 del active_streams[state.guild_id]
             
+            state.vc.stop()  # stop current before playing new
             source = MonitorAudioSource(SINK_NAME)
             state.vc.play(
                 source,
