@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-cd ~/robbo-obibot || exit 1
+set -euo pipefail
+cd "$(dirname "$0")" || exit 1
 source venv/bin/activate
-export DISCORD_BOT_TOKEN="MTUx..."
-exec python3 -u asma-bot.py > /tmp/robbo.log 2>&1
+exec python3 -u asma-bot.py 2>&1 | tee /tmp/robbo.log

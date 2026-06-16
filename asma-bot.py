@@ -10,7 +10,6 @@ Commands:
 
 import discord
 from discord.ext import commands
-import requests
 import subprocess
 import os
 import tempfile
@@ -19,9 +18,17 @@ import random
 import json
 import re
 import time
+import logging
 import aiohttp
 import yaml
 from urllib.parse import urljoin
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger("asma-bot")
 
 # ── Config Loader ────────────────────────────────────────────────
 def load_config() -> dict:
@@ -46,6 +53,10 @@ def load_config() -> dict:
             "shuffle": True,
             "crossfade": 0,
         },
+        "auto": {
+            "start_channel": "",
+            "empty_timeout": 60,
+        },
     }
     cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
     if os.path.exists(cfg_path):
@@ -61,7 +72,7 @@ def load_config() -> dict:
                         base[k] = v
             deep_merge(defaults, user_cfg)
         except Exception as e:
-            print(f"Warning: failed to load config.yaml: {e}", flush=True)
+            log.warning("Failed to load config.yaml: %s", e)
     return defaults
 
 CONFIG = load_config()
@@ -74,9 +85,13 @@ ASMA_BASE = CONFIG["asma"]["base_url"]
 CRAWL_TIMEOUT = CONFIG["asma"]["crawl_timeout"]
 CACHE_TTL = CONFIG["asma"]["cache_ttl"]
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "asma_cache.json")
+QUEUE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queues")
 COMMAND_PREFIX = CONFIG["command_prefix"]
 PLAYBACK_LOOP = CONFIG["playback"]["loop"]
 PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
+CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)
+AUTO_START_CHANNEL = CONFIG["auto"].get("start_channel", "")
+AUTO_EMPTY_TIMEOUT = CONFIG["auto"].get("empty_timeout", 60)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -96,8 +111,42 @@ class PlaylistState:
         self.vc = None
         self.current_sap_path: str | None = None
         self.crawling: bool = False
+        self.pre_downloaded: str | None = None  # next track pre-downloaded
 
-playlist_state = PlaylistState()
+guilds: dict[int, PlaylistState] = {}
+
+def get_state(guild_id: int) -> PlaylistState:
+    if guild_id not in guilds:
+        guilds[guild_id] = PlaylistState()
+    return guilds[guild_id]
+
+def save_queue(state: PlaylistState):
+    """Persist queue to disk for this guild."""
+    if not state.guild_id:
+        return
+    os.makedirs(QUEUE_DIR, exist_ok=True)
+    path = os.path.join(QUEUE_DIR, f"{state.guild_id}.json")
+    data = {
+        "queue": state.queue,
+        "index": state.index,
+        "loop": state.loop,
+    }
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+def load_queue(guild_id: int) -> dict | None:
+    """Load persisted queue for a guild, or None."""
+    path = os.path.join(QUEUE_DIR, f"{guild_id}.json")
+    try:
+        if not os.path.exists(path):
+            return None
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 # ── Audio Capture ───────────────────────────────────────────────
 class MonitorAudioSource(discord.AudioSource):
@@ -105,10 +154,14 @@ class MonitorAudioSource(discord.AudioSource):
 
     def __init__(self, sink_name: str):
         self.buffer = b""
-        self.process = subprocess.Popen(
+        self.sink_name = sink_name
+        self.process = self._start_ffmpeg()
+
+    def _start_ffmpeg(self) -> subprocess.Popen:
+        return subprocess.Popen(
             [
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
-                "-f", "pulse", "-i", f"{sink_name}.monitor",
+                "-f", "pulse", "-i", f"{self.sink_name}.monitor",
                 "-f", CONFIG["audio"]["format"],
                 "-ar", str(CONFIG["audio"]["sample_rate"]),
                 "-ac", str(CONFIG["audio"]["channels"]),
@@ -118,8 +171,14 @@ class MonitorAudioSource(discord.AudioSource):
             stderr=subprocess.DEVNULL,
         )
 
+    def _restart_ffmpeg(self):
+        self.cleanup()
+        self.process = self._start_ffmpeg()
+
     def read(self) -> bytes:
         while len(self.buffer) < self.FRAME_SIZE:
+            if self.process.poll() is not None:
+                self._restart_ffmpeg()
             chunk = self.process.stdout.read(4096)
             if not chunk:
                 return b""
@@ -173,14 +232,25 @@ def move_playback_to_sink():
                 capture_output=True,
             )
 
-def download_sap(url: str) -> str:
+async def download_sap(url: str, retries: int = 2) -> str:
     filename = url.split("/")[-1]
     filepath = os.path.join(TEMP_DIR, filename)
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    with open(filepath, "wb") as f:
-        f.write(resp.content)
-    return filepath
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url) as resp:
+                    resp.raise_for_status()
+                    data = await resp.read()
+            with open(filepath, "wb") as f:
+                f.write(data)
+            return filepath
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            last_err = e
+            if attempt < retries:
+                await asyncio.sleep(1)
+    raise last_err
 
 def audacious_play(filepath: str):
     subprocess.run(["audtool", "playlist-clear"], capture_output=True)
@@ -200,6 +270,24 @@ def is_playing() -> bool:
     r = subprocess.run(["audtool", "playback-playing"], capture_output=True)
     return r.returncode == 0
 
+# ── SAP Metadata Parser ──────────────────────────────────────────
+SAP_HEADER_RE = re.compile(rb'^;(.+)', re.MULTILINE)
+
+def parse_sap_header(filepath: str) -> dict[str, str]:
+    """Parse SAP file header for metadata (AUTHOR, NAME, etc.)."""
+    meta = {}
+    try:
+        with open(filepath, "rb") as f:
+            header = f.read(4096)
+        for match in SAP_HEADER_RE.finditer(header):
+            line = match.group(1).decode("ascii", errors="replace").strip()
+            if ":" in line:
+                key, _, val = line.partition(":")
+                meta[key.strip().upper()] = val.strip()
+    except Exception:
+        pass
+    return meta
+
 # ── ASMA Crawler ────────────────────────────────────────────────
 SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
 DIR_RE = re.compile(r'href="([^"]+)/"')
@@ -214,14 +302,14 @@ async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int =
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=CRAWL_TIMEOUT)) as resp:
             if resp.status != 200:
-                print(f"  HTTP {resp.status} for {url}", flush=True)
+                log.warning("HTTP %d for %s", resp.status, url)
                 return []
             html = await resp.text()
     except asyncio.TimeoutError:
-        print(f"  TIMEOUT {url}", flush=True)
+        log.warning("TIMEOUT %s", url)
         return []
     except Exception as e:
-        print(f"  ERROR {url}: {e}", flush=True)
+        log.error("ERROR %s: %s", url, e)
         return []
     
     tracks = []
@@ -260,9 +348,9 @@ async def refresh_tracklist() -> list[str]:
     async with aiohttp.ClientSession(connector=connector) as session:
         for i, top_dir in enumerate(TOP_LEVEL_DIRS):
             url = urljoin(ASMA_BASE, top_dir)
-            print(f"[{i+1}/{len(TOP_LEVEL_DIRS)}] Crawling {top_dir}...", flush=True)
+            log.info("[%d/%d] Crawling %s...", i+1, len(TOP_LEVEL_DIRS), top_dir)
             tracks = await crawl_directory(session, url)
-            print(f"  -> {len(tracks)} tracks found in {top_dir}", flush=True)
+            log.info("  -> %d tracks found in %s", len(tracks), top_dir)
             all_tracks.extend(tracks)
     
     # Save cache
@@ -290,38 +378,74 @@ def load_cached_tracklist() -> list[str] | None:
         return None
 
 # ── Playback control ────────────────────────────────────────────
+async def pre_download_next(state: PlaylistState):
+    """Pre-download the next track in the queue for gapless transitions."""
+    next_idx = state.index + 1
+    if next_idx >= len(state.queue):
+        if state.loop:
+            next_idx = 0
+        else:
+            return
+    url = state.queue[next_idx]
+    try:
+        filepath = await download_sap(url, retries=1)
+        state.pre_downloaded = filepath
+    except Exception:
+        state.pre_downloaded = None
+
 async def play_current_track(ctx):
     """Download and play the current track from the queue."""
-    if playlist_state.index < 0 or playlist_state.index >= len(playlist_state.queue):
+    state = get_state(ctx.guild.id)
+    if state.index < 0 or state.index >= len(state.queue):
         await ctx.send("Queue empty. Use !play to rebuild.")
         return False
     
-    url = playlist_state.queue[playlist_state.index]
+    url = state.queue[state.index]
     await ctx.send(f"Loading... `{url.split('/')[-1]}`")
     
     try:
-        filepath = await asyncio.get_event_loop().run_in_executor(None, download_sap, url)
+        # Use pre-downloaded track if available, otherwise download now
+        if state.pre_downloaded and os.path.exists(state.pre_downloaded):
+            filepath = state.pre_downloaded
+            state.pre_downloaded = None
+        else:
+            filepath = await download_sap(url)
         await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
         
-        playlist_state.current_sap_path = filepath
+        state.current_sap_path = filepath
         
         # Re-create voice source if needed
-        if playlist_state.vc and playlist_state.vc.is_connected():
-            if playlist_state.guild_id in active_streams:
-                active_streams[playlist_state.guild_id].cleanup()
-                del active_streams[playlist_state.guild_id]
+        if state.vc and state.vc.is_connected():
+            if state.guild_id in active_streams:
+                active_streams[state.guild_id].cleanup()
+                del active_streams[state.guild_id]
             
             source = MonitorAudioSource(SINK_NAME)
-            playlist_state.vc.play(
+            state.vc.play(
                 source,
-                after=lambda e: print(f"Stream ended: {e}")
+                after=lambda e: log.info("Stream ended: %s", e)
             )
-            active_streams[playlist_state.guild_id] = source
+            active_streams[state.guild_id] = source
         
         track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
-        total = len(playlist_state.queue)
-        pos = playlist_state.index + 1
-        await ctx.send(f"🎵 **{track or url.split('/')[-1]}** ({pos}/{total})")
+        total = len(state.queue)
+        pos = state.index + 1
+        meta = parse_sap_header(filepath)
+        name = meta.get("NAME", track or url.split("/")[-1])
+        author = meta.get("AUTHOR", "")
+        songs = meta.get("SONGS", "")
+
+        embed = discord.Embed(
+            title=name,
+            color=discord.Color.green(),
+        )
+        if author:
+            embed.add_field(name="Composer", value=author, inline=True)
+        if songs:
+            embed.add_field(name="Songs", value=songs, inline=True)
+        embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+        embed.set_footer(text="ASMA Radio")
+        await ctx.send(embed=embed)
         return True
     
     except Exception as e:
@@ -330,37 +454,94 @@ async def play_current_track(ctx):
 
 async def skip_to_next(ctx):
     """Skip to next track and play it."""
-    if not playlist_state.queue:
+    state = get_state(ctx.guild.id)
+    if not state.queue:
         await ctx.send("No tracks in queue. Use !play.")
         return
     
-    playlist_state.index += 1
+    state.index += 1
     
-    if playlist_state.index >= len(playlist_state.queue):
-        if playlist_state.loop:
-            random.shuffle(playlist_state.queue)
-            playlist_state.index = 0
+    if state.index >= len(state.queue):
+        if state.loop:
+            random.shuffle(state.queue)
+            state.index = 0
             await ctx.send("🔁 Loop: reshuffling playlist...")
         else:
             await ctx.send("Playlist ended.")
-            if playlist_state.vc and playlist_state.vc.is_connected():
-                await playlist_state.vc.disconnect()
+            if state.vc and state.vc.is_connected():
+                await state.vc.disconnect()
             return
     
-    await play_current_track(playlist_state.ctx or ctx)
+    save_queue(state)
+    await play_current_track(state.ctx or ctx)
 
 # ── Bot Events ──────────────────────────────────────────────────
 @bot.event
 async def on_ready():
-    print(f"Ready: {bot.user}")
+    log.info("Ready: %s", bot.user)
     await asyncio.get_event_loop().run_in_executor(None, setup_virtual_sink)
     await asyncio.get_event_loop().run_in_executor(None, ensure_audacious)
     
-    # Preload cached tracklist
+    # Preload cached tracklist for all guilds
     cached = load_cached_tracklist()
     if cached:
-        playlist_state.tracks = cached
-        print(f"Loaded {len(cached)} tracks from cache")
+        log.info("Loaded %d tracks from cache", len(cached))
+
+    # Start health watchdog
+    bot.loop.create_task(health_watchdog())
+
+
+@bot.event
+async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    """Auto-start radio when someone joins the configured channel."""
+    if not AUTO_START_CHANNEL or member.bot:
+        return
+    if before.channel == after.channel:
+        return
+    if after.channel is None:
+        return
+    if after.channel.name != AUTO_START_CHANNEL:
+        return
+    if member.guild.voice_client:
+        return
+
+    log.info("Auto-start: %s joined %s", member.display_name, after.channel.name)
+    try:
+        vc = await after.channel.connect()
+        state = get_state(member.guild.id)
+        state.vc = vc
+        state.guild_id = member.guild.id
+        state.loop = PLAYBACK_LOOP
+
+        if not state.tracks:
+            state.tracks = await refresh_tracklist()
+
+        if not state.tracks:
+            log.warning("Auto-start: no tracks available")
+            await vc.disconnect()
+            return
+
+        saved = load_queue(member.guild.id)
+        if saved and saved.get("queue") and saved["queue"][0] in state.tracks:
+            state.queue = saved["queue"]
+            state.index = saved.get("index", 0)
+            state.loop = saved.get("loop", PLAYBACK_LOOP)
+        else:
+            state.queue = list(state.tracks)
+            if PLAYBACK_SHUFFLE:
+                random.shuffle(state.queue)
+            state.index = 0
+
+        # Use system channel or first text channel for messages
+        text_channel = member.guild.system_channel or member.guild.text_channels[0]
+        ctx = await bot.get_context(await text_channel.send("📻 **Auto-starting ASMA Radio...**"))
+        state.ctx = ctx
+
+        if await play_current_track(ctx):
+            save_queue(state)
+            bot.loop.create_task(monitor_playback(ctx, vc, member.guild.id))
+    except Exception as e:
+        log.error("Auto-start failed: %s", e)
 
 # ── Commands ────────────────────────────────────────────────────
 @bot.command(aliases=["radio"])
@@ -373,61 +554,71 @@ async def play(ctx: commands.Context):
         await ctx.voice_client.disconnect()
     
     vc = await ctx.author.voice.channel.connect()
-    playlist_state.vc = vc
-    playlist_state.guild_id = ctx.guild.id
-    playlist_state.ctx = ctx
-    playlist_state.loop = PLAYBACK_LOOP
+    state = get_state(ctx.guild.id)
+    state.vc = vc
+    state.guild_id = ctx.guild.id
+    state.ctx = ctx
+    state.loop = PLAYBACK_LOOP
     
     await ctx.send("🎛️ **ASMA Radio starting...**")
     
     # Ensure we have tracks
-    if not playlist_state.tracks:
+    if not state.tracks:
         await ctx.send("🔍 Crawling ASMA archive (6400+ tracks)... this may take a minute.")
-        playlist_state.crawling = True
+        state.crawling = True
         try:
             tracks = await refresh_tracklist()
-            playlist_state.tracks = tracks
-            print(f"ASMA crawl complete: {len(tracks)} tracks found")
+            state.tracks = tracks
+            log.info("ASMA crawl complete: %d tracks found", len(tracks))
         except Exception as e:
-            print(f"CRASH during crawl: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
-            playlist_state.tracks = []
+            log.error("CRASH during crawl: %s", e, exc_info=True)
+            state.tracks = []
             await ctx.send(f"❌ Crawl failed: {e}")
-        playlist_state.crawling = False
-        await ctx.send(f"📀 Found **{len(playlist_state.tracks)}** tracks!")
+        state.crawling = False
+        await ctx.send(f"📀 Found **{len(state.tracks)}** tracks!")
     else:
-        tracks = playlist_state.tracks
+        tracks = state.tracks
         await ctx.send(f"📀 Using cached playlist: **{len(tracks)}** tracks")
     
     # Shuffle and start
-    playlist_state.queue = list(tracks)
-    if PLAYBACK_SHUFFLE:
-        random.shuffle(playlist_state.queue)
-    playlist_state.index = 0
+    saved = load_queue(ctx.guild.id)
+    if saved and saved.get("queue") and saved["queue"][0] in state.tracks:
+        state.queue = saved["queue"]
+        state.index = saved.get("index", 0)
+        state.loop = saved.get("loop", PLAYBACK_LOOP)
+        await ctx.send("📋 Restored previous queue.")
+    else:
+        state.queue = list(tracks)
+        if PLAYBACK_SHUFFLE:
+            random.shuffle(state.queue)
+        state.index = 0
     
     if await play_current_track(ctx):
+        save_queue(state)
         bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
 
 
 @bot.command()
 async def stop(ctx: commands.Context):
     """Stop playback and disconnect."""
-    if playlist_state.guild_id and playlist_state.guild_id in active_streams:
-        active_streams[playlist_state.guild_id].cleanup()
-        del active_streams[playlist_state.guild_id]
+    state = get_state(ctx.guild.id)
+    if state.guild_id and state.guild_id in active_streams:
+        active_streams[state.guild_id].cleanup()
+        del active_streams[state.guild_id]
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
-    playlist_state.queue = []
-    playlist_state.index = -1
+    state.queue = []
+    state.index = -1
+    save_queue(state)
     await ctx.send("⏹️ Stopped.")
 
 
 @bot.command(aliases=["next"])
 async def skip(ctx: commands.Context):
     """Skip to next track."""
-    if not playlist_state.queue:
+    state = get_state(ctx.guild.id)
+    if not state.queue:
         return await ctx.send("Nothing playing.")
     await skip_to_next(ctx)
 
@@ -438,9 +629,27 @@ async def np(ctx: commands.Context):
     if not is_playing():
         return await ctx.send("Nothing playing right now.")
     track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
-    total = len(playlist_state.queue)
-    pos = playlist_state.index + 1
-    await ctx.send(f"🎵 Now playing: **{track}** ({pos}/{total})")
+    state = get_state(ctx.guild.id)
+    total = len(state.queue)
+    pos = state.index + 1
+    meta = {}
+    if state.current_sap_path:
+        meta = parse_sap_header(state.current_sap_path)
+    name = meta.get("NAME", track)
+    author = meta.get("AUTHOR", "")
+    songs = meta.get("SONGS", "")
+
+    embed = discord.Embed(
+        title=f"Now Playing: {name}",
+        color=discord.Color.blue(),
+    )
+    if author:
+        embed.add_field(name="Composer", value=author, inline=True)
+    if songs:
+        embed.add_field(name="Songs", value=songs, inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.set_footer(text="ASMA Radio")
+    await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -448,18 +657,20 @@ async def refresh(ctx: commands.Context):
     """Re-crawl ASMA and rebuild the playlist."""
     await ctx.send("🔍 Re-crawling ASMA archive... this may take a minute.")
     tracks = await refresh_tracklist()
-    playlist_state.tracks = tracks
+    state = get_state(ctx.guild.id)
+    state.tracks = tracks
     await ctx.send(f"✅ Refreshed! Found **{len(tracks)}** tracks.")
 
 
 @bot.command()
 async def stats(ctx: commands.Context):
     """Show radio stats."""
-    total = len(playlist_state.tracks)
-    queue_len = len(playlist_state.queue)
-    pos = playlist_state.index + 1 if playlist_state.index >= 0 else 0
+    state = get_state(ctx.guild.id)
+    total = len(state.tracks)
+    queue_len = len(state.queue)
+    pos = state.index + 1 if state.index >= 0 else 0
     playing = "🎵 Yes" if is_playing() else "⏸️ No"
-    loop = "🔁 On" if playlist_state.loop else "➡️ Off"
+    loop = "🔁 On" if state.loop else "➡️ Off"
     await ctx.send(
         f"📊 **ASMA Radio Stats**\n"
         f"• Total tracks in archive: **{total}**\n"
@@ -468,20 +679,63 @@ async def stats(ctx: commands.Context):
         f"• Loop: {loop}"
     )
 
+
+@bot.command()
+async def search(ctx: commands.Context, *, query: str):
+    """Search tracks by name or author. Usage: !search <query>"""
+    state = get_state(ctx.guild.id)
+    if not state.tracks:
+        return await ctx.send("No tracks loaded. Use !play first.")
+
+    query_lower = query.lower()
+    matches = []
+    for url in state.tracks:
+        filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
+        if query_lower in filename.lower():
+            matches.append(url)
+        if len(matches) >= 10:
+            break
+
+    if not matches:
+        return await ctx.send(f"No tracks matching `{query}`.")
+
+    lines = [f"🔍 **Results for `{query}`**"]
+    for i, url in enumerate(matches, 1):
+        name = url.split("/")[-1].replace(".sap", "").replace("_", " ")
+        lines.append(f"{i}. {name}")
+    await ctx.send("\n".join(lines))
+
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
-    """Monitor playback and auto-advance when track ends."""
+    """Monitor playback, auto-advance tracks, and disconnect on empty channel."""
+    empty_since = None
     while vc.is_connected():
         await asyncio.sleep(1)
+
+        # Check for empty channel
+        if vc.channel and len(vc.channel.members) <= 1:
+            if empty_since is None:
+                empty_since = time.time()
+            elif AUTO_EMPTY_TIMEOUT > 0 and (time.time() - empty_since) >= AUTO_EMPTY_TIMEOUT:
+                log.info("Channel empty for %ds, disconnecting", AUTO_EMPTY_TIMEOUT)
+                state = get_state(guild_id)
+                if guild_id in active_streams:
+                    active_streams[guild_id].cleanup()
+                    del active_streams[guild_id]
+                await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+                await vc.disconnect()
+                await ctx.send("🌙 No one listening. Stopping ASMA Radio.")
+                break
+        else:
+            empty_since = None
+
         playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
         if not playing:
-            # Track finished - advance to next
-            if playlist_state.loop or playlist_state.index < len(playlist_state.queue) - 1:
+            state = get_state(guild_id)
+            if state.loop or state.index < len(state.queue) - 1:
                 await skip_to_next(ctx)
-                # Continue monitoring
                 continue
             else:
-                # Last track, no loop
                 if guild_id in active_streams:
                     active_streams[guild_id].cleanup()
                     del active_streams[guild_id]
@@ -490,10 +744,37 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                 await ctx.send("Playlist ended. Use !play to restart.")
                 break
     
-    # Cleanup on disconnect
     if guild_id in active_streams:
         active_streams[guild_id].cleanup()
         del active_streams[guild_id]
+
+
+# ── Health Watchdog ─────────────────────────────────────────────
+async def health_watchdog():
+    """Periodically check Audacious and PulseAudio health."""
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        await asyncio.sleep(30)
+        try:
+            # Check Audacious
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: subprocess.run(["pgrep", "-x", "audacious"], capture_output=True)
+            )
+            if result.returncode != 0:
+                log.warning("Audacious not running, restarting...")
+                await asyncio.get_event_loop().run_in_executor(None, ensure_audacious)
+
+            # Check PulseAudio sink
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: subprocess.run(
+                    ["pactl", "list", "sinks", "short"], capture_output=True, text=True
+                )
+            )
+            if SINK_NAME not in result.stdout:
+                log.warning("Virtual sink missing, recreating...")
+                await asyncio.get_event_loop().run_in_executor(None, setup_virtual_sink)
+        except Exception as e:
+            log.error("Watchdog error: %s", e)
 
 # ── Main ────────────────────────────────────────────────────────
 if not BOT_TOKEN:

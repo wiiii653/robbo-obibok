@@ -32,3 +32,8 @@ playback:
   loop: true                    # loop playlist after last track
   shuffle: true                 # shuffle on start
   crossfade: 0                  # crossfade seconds (0 = off)
+
+# Auto-start / Auto-stop
+auto:
+  start_channel: ""             # voice channel name to auto-start (empty = disabled)
+  empty_timeout: 60             # seconds of empty channel before auto-disconnect (0 = disabled)

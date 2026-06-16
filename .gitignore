@@ -6,7 +6,6 @@ temp.sap
 temp.wav
 asma_bot_*/
 asma_cache.json
-venv/
-.env
 runner.py
 *.log
+queues/
