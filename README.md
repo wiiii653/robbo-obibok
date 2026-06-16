@@ -38,6 +38,8 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | Command | Description |
 |---------|-------------|
 | `!play` / `!radio` | Start shuffled radio from all ASMA tracks |
+| `!play <query>` | Search and play first matching track |
+| `!play <number>` | Play a track from last search results |
 | `!stop` | Stop playback and disconnect |
 | `!skip` / `!next` | Skip to next track |
 | `!np` | Show current track info (name, composer, position) |
