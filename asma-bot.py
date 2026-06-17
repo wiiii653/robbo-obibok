@@ -19,6 +19,9 @@ import json
 import re
 import time
 import logging
+import shutil
+import signal
+import sys
 import aiohttp
 import yaml
 from urllib.parse import urljoin
@@ -998,5 +1001,35 @@ async def health_watchdog():
 if not BOT_TOKEN:
     raise SystemExit("Set DISCORD_BOT_TOKEN environment variable.")
 
+def cleanup_temp():
+    """Remove temp directory and all downloaded SAP files."""
+    try:
+        if os.path.isdir(TEMP_DIR):
+            shutil.rmtree(TEMP_DIR, ignore_errors=True)
+            log.info("Cleaned up temp dir: %s", TEMP_DIR)
+    except Exception as e:
+        log.warning("Temp cleanup failed: %s", e)
+
+async def graceful_shutdown():
+    """Disconnect all voice clients and stop Audacious."""
+    log.info("Shutting down gracefully...")
+    for guild_id, source in list(active_streams.items()):
+        source.cleanup()
+    del active_streams
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    for vc in list(bot.voice_clients):
+        await vc.disconnect()
+    cleanup_temp()
+
+def handle_signal(signum, frame):
+    log.info("Received signal %d, shutting down...", signum)
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        loop.create_task(graceful_shutdown())
+    else:
+        loop.run_until_complete(graceful_shutdown())
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
     bot.run(BOT_TOKEN)
