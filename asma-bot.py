@@ -1264,6 +1264,41 @@ async def status(ctx: commands.Context):
     )
 
 
+@bot.command(aliases=["switch", "toggle", "przelacz"])
+async def flip(ctx: commands.Context):
+    """Toggle between Atari SAP (ASMA) and C64 SID (HVSC) collections."""
+    global COLLECTION_MODE
+    if COLLECTION_MODE == "hvsc":
+        # Switch to ASMA
+        COLLECTION_MODE = "asma"
+        state = get_state(ctx.guild.id)
+        cached = load_cached_tracklist()
+        if cached:
+            state.tracks = cached
+            await ctx.send("🟢 **Switched to Atari SAP (ASMA)!** Use `!play` to start.")
+        else:
+            state.tracks = []
+            await ctx.send("🟢 **Switched to Atari SAP (ASMA).** Use `!play` to crawl the archive.")
+        log.info("ASMA: collection switched via flip")
+    else:
+        # Switch to HVSC
+        COLLECTION_MODE = "hvsc"
+        tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+        if not tracks:
+            await ctx.send("🔄 Loading C64 SID collection (60,000+ tracks)...")
+            tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+        if tracks:
+            state = get_state(ctx.guild.id)
+            state.tracks = tracks
+            await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!** Use `!play` to start.")
+            global metadata_index
+            metadata_index = {}
+        else:
+            await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
+            COLLECTION_MODE = "asma"  # revert
+        log.info("HVSC: collection switched via flip")
+
+
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
     """Monitor playback, auto-advance tracks, and disconnect on empty channel."""
