@@ -544,7 +544,8 @@ async def play_current_sid_track(ctx, state, url):
     author = meta.get("author", "")
     copyright_info = meta.get("copyright", "")
 
-    # Play via GStreamer
+    # Play via GStreamer — stop Audacious first so they don't bleed
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     await asyncio.get_event_loop().run_in_executor(None, gst_play_sid, sid_path)
     state.current_sap_path = sid_path
 
@@ -605,6 +606,7 @@ async def play_current_track(ctx):
             state.pre_downloaded = None
         else:
             filepath = await download_sap(url)
+        await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
         await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
         
         state.current_sap_path = filepath
@@ -867,8 +869,7 @@ async def stop(ctx: commands.Context):
     if state.guild_id and state.guild_id in active_streams:
         active_streams[state.guild_id].cleanup()
         del active_streams[state.guild_id]
-    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
-    await asyncio.get_event_loop().run_in_executor(None, gst_stop)
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
     state.queue = []
@@ -1195,6 +1196,12 @@ def gst_is_playing() -> bool:
     return gst_process is not None and gst_process.poll() is None
 
 
+def stop_all_players():
+    """Stop Audacious AND GStreamer — ensures no bleed between collections."""
+    audacious_stop()
+    gst_stop()
+
+
 # ── Collection Commands ─────────────────────────────────────────
 @bot.command(aliases=["c64", "sid"])
 async def hvsc(ctx: commands.Context):
@@ -1207,6 +1214,7 @@ async def hvsc(ctx: commands.Context):
             await ctx.send("📀 **Already in C64 SID mode.** Use `!play` to start!")
             return
     await ctx.send("🔄 **Loading C64 SID collection (60,000+ tracks)...**")
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
     if not tracks:
         tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
@@ -1234,6 +1242,7 @@ async def asma(ctx: commands.Context):
     """Switch back to Atari SAP collection (ASMA)."""
     global COLLECTION_MODE
     COLLECTION_MODE = "asma"
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     state = get_state(ctx.guild.id)
     cached = load_cached_tracklist()
     if cached:
@@ -1268,6 +1277,7 @@ async def status(ctx: commands.Context):
 async def flip(ctx: commands.Context):
     """Toggle between Atari SAP (ASMA) and C64 SID (HVSC) collections."""
     global COLLECTION_MODE
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     if COLLECTION_MODE == "hvsc":
         # Switch to ASMA
         COLLECTION_MODE = "asma"
@@ -1318,8 +1328,7 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                 if guild_id in active_streams:
                     active_streams[guild_id].cleanup()
                     del active_streams[guild_id]
-                await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
-                await asyncio.get_event_loop().run_in_executor(None, gst_stop)
+                await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
                 await vc.disconnect()
                 await ctx.send("🌙 No one listening. Stopping ASMA Radio.")
                 break
