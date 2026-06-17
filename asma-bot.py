@@ -44,6 +44,7 @@ def load_config() -> dict:
             "top_dirs": ["Composers/", "Games/", "Groups/", "Misc/", "Unknown/"],
             "crawl_timeout": 15,
             "cache_ttl": 24,
+            "crawl_concurrency": 5,
         },
         "audio": {
             "sink_name": "asma_bot",
@@ -397,24 +398,26 @@ SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
 DIR_RE = re.compile(r'href="([^"]+)/"')
 
 TOP_LEVEL_DIRS = CONFIG["asma"]["top_dirs"]
+CRAWL_SEMAPHORE = asyncio.Semaphore(CONFIG["asma"].get("crawl_concurrency", 5))
 
 async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int = 0) -> list[str]:
     """Recursively crawl an ASMA directory and return .sap file URLs."""
     if depth > 10:
         return []
     
-    try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=CRAWL_TIMEOUT)) as resp:
-            if resp.status != 200:
-                log.warning("HTTP %d for %s", resp.status, url)
-                return []
-            html = await resp.text()
-    except asyncio.TimeoutError:
-        log.warning("TIMEOUT %s", url)
-        return []
-    except Exception as e:
-        log.error("ERROR %s: %s", url, e)
-        return []
+    async with CRAWL_SEMAPHORE:
+        try:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=CRAWL_TIMEOUT)) as resp:
+                if resp.status != 200:
+                    log.warning("HTTP %d for %s", resp.status, url)
+                    return []
+                html = await resp.text()
+        except asyncio.TimeoutError:
+            log.warning("TIMEOUT %s", url)
+            return []
+        except Exception as e:
+            log.error("ERROR %s: %s", url, e)
+            return []
     
     tracks = []
     
