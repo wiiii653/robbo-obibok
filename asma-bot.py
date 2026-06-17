@@ -93,6 +93,10 @@ QUEUE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queues")
 COMMAND_PREFIX = CONFIG["command_prefix"]
 PLAYBACK_LOOP = CONFIG["playback"]["loop"]
 PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
+
+# ── Favorites System ────────────────────────────────────────────
+FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
+OGNJEN_USER_ID = 693164855066099814  # Master's Discord ID
 CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)
 AUTO_START_CHANNEL = CONFIG["auto"].get("start_channel", "")
 AUTO_EMPTY_TIMEOUT = CONFIG["auto"].get("empty_timeout", 60)
@@ -119,6 +123,9 @@ class PlaylistState:
         self.search_results: list[str] = []     # last search results
 
 guilds: dict[int, PlaylistState] = {}
+
+# Track message IDs → track info for reaction-based favorites
+message_track_map: dict[int, dict] = {}
 
 def get_state(guild_id: int) -> PlaylistState:
     if guild_id not in guilds:
@@ -552,7 +559,14 @@ async def play_current_track(ctx):
             embed.add_field(name="Songs", value=songs, inline=True)
         embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
         embed.set_footer(text="ASMA Radio")
-        await ctx.send(embed=embed)
+        np_msg = await ctx.send(embed=embed)
+        # Track for reaction-based favorites
+        message_track_map[np_msg.id] = {
+            "url": url,
+            "name": name,
+            "author": author,
+            "timestamp": time.time(),
+        }
         return True
     
     except Exception as e:
@@ -896,6 +910,80 @@ async def search(ctx: commands.Context, *, query: str):
     lines.append("")
     lines.append("Type `!play <number>` to play a track")
     await ctx.send("\n".join(lines))
+
+
+# ── Favorites System ────────────────────────────────────────────
+def load_favorites() -> dict:
+    """Load the favorites database from disk."""
+    if os.path.exists(FAVORITES_FILE):
+        try:
+            with open(FAVORITES_FILE) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_favorites(data: dict):
+    """Save the favorites database to disk."""
+    try:
+        with open(FAVORITES_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        log.error("Failed to save favorites: %s", e)
+
+
+@bot.event
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    """Track Ognjen's reactions on Now Playing embeds → add/remove favorites."""
+    if payload.user_id != OGNJEN_USER_ID:
+        return
+    if payload.message_id not in message_track_map:
+        return
+
+    track = message_track_map[payload.message_id]
+    favs = load_favorites()
+    uid = str(payload.user_id)
+    user_favs = favs.setdefault(uid, {"tracks": []})
+    url = track["url"]
+
+    existing = [t for t in user_favs["tracks"] if t["url"] == url]
+    if existing:
+        user_favs["tracks"] = [t for t in user_favs["tracks"] if t["url"] != url]
+        save_favorites(favs)
+        log.info("❤️ Removed from favorites: %s", url)
+    else:
+        entry = {
+            "url": url,
+            "name": track.get("name", url.split("/")[-1].replace(".sap", "")),
+            "author": track.get("author", ""),
+            "added_at": time.time(),
+            "emoji": str(payload.emoji),
+        }
+        user_favs["tracks"].append(entry)
+        save_favorites(favs)
+        log.info("❤️ Added to favorites: %s — %s", track.get("name", "?"), url)
+
+
+@bot.command(aliases=["favs", "playlista"])
+async def favorites(ctx: commands.Context):
+    """Show your favorited tracks. React to any Now Playing embed to add!"""
+    favs = load_favorites()
+    user_favs = favs.get(str(ctx.author.id), {}).get("tracks", [])
+
+    if not user_favs:
+        return await ctx.send("📭 **No favorites yet.** React to a 🎵 Now Playing embed with any emoji to save tracks here!")
+
+    lines = [f"🎵 **Your Favorites ({len(user_favs)} tracks)**"]
+    for i, t in enumerate(user_favs, 1):
+        name = t.get("name", "Unknown")
+        author_s = f" — {t['author']}" if t.get("author") else ""
+        lines.append(f"`{i}.` {name}{author_s}")
+
+    # Discord has 2000 char limit per message
+    for chunk in [lines[i:i+15] for i in range(0, len(lines), 15)]:
+        await ctx.send("\n".join(chunk))
+
 
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
