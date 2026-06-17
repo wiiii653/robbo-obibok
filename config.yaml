@@ -17,8 +17,15 @@ asma:
     - "Groups/"
     - "Misc/"
     - "Unknown/"
-  crawl_timeout: 15  # seconds per HTTP request
-  cache_ttl: 24       # hours before re-crawl
+  crawl_timeout: 15       # seconds per HTTP request
+  cache_ttl: 24            # hours before re-crawl
+
+# High Voltage SID Collection (C64) settings
+hvsc:
+  base_url: "https://www.hvsc.c64.org/download/C64Music/"
+  songlengths_url: "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.txt"
+  cache_ttl: 168            # hours before re-download (1 week)
+  enabled: false            # set true to use HVSC by default
 
 # Audio settings
 audio:
