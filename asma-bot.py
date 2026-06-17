@@ -19,6 +19,9 @@ import json
 import re
 import time
 import logging
+import shutil
+import signal
+import sys
 import aiohttp
 import yaml
 from urllib.parse import urljoin
@@ -41,6 +44,7 @@ def load_config() -> dict:
             "top_dirs": ["Composers/", "Games/", "Groups/", "Misc/", "Unknown/"],
             "crawl_timeout": 15,
             "cache_ttl": 24,
+            "crawl_concurrency": 5,
         },
         "audio": {
             "sink_name": "asma_bot",
@@ -394,24 +398,26 @@ SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
 DIR_RE = re.compile(r'href="([^"]+)/"')
 
 TOP_LEVEL_DIRS = CONFIG["asma"]["top_dirs"]
+CRAWL_SEMAPHORE = asyncio.Semaphore(CONFIG["asma"].get("crawl_concurrency", 5))
 
 async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int = 0) -> list[str]:
     """Recursively crawl an ASMA directory and return .sap file URLs."""
     if depth > 10:
         return []
     
-    try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=CRAWL_TIMEOUT)) as resp:
-            if resp.status != 200:
-                log.warning("HTTP %d for %s", resp.status, url)
-                return []
-            html = await resp.text()
-    except asyncio.TimeoutError:
-        log.warning("TIMEOUT %s", url)
-        return []
-    except Exception as e:
-        log.error("ERROR %s: %s", url, e)
-        return []
+    async with CRAWL_SEMAPHORE:
+        try:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=CRAWL_TIMEOUT)) as resp:
+                if resp.status != 200:
+                    log.warning("HTTP %d for %s", resp.status, url)
+                    return []
+                html = await resp.text()
+        except asyncio.TimeoutError:
+            log.warning("TIMEOUT %s", url)
+            return []
+        except Exception as e:
+            log.error("ERROR %s: %s", url, e)
+            return []
     
     tracks = []
     
@@ -998,5 +1004,35 @@ async def health_watchdog():
 if not BOT_TOKEN:
     raise SystemExit("Set DISCORD_BOT_TOKEN environment variable.")
 
+def cleanup_temp():
+    """Remove temp directory and all downloaded SAP files."""
+    try:
+        if os.path.isdir(TEMP_DIR):
+            shutil.rmtree(TEMP_DIR, ignore_errors=True)
+            log.info("Cleaned up temp dir: %s", TEMP_DIR)
+    except Exception as e:
+        log.warning("Temp cleanup failed: %s", e)
+
+async def graceful_shutdown():
+    """Disconnect all voice clients and stop Audacious."""
+    log.info("Shutting down gracefully...")
+    for guild_id, source in list(active_streams.items()):
+        source.cleanup()
+    del active_streams
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    for vc in list(bot.voice_clients):
+        await vc.disconnect()
+    cleanup_temp()
+
+def handle_signal(signum, frame):
+    log.info("Received signal %d, shutting down...", signum)
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        loop.create_task(graceful_shutdown())
+    else:
+        loop.run_until_complete(graceful_shutdown())
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
     bot.run(BOT_TOKEN)
