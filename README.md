@@ -53,8 +53,9 @@ React with **any emoji** to a Now Playing embed to save the track to your favori
 
 ## Quick Start
 
+### Ubuntu / Debian
+
 ```bash
-# Ubuntu / Debian
 sudo apt update
 sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse gstreamer1.0-plugins-good gstreamer1.0-plugins-bad sidplayfp
 
@@ -63,13 +64,117 @@ cd robbo-obibot-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Set your bot token and run
+### Fedora
+
+```bash
+sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpeg pipewire-utils gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld sidplayfp
+
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Arch Linux
+
+```bash
+sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp
+
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Windows (WSL 2)
+
+1. Install [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu
+2. Inside WSL, follow the Ubuntu guide above
+3. **PulseAudio bridge** (optional, for sound):
+   ```bash
+   # Inside WSL
+   sudo apt install pipewire-pulse
+   # Windows may need additional audio bridge — see WSL audio docs
+   ```
+
+### macOS
+
+Not natively supported (Audacious and PipeWire are Linux-only). Run in a Linux VM or Docker:
+
+```bash
+docker run -it --rm ubuntu:22.04 bash
+# then follow Ubuntu guide
+```
+
+## Running
+
+```bash
+cd robbo-obibot-ulimate-chiptune-bot
+source venv/bin/activate
+
+# Set your bot token
 export DISCORD_BOT_TOKEN="your-token-here"
+
+# Run
 ./venv/bin/python3 asma-bot.py
 ```
 
-> **Note:** GStreamer `siddec` plugin (for C64 SID playback) is usually bundled with `gstreamer1.0-plugins-bad`. If your distro splits it separately, also install `gstreamer1.0-libav` and `gstreamer1.0-pulseaudio`.
+Or use the wrapper (reads token from base64 in runner.py):
+
+```bash
+./venv/bin/python3 runner.py
+```
+
+> **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`
+
+## Invite the Bot
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Select your bot application → **OAuth2 → URL Generator**
+3. Scopes: `bot`, `applications.commands`
+4. Permissions: `Send Messages`, `Connect`, `Speak`, `Use Voice Activity`
+5. Use the generated URL to invite the bot to your server
+
+## Systemd Service (Linux)
+
+Run as a background service:
+
+```bash
+# Copy service file
+cp asma-bot.service ~/.config/systemd/user/
+mkdir -p ~/.config/systemd/user
+
+# Store token securely (or use runner.py with embedded token)
+echo "YOUR_TOKEN_HERE" > ~/.asma-bot-token
+chmod 600 ~/.asma-bot-token
+
+# Enable and start
+systemctl --user daemon-reload
+systemctl --user enable asma-bot
+systemctl --user start asma-bot
+
+# Check logs
+journalctl --user -u asma-bot -f
+```
+
+## Troubleshooting
+
+| Symptom | Likely Fix |
+|---------|-----------|
+| `RuntimeError: PyNaCl library needed` | `pip install pynacl` |
+| Bot doesn't respond to commands | Enable **Message Content Intent** in Discord Developer Portal |
+| Bot joins VC but no sound (ASMA) | Audacious not running — restart bot, or run `audacious --headless` manually |
+| Bot joins VC but no sound (C64) | `gst-inspect-1.0 siddec` — if missing, install `gstreamer1.0-plugins-bad` |
+| Both Atari and C64 play at once | Update to latest code — `stop_all_players()` fix prevents audio bleed |
+| Crawl seems stuck | Check `config.yaml` → `crawl_timeout` and `cache_ttl` |
+| `!play` says "Join a voice channel" | You must be on a voice channel when issuing the command |
+| Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
+| HVSC index download fails | Check `hvsc.songlengths_url` in config — HVSC may be temporarily down |
+| SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
 
 ## Configuration
 
