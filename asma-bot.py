@@ -97,6 +97,15 @@ PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
 OGNJEN_USER_ID = 693164855066099814  # Master's Discord ID
+
+# ── HVSC Collection (C64 SID) ────────────────────────────────────
+HVSC_BASE = CONFIG.get("hvsc", {}).get("base_url", "https://www.hvsc.c64.org/download/C64Music/")
+HVSC_SONGLENGTHS_URL = CONFIG.get("hvsc", {}).get("songlengths_url", "")
+HVSC_CACHE_TTL = CONFIG.get("hvsc", {}).get("cache_ttl", 168)
+HVSC_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hvsc_cache.json")
+COLLECTION_MODE = "hvsc" if CONFIG.get("hvsc", {}).get("enabled", False) else "asma"
+gst_process: subprocess.Popen | None = None  # GStreamer process for SID playback
+
 CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)
 AUTO_START_CHANNEL = CONFIG["auto"].get("start_channel", "")
 AUTO_EMPTY_TIMEOUT = CONFIG["auto"].get("empty_timeout", 60)
@@ -510,6 +519,71 @@ async def pre_download_next(state: PlaylistState):
     except Exception:
         state.pre_downloaded = None
 
+
+async def play_current_sid_track(ctx, state, url):
+    """Download and play a SID track via GStreamer."""
+    # Download full SID to temp (they're small, ~5-15KB)
+    sid_path = os.path.join(TEMP_DIR, url.split("/")[-1])
+    try:
+        # Use async HTTP download
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                resp.raise_for_status()
+                data = await resp.read()
+        with open(sid_path, "wb") as f:
+            f.write(data)
+    except Exception as e:
+        log.error("SID download failed: %s", e)
+        await ctx.send(f"❌ Download failed: {e}")
+        return False
+
+    # Parse SID header for metadata
+    meta = parse_sid_header(data)
+    name = meta.get("name") or url.split("/")[-1].replace(".sid", "")
+    author = meta.get("author", "")
+    copyright_info = meta.get("copyright", "")
+
+    # Play via GStreamer
+    await asyncio.get_event_loop().run_in_executor(None, gst_play_sid, sid_path)
+    state.current_sap_path = sid_path
+
+    # Setup MonitorAudioSource if needed
+    if state.vc and state.vc.is_connected():
+        if state.guild_id not in active_streams:
+            source = MonitorAudioSource(SINK_NAME)
+            state.vc.play(
+                source,
+                after=lambda e: log.info("Stream ended: %s", e),
+            )
+            active_streams[state.guild_id] = source
+
+    total = len(state.queue)
+    pos = state.index + 1
+
+    embed = discord.Embed(
+        title=name,
+        color=discord.Color.purple(),
+    )
+    if author:
+        embed.add_field(name="Composer", value=author, inline=True)
+    if copyright_info:
+        embed.add_field(name="Copyright", value=copyright_info, inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.set_footer(text="C64 SID Radio")
+    np_msg = await ctx.send(embed=embed)
+
+    # Track for reaction-based favorites
+    message_track_map[np_msg.id] = {
+        "url": url,
+        "name": name,
+        "author": author,
+        "timestamp": time.time(),
+    }
+    log.info("SID now playing: %s — %s", name, author)
+    return True
+
+
 async def play_current_track(ctx):
     """Download and play the current track from the queue."""
     state = get_state(ctx.guild.id)
@@ -521,6 +595,10 @@ async def play_current_track(ctx):
     await ctx.send(f"Loading... `{url.split('/')[-1]}`")
     
     try:
+        if COLLECTION_MODE == "hvsc":
+            return await play_current_sid_track(ctx, state, url)
+        
+        # ── ASMA SAP Playback ────────────────────────────────────
         # Use pre-downloaded track if available, otherwise download now
         if state.pre_downloaded and os.path.exists(state.pre_downloaded):
             filepath = state.pre_downloaded
@@ -790,6 +868,7 @@ async def stop(ctx: commands.Context):
         active_streams[state.guild_id].cleanup()
         del active_streams[state.guild_id]
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    await asyncio.get_event_loop().run_in_executor(None, gst_stop)
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
     state.queue = []
@@ -985,6 +1064,206 @@ async def favorites(ctx: commands.Context):
         await ctx.send("\n".join(chunk))
 
 
+# ── HVSC C64 SID Collection ─────────────────────────────────────
+def parse_songlengths_to_tracks(data: str) -> list[str]:
+    """Parse Songlengths.txt → list of full SID URLs."""
+    urls = []
+    for line in data.splitlines():
+        line = line.strip()
+        if line.startswith("; /"):
+            path = line[2:].strip()  # "; /MUSICIANS/..." → "/MUSICIANS/..."
+            full_url = HVSC_BASE.rstrip("/") + path
+            urls.append(full_url)
+    return urls
+
+
+def download_hvsc_index() -> list[str] | None:
+    """Download Songlengths.txt and return list of SID URLs."""
+    if not HVSC_SONGLENGTHS_URL:
+        log.error("HVSC: no songlengths_url configured")
+        return None
+    try:
+        r = subprocess.run(
+            ["curl", "-sL", "--max-time", "120", HVSC_SONGLENGTHS_URL],
+            capture_output=True, text=True, timeout=180,
+        )
+        if r.returncode != 0 or not r.stdout:
+            log.error("HVSC index download failed (exit %d)", r.returncode)
+            return None
+        tracks = parse_songlengths_to_tracks(r.stdout)
+        # Cache to file
+        try:
+            with open(HVSC_CACHE_FILE, "w") as f:
+                json.dump({"tracks": tracks, "downloaded": time.time()}, f)
+        except Exception as e:
+            log.warning("HVSC: cache write failed: %s", e)
+        log.info("HVSC: loaded %d SID tracks", len(tracks))
+        return tracks
+    except Exception as e:
+        log.error("HVSC index error: %s", e)
+        return None
+
+
+def load_cached_hvsc() -> list[str] | None:
+    """Load HVSC track list from cache if fresh."""
+    try:
+        if not os.path.exists(HVSC_CACHE_FILE):
+            return None
+        with open(HVSC_CACHE_FILE) as f:
+            data = json.load(f)
+        age = time.time() - data.get("downloaded", 0)
+        if age > HVSC_CACHE_TTL * 3600:
+            log.info("HVSC cache expired (%.1f hours old)", age / 3600)
+            return None
+        tracks = data.get("tracks", [])
+        log.info("HVSC: loaded %d tracks from cache", len(tracks))
+        return tracks
+    except Exception as e:
+        log.warning("HVSC cache load error: %s", e)
+        return None
+
+
+def parse_sid_header(data: bytes) -> dict[str, str]:
+    """Parse PSID/RSID header for metadata."""
+    meta = {"name": "", "author": "", "copyright": ""}
+    if len(data) < 0x76:
+        return meta
+    magic = data[0:4]
+    if magic not in (b"PSID", b"RSID"):
+        return meta
+    try:
+        meta["name"] = data[0x16:0x16+32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
+        meta["author"] = data[0x36:0x36+32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
+        meta["copyright"] = data[0x56:0x56+32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
+    except Exception:
+        pass
+    return meta
+
+
+async def download_sid_for_meta(url: str) -> dict[str, str]:
+    """Download SID header bytes for metadata parsing."""
+    meta = {}
+    try:
+        r = subprocess.run(
+            ["curl", "-sL", "--max-time", "15", "--range", "0-255", url],
+            capture_output=True, timeout=20,
+        )
+        if r.returncode == 0 and len(r.stdout) >= 0x76:
+            meta = parse_sid_header(r.stdout)
+            meta["url"] = url
+            meta["sap_name"] = url.rstrip("/").split("/")[-1]
+    except Exception as e:
+        log.warning("SID meta fetch error for %s: %s", url, e)
+    return meta
+
+
+def gst_play_sid(filepath: str):
+    """Play a SID file via GStreamer into the asma_bot PulseAudio sink."""
+    global gst_process
+    gst_stop()
+    gst_process = subprocess.Popen(
+        [
+            "gst-launch-1.0", "-q",
+            "filesrc", f"location={filepath}",
+            "!", "siddec",
+            "!", "audioconvert",
+            "!", "audioresample",
+            "!", "pulsesink", f"device={SINK_NAME}",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    log.info("GStreamer SID started (PID %d)", gst_process.pid)
+
+
+def gst_stop():
+    """Stop GStreamer SID playback."""
+    global gst_process
+    if gst_process and gst_process.poll() is None:
+        gst_process.terminate()
+        try:
+            gst_process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            gst_process.kill()
+            gst_process.wait()
+    gst_process = None
+
+
+def gst_is_playing() -> bool:
+    """Check if GStreamer SID is still playing."""
+    global gst_process
+    return gst_process is not None and gst_process.poll() is None
+
+
+# ── Collection Commands ─────────────────────────────────────────
+@bot.command(aliases=["c64", "sid"])
+async def hvsc(ctx: commands.Context):
+    """Switch to C64 SID collection (HVSC)."""
+    global COLLECTION_MODE
+    if COLLECTION_MODE == "hvsc":
+        # Already in HVSC - try to play
+        state = get_state(ctx.guild.id)
+        if state.tracks:
+            await ctx.send("📀 **Already in C64 SID mode.** Use `!play` to start!")
+            return
+    await ctx.send("🔄 **Loading C64 SID collection (60,000+ tracks)...**")
+    tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+    if not tracks:
+        tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+    if not tracks:
+        return await ctx.send("❌ Failed to load HVSC index. Check config or try again.")
+    COLLECTION_MODE = "hvsc"
+    state = get_state(ctx.guild.id)
+    state.tracks = tracks
+    await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**\nUse `!play` to shuffle and play.")
+    # Update the search index
+    global metadata_index
+    metadata_index = {}
+    log.info("HVSC: collection switched, %d tracks loaded", len(tracks))
+    await cleanup_hvsc_file(ctx, tracks)
+
+
+async def cleanup_hvsc_file(ctx, tracks):
+    """Store the HVSC tracklist for search (no local copies yet)."""
+    # Just let user know search won't have metadata until they use it
+    pass
+
+
+@bot.command()
+async def asma(ctx: commands.Context):
+    """Switch back to Atari SAP collection (ASMA)."""
+    global COLLECTION_MODE
+    COLLECTION_MODE = "asma"
+    state = get_state(ctx.guild.id)
+    cached = load_cached_tracklist()
+    if cached:
+        state.tracks = cached
+        await ctx.send(f"📀 **Switched to ASMA Atari SAP — {len(cached)} tracks!**")
+    else:
+        state.tracks = []
+        await ctx.send("📀 **Switched to ASMA Atari SAP.** Use `!play` to crawl the archive.")
+    log.info("ASMA: collection switched")
+
+
+@bot.command(aliases=["mode", "collection"])
+async def status(ctx: commands.Context):
+    """Show current collection mode and playlist stats."""
+    state = get_state(ctx.guild.id)
+    mode_icon = "🟣" if COLLECTION_MODE == "hvsc" else "🟢"
+    mode_name = "C64 SID (HVSC)" if COLLECTION_MODE == "hvsc" else "Atari SAP (ASMA)"
+    total = len(state.tracks) if state.tracks else 0
+    qlen = len(state.queue)
+    pos = state.index + 1 if state.index >= 0 else 0
+    playing = "🎵 Yes" if (is_playing() or gst_is_playing()) else "⏸️ No"
+    await ctx.send(
+        f"{mode_icon} **Collection: {mode_name}**\n"
+        f"• Tracks in archive: **{total}**\n"
+        f"• Queue remaining: **{qlen - pos}/{qlen}**\n"
+        f"• Playing: {playing}\n"
+        f"• Loop: {'🔁 On' if state.loop else '➡️ Off'}"
+    )
+
+
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
     """Monitor playback, auto-advance tracks, and disconnect on empty channel."""
@@ -1005,13 +1284,14 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                     active_streams[guild_id].cleanup()
                     del active_streams[guild_id]
                 await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+                await asyncio.get_event_loop().run_in_executor(None, gst_stop)
                 await vc.disconnect()
                 await ctx.send("🌙 No one listening. Stopping ASMA Radio.")
                 break
         else:
             empty_since = None
 
-        playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
+        playing = await asyncio.get_event_loop().run_in_executor(None, lambda: is_playing() or gst_is_playing())
         if playing:
             not_playing_since = None
         else:
