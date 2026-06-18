@@ -1,1 +1,34 @@
-{}
+{
+  "693164855066099814": {
+    "tracks": [
+      {
+        "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/N/Nilsen_Ronny/Mozique.sid",
+        "name": "Mozique",
+        "author": "Ronny Nilsen (Snap)",
+        "added_at": 1781763027.5971804,
+        "emoji": "\u2764\ufe0f"
+      },
+      {
+        "url": "https://www.hvsc.c64.org/download/C64Music/DEMOS/0-9/10_Orbyte.sid",
+        "name": "10 Orbyte",
+        "author": "Michael Becker (Premium)",
+        "added_at": 1781770830.833622,
+        "emoji": "\u2764\ufe0f"
+      },
+      {
+        "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/H/Highway_Guy/How_the_Earth_Was_Destroyed_by_a_Giant_Nazi_Hentai_Loli.sid",
+        "name": "How the Earth Was Destroyed...",
+        "author": "William Fay (Highway Guy)",
+        "added_at": 1781772342.5634186,
+        "emoji": "\u2764\ufe0f"
+      },
+      {
+        "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/A/Ace64/Tune_19.sid",
+        "name": "Tune 19",
+        "author": "Ace64",
+        "added_at": 1781777587.2451673,
+        "emoji": "\u2764\ufe0f"
+      }
+    ]
+  }
+}

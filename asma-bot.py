@@ -286,6 +286,7 @@ async def download_sap(url: str, retries: int = 2) -> str:
     raise last_err
 
 def audacious_play(filepath: str):
+    ensure_audacious()
     subprocess.run(["audtool", "playlist-clear"], capture_output=True)
     subprocess.run(["audtool", "playlist-addurl", filepath], capture_output=True)
     subprocess.run(["audtool", "playback-play"], capture_output=True)
@@ -293,7 +294,16 @@ def audacious_play(filepath: str):
     move_playback_to_sink()
 
 def audacious_stop():
+    """Stop Audacious playback and clear its playlist."""
     subprocess.run(["audtool", "playback-stop"], capture_output=True)
+    subprocess.run(["audtool", "playlist-clear"], capture_output=True)
+
+
+def audacious_kill():
+    """Kill the Audacious process entirely — prevents audio bleed between collections."""
+    subprocess.run(["audtool", "playback-stop"], capture_output=True)
+    subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
+
 
 def audacious_song() -> str:
     r = subprocess.run(["audtool", "current-song"], capture_output=True, text=True)
@@ -1314,8 +1324,9 @@ def gst_is_playing() -> bool:
 
 
 def stop_all_players():
-    """Stop Audacious AND GStreamer — ensures no bleed between collections."""
-    audacious_stop()
+    """Stop Audacious AND GStreamer — ensures no bleed between collections.
+    Kills Audacious so it can't keep playing stale tracks after mode switch."""
+    audacious_kill()
     gst_stop()
 
 
