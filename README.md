@@ -90,26 +90,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Windows (WSL 2)
-
-1. Install [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu
-2. Inside WSL, follow the Ubuntu guide above
-3. **PulseAudio bridge** (optional, for sound):
-   ```bash
-   # Inside WSL
-   sudo apt install pipewire-pulse
-   # Windows may need additional audio bridge — see WSL audio docs
-   ```
-
-### macOS
-
-Not natively supported (Audacious and PipeWire are Linux-only). Run in a Linux VM or Docker:
-
-```bash
-docker run -it --rm ubuntu:22.04 bash
-# then follow Ubuntu guide
-```
-
 ## Running
 
 ```bash

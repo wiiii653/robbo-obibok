@@ -130,6 +130,11 @@ class PlaylistState:
         self.crawling: bool = False
         self.pre_downloaded: str | None = None  # next track pre-downloaded
         self.search_results: list[str] = []     # last search results
+        # SID duration-based auto-advance tracking
+        self.sid_start_time: float = 0          # when current SID track started (0 = no track)
+        self.sid_current_url: str = ""          # URL of current SID track (for duration lookup)
+        self.sid_duration: int = 120            # expected duration in seconds
+
 
 guilds: dict[int, PlaylistState] = {}
 
@@ -549,6 +554,11 @@ async def play_current_sid_track(ctx, state, url):
     await asyncio.get_event_loop().run_in_executor(None, gst_play_sid, sid_path)
     state.current_sap_path = sid_path
 
+    # Record SID timing for duration-based auto-advance
+    state.sid_start_time = time.time()
+    state.sid_current_url = url
+    state.sid_duration = sid_durations.get(url, 120)  # fallback 120s if unknown
+
     # Setup MonitorAudioSource if needed
     if state.vc and state.vc.is_connected():
         if state.guild_id not in active_streams:
@@ -874,6 +884,9 @@ async def stop(ctx: commands.Context):
         await ctx.voice_client.disconnect()
     state.queue = []
     state.index = -1
+    state.sid_start_time = 0
+    state.sid_current_url = ""
+    state.sid_duration = 120
     save_queue(state)
     await ctx.send("⏹️ Stopped.")
 
@@ -1066,15 +1079,40 @@ async def favorites(ctx: commands.Context):
 
 
 # ── HVSC C64 SID Collection ─────────────────────────────────────
+# URL → duration in seconds, parsed from Songlengths.txt
+sid_durations: dict[str, int] = {}
+
 def parse_songlengths_to_tracks(data: str) -> list[str]:
-    """Parse Songlengths.txt → list of full SID URLs."""
+    """Parse Songlengths.txt → list of full SID URLs.
+    Also populates sid_durations with track durations (seconds)."""
     urls = []
     for line in data.splitlines():
         line = line.strip()
         if line.startswith("; /"):
-            path = line[2:].strip()  # "; /MUSICIANS/..." → "/MUSICIANS/..."
-            full_url = HVSC_BASE.rstrip("/") + path
+            # Extract path: "; /MUSICIANS/... = 3:02" → "/MUSICIANS/..."
+            rest = line[2:].strip()  # "/MUSICIANS/... = 3:02"
+            if " = " in rest:
+                path_part, dur_part = rest.split(" = ", 1)
+            else:
+                path_part = rest
+                dur_part = ""
+
+            # Parse duration "M:SS" or "M:SS (alt)" → seconds
+            dur_seconds = 0
+            if dur_part:
+                # Get first duration segment (before any parenthesis or space)
+                dur_str = dur_part.split()[0].split("(")[0].strip()
+                if ":" in dur_str:
+                    try:
+                        parts = dur_str.split(":")
+                        dur_seconds = int(parts[0]) * 60 + int(parts[1])
+                    except (ValueError, IndexError):
+                        pass
+
+            full_url = HVSC_BASE.rstrip("/") + path_part
             urls.append(full_url)
+            if dur_seconds > 0:
+                sid_durations[full_url] = dur_seconds
     return urls
 
 
@@ -1336,6 +1374,30 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
             empty_since = None
 
         playing = await asyncio.get_event_loop().run_in_executor(None, lambda: is_playing() or gst_is_playing())
+
+        # For HVSC SID: check if current track exceeded its expected duration
+        # GStreamer siddec never exits (loops forever), so we advance by time
+        if playing and COLLECTION_MODE == "hvsc":
+            state = get_state(guild_id)
+            if state.sid_start_time > 0 and state.sid_duration > 0:
+                elapsed = time.time() - state.sid_start_time
+                if elapsed >= state.sid_duration:
+                    log.info("SID track duration reached (%ds), advancing", state.sid_duration)
+                    state.sid_start_time = 0
+                    await asyncio.get_event_loop().run_in_executor(None, gst_stop)
+                    not_playing_since = None
+                    if state.loop or state.index < len(state.queue) - 1:
+                        await skip_to_next(ctx)
+                        continue
+                    else:
+                        if guild_id in active_streams:
+                            active_streams[guild_id].cleanup()
+                            del active_streams[guild_id]
+                        if vc.is_connected():
+                            await vc.disconnect()
+                        await ctx.send("Playlist ended. Use !play to restart.")
+                        break
+
         if playing:
             not_playing_since = None
         else:
