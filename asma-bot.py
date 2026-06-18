@@ -1326,9 +1326,9 @@ def gst_is_playing() -> bool:
 
 
 def cleanup_orphan_players():
-    """Kill any orphaned gst-launch-1.0 and ffmpeg processes from previous bot sessions."""
+    """Kill orphaned gst-launch-1.0 processes from crashed bot sessions.
+    Does NOT kill ffmpeg (MonitorAudioSource) since that's managed in-band."""
     subprocess.run(["pkill", "-f", "gst-launch-1.0.*siddec"], capture_output=True)
-    subprocess.run(["pkill", "-f", "ffmpeg.*asma_bot"], capture_output=True)
 
 
 def stop_all_players():
@@ -1336,6 +1336,8 @@ def stop_all_players():
     Kills Audacious so it can't keep playing stale tracks after mode switch."""
     audacious_kill()
     gst_stop()
+    # Kill any orphaned players that escaped the global tracker
+    cleanup_orphan_players()
 
 
 # ── Collection Commands ─────────────────────────────────────────
