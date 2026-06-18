@@ -25,6 +25,7 @@ import sys
 import aiohttp
 import yaml
 from urllib.parse import urljoin
+from hashlib import sha1
 
 logging.basicConfig(
     level=logging.INFO,
@@ -96,14 +97,12 @@ PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
-OGNJEN_USER_ID = 693164855066099814  # Master's Discord ID
-
 # ── HVSC Collection (C64 SID) ────────────────────────────────────
 HVSC_BASE = CONFIG.get("hvsc", {}).get("base_url", "https://www.hvsc.c64.org/download/C64Music/")
 HVSC_SONGLENGTHS_URL = CONFIG.get("hvsc", {}).get("songlengths_url", "")
 HVSC_CACHE_TTL = CONFIG.get("hvsc", {}).get("cache_ttl", 168)
 HVSC_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hvsc_cache.json")
-COLLECTION_MODE = "hvsc" if CONFIG.get("hvsc", {}).get("enabled", False) else "asma"
+DEFAULT_COLLECTION_MODE = "hvsc" if CONFIG.get("hvsc", {}).get("enabled", False) else "asma"
 gst_process: subprocess.Popen | None = None  # GStreamer process for SID playback
 
 CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)
@@ -123,6 +122,7 @@ class PlaylistState:
         self.queue: list[str] = []       # shuffled play queue
         self.index: int = -1             # current position in queue
         self.loop: bool = True
+        self.collection_mode: str = DEFAULT_COLLECTION_MODE
         self.guild_id: int | None = None
         self.ctx = None
         self.vc = None
@@ -173,6 +173,13 @@ def load_queue(guild_id: int) -> dict | None:
             return json.load(f)
     except Exception:
         return None
+
+
+def build_temp_path(url: str) -> str:
+    """Create a collision-resistant temp path for a downloaded track."""
+    filename = url.split("/")[-1] or "track.bin"
+    digest = sha1(url.encode("utf-8")).hexdigest()[:12]
+    return os.path.join(TEMP_DIR, f"{digest}_{filename}")
 
 # ── Audio Capture ───────────────────────────────────────────────
 class MonitorAudioSource(discord.AudioSource):
@@ -260,8 +267,7 @@ def move_playback_to_sink():
             )
 
 async def download_sap(url: str, retries: int = 2) -> str:
-    filename = url.split("/")[-1]
-    filepath = os.path.join(TEMP_DIR, filename)
+    filepath = build_temp_path(url)
     last_err = None
     for attempt in range(retries + 1):
         try:
@@ -348,14 +354,16 @@ async def fetch_metadata_batch(session: aiohttp.ClientSession, urls: list[str], 
     results = {}
     for i in range(0, len(urls), batch_size):
         batch = urls[i:i+batch_size]
+        batch_urls = []
         tasks = []
         for url in batch:
             if url in metadata_index:
                 continue
+            batch_urls.append(url)
             tasks.append(fetch_single_metadata(session, url))
         if tasks:
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            for url, result in zip(batch, batch_results):
+            for url, result in zip(batch_urls, batch_results):
                 if isinstance(result, dict) and result:
                     results[url] = result
         if results:
@@ -528,7 +536,7 @@ async def pre_download_next(state: PlaylistState):
 async def play_current_sid_track(ctx, state, url):
     """Download and play a SID track via GStreamer."""
     # Download full SID to temp (they're small, ~5-15KB)
-    sid_path = os.path.join(TEMP_DIR, url.split("/")[-1])
+    sid_path = build_temp_path(url)
     try:
         # Use async HTTP download
         timeout = aiohttp.ClientTimeout(total=30)
@@ -606,7 +614,7 @@ async def play_current_track(ctx):
     await ctx.send(f"Loading... `{url.split('/')[-1]}`")
     
     try:
-        if COLLECTION_MODE == "hvsc":
+        if state.collection_mode == "hvsc":
             return await play_current_sid_track(ctx, state, url)
         
         # ── ASMA SAP Playback ────────────────────────────────────
@@ -728,7 +736,12 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         state.loop = PLAYBACK_LOOP
 
         if not state.tracks:
-            state.tracks = await refresh_tracklist()
+            if state.collection_mode == "hvsc":
+                state.tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+                if not state.tracks:
+                    state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+            else:
+                state.tracks = await refresh_tracklist()
 
         if not state.tracks:
             log.warning("Auto-start: no tracks available")
@@ -748,7 +761,8 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 
         # Use system channel or first text channel for messages
         text_channel = member.guild.system_channel or member.guild.text_channels[0]
-        ctx = await bot.get_context(await text_channel.send("📻 **Auto-starting ASMA Radio...**"))
+        station_name = "C64 SID Radio" if state.collection_mode == "hvsc" else "ASMA Radio"
+        ctx = await bot.get_context(await text_channel.send(f"📻 **Auto-starting {station_name}...**"))
         state.ctx = ctx
 
         if await play_current_track(ctx):
@@ -760,7 +774,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 # ── Commands ────────────────────────────────────────────────────
 @bot.command(aliases=["radio"])
 async def play(ctx: commands.Context, *, query: str = ""):
-    """Start shuffled ASMA radio. Usage: !play, !play <number>, or !play <search query>"""
+    """Start shuffled radio. Usage: !play, !play <number>, or !play <search query>"""
     if not ctx.author.voice:
         return await ctx.send("Join a voice channel first!")
 
@@ -771,9 +785,15 @@ async def play(ctx: commands.Context, *, query: str = ""):
         idx = int(query) - 1
         if not state.search_results or idx < 0 or idx >= len(state.search_results):
             return await ctx.send("Invalid number. Use !search first.")
-        url = state.search_results[idx]
         if not state.tracks:
-            state.tracks = await refresh_tracklist()
+            state.tracks = await (
+                asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+                if state.collection_mode == "hvsc"
+                else refresh_tracklist()
+            )
+            if not state.tracks and state.collection_mode == "hvsc":
+                state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+        url = state.search_results[idx]
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
         vc = await ctx.author.voice.channel.connect()
@@ -796,12 +816,17 @@ async def play(ctx: commands.Context, *, query: str = ""):
 
     # Search and play first result
     if query:
+        if not state.tracks:
+            if state.collection_mode == "hvsc":
+                state.tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+                if not state.tracks:
+                    state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+            else:
+                state.tracks = await refresh_tracklist()
         query_lower = query.lower()
-        matches = [u for u in state.tracks if query_lower in u.split("/")[-1].replace(".sap", "").replace("_", " ").lower()]
+        matches = [u for u in state.tracks if query_lower in u.split("/")[-1].rsplit(".", 1)[0].replace("_", " ").lower()]
         if matches:
             url = matches[0]
-            if not state.tracks:
-                state.tracks = await refresh_tracklist()
             if ctx.voice_client:
                 await ctx.voice_client.disconnect()
             vc = await ctx.author.voice.channel.connect()
@@ -834,21 +859,28 @@ async def play(ctx: commands.Context, *, query: str = ""):
     state.ctx = ctx
     state.loop = PLAYBACK_LOOP
     
-    await ctx.send("🎛️ **ASMA Radio starting...**")
+    station_name = "C64 SID Radio" if state.collection_mode == "hvsc" else "ASMA Radio"
+    await ctx.send(f"🎛️ **{station_name} starting...**")
     
     # Ensure we have tracks
     if not state.tracks:
-        await ctx.send("🔍 Crawling ASMA archive (6400+ tracks)... this may take a minute.")
-        state.crawling = True
-        try:
-            tracks = await refresh_tracklist()
-            state.tracks = tracks
-            log.info("ASMA crawl complete: %d tracks found", len(tracks))
-        except Exception as e:
-            log.error("CRASH during crawl: %s", e, exc_info=True)
-            state.tracks = []
-            await ctx.send(f"❌ Crawl failed: {e}")
-        state.crawling = False
+        if state.collection_mode == "hvsc":
+            await ctx.send("🔍 Loading HVSC index...")
+            state.tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+            if not state.tracks:
+                state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+        else:
+            await ctx.send("🔍 Crawling ASMA archive (6400+ tracks)... this may take a minute.")
+            state.crawling = True
+            try:
+                tracks = await refresh_tracklist()
+                state.tracks = tracks
+                log.info("ASMA crawl complete: %d tracks found", len(tracks))
+            except Exception as e:
+                log.error("CRASH during crawl: %s", e, exc_info=True)
+                state.tracks = []
+                await ctx.send(f"❌ Crawl failed: {e}")
+            state.crawling = False
         await ctx.send(f"📀 Found **{len(state.tracks)}** tracks!")
     else:
         tracks = state.tracks
@@ -903,10 +935,36 @@ async def skip(ctx: commands.Context):
 @bot.command()
 async def np(ctx: commands.Context):
     """Show current track info."""
+    state = get_state(ctx.guild.id)
+    if state.collection_mode == "hvsc":
+        if not gst_is_playing():
+            return await ctx.send("Nothing playing right now.")
+        meta = {}
+        if state.current_sap_path and os.path.exists(state.current_sap_path):
+            try:
+                with open(state.current_sap_path, "rb") as f:
+                    meta = parse_sid_header(f.read(0x76))
+            except Exception:
+                meta = {}
+        name = meta.get("name") or state.sid_current_url.split("/")[-1].replace(".sid", "")
+        author = meta.get("author", "")
+        copyright_info = meta.get("copyright", "")
+        embed = discord.Embed(
+            title=f"Now Playing: {name}",
+            color=discord.Color.blue(),
+        )
+        if author:
+            embed.add_field(name="Composer", value=author, inline=True)
+        if copyright_info:
+            embed.add_field(name="Copyright", value=copyright_info, inline=True)
+        embed.add_field(name="Position", value=f"{state.index + 1}/{len(state.queue)}", inline=True)
+        embed.set_footer(text="C64 SID Radio")
+        await ctx.send(embed=embed)
+        return
+
     if not is_playing():
         return await ctx.send("Nothing playing right now.")
     track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
-    state = get_state(ctx.guild.id)
     total = len(state.queue)
     pos = state.index + 1
     meta = {}
@@ -966,7 +1024,8 @@ async def stats(ctx: commands.Context):
     total = len(state.tracks)
     queue_len = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing = "🎵 Yes" if is_playing() else "⏸️ No"
+    playing_now = gst_is_playing() if state.collection_mode == "hvsc" else is_playing()
+    playing = "🎵 Yes" if playing_now else "⏸️ No"
     loop = "🔁 On" if state.loop else "➡️ Off"
     await ctx.send(
         f"📊 **ASMA Radio Stats**\n"
@@ -1028,9 +1087,7 @@ def save_favorites(data: dict):
 
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
-    """Track Ognjen's reactions on Now Playing embeds → add/remove favorites."""
-    if payload.user_id != OGNJEN_USER_ID:
-        return
+    """Track reactions on Now Playing embeds → add/remove favorites."""
     if payload.message_id not in message_track_map:
         return
 
@@ -1058,6 +1115,28 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
         log.info("❤️ Added to favorites: %s — %s", track.get("name", "?"), url)
 
 
+@bot.event
+async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
+    """Remove favorites when a user removes their reaction from a tracked message."""
+    if payload.message_id not in message_track_map:
+        return
+
+    track = message_track_map[payload.message_id]
+    favs = load_favorites()
+    uid = str(payload.user_id)
+    user_favs = favs.get(uid, {}).get("tracks", [])
+    url = track["url"]
+    updated = [t for t in user_favs if t["url"] != url]
+    if len(updated) == len(user_favs):
+        return
+
+    if uid not in favs:
+        return
+    favs[uid]["tracks"] = updated
+    save_favorites(favs)
+    log.info("❤️ Removed from favorites via reaction removal: %s", url)
+
+
 @bot.command(aliases=["favs", "playlista"])
 async def favorites(ctx: commands.Context):
     """Show your favorited tracks. React to any Now Playing embed to add!"""
@@ -1065,7 +1144,7 @@ async def favorites(ctx: commands.Context):
     user_favs = favs.get(str(ctx.author.id), {}).get("tracks", [])
 
     if not user_favs:
-        return await ctx.send("📭 **No favorites yet.** React to a 🎵 Now Playing embed with any emoji to save tracks here!")
+        return await ctx.send("📭 **No favorites yet.** React to a Now Playing embed with any emoji to save tracks here!")
 
     lines = [f"🎵 **Your Favorites ({len(user_favs)} tracks)**"]
     for i, t in enumerate(user_favs, 1):
@@ -1190,7 +1269,7 @@ async def download_sid_for_meta(url: str) -> dict[str, str]:
         if r.returncode == 0 and len(r.stdout) >= 0x76:
             meta = parse_sid_header(r.stdout)
             meta["url"] = url
-            meta["sap_name"] = url.rstrip("/").split("/")[-1]
+            meta["sid_name"] = url.rstrip("/").split("/")[-1]
     except Exception as e:
         log.warning("SID meta fetch error for %s: %s", url, e)
     return meta
@@ -1244,13 +1323,10 @@ def stop_all_players():
 @bot.command(aliases=["c64", "sid"])
 async def hvsc(ctx: commands.Context):
     """Switch to C64 SID collection (HVSC)."""
-    global COLLECTION_MODE
-    if COLLECTION_MODE == "hvsc":
-        # Already in HVSC - try to play
-        state = get_state(ctx.guild.id)
-        if state.tracks:
-            await ctx.send("📀 **Already in C64 SID mode.** Use `!play` to start!")
-            return
+    state = get_state(ctx.guild.id)
+    if state.collection_mode == "hvsc" and state.tracks:
+        await ctx.send("📀 **Already in C64 SID mode.** Use `!play` to start!")
+        return
     await ctx.send("🔄 **Loading C64 SID collection (60,000+ tracks)...**")
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
@@ -1258,8 +1334,7 @@ async def hvsc(ctx: commands.Context):
         tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
     if not tracks:
         return await ctx.send("❌ Failed to load HVSC index. Check config or try again.")
-    COLLECTION_MODE = "hvsc"
-    state = get_state(ctx.guild.id)
+    state.collection_mode = "hvsc"
     state.tracks = tracks
     await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**\nUse `!play` to shuffle and play.")
     # Update the search index
@@ -1278,10 +1353,9 @@ async def cleanup_hvsc_file(ctx, tracks):
 @bot.command()
 async def asma(ctx: commands.Context):
     """Switch back to Atari SAP collection (ASMA)."""
-    global COLLECTION_MODE
-    COLLECTION_MODE = "asma"
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     state = get_state(ctx.guild.id)
+    state.collection_mode = "asma"
     cached = load_cached_tracklist()
     if cached:
         state.tracks = cached
@@ -1296,12 +1370,13 @@ async def asma(ctx: commands.Context):
 async def status(ctx: commands.Context):
     """Show current collection mode and playlist stats."""
     state = get_state(ctx.guild.id)
-    mode_icon = "🟣" if COLLECTION_MODE == "hvsc" else "🟢"
-    mode_name = "C64 SID (HVSC)" if COLLECTION_MODE == "hvsc" else "Atari SAP (ASMA)"
+    mode_icon = "🟣" if state.collection_mode == "hvsc" else "🟢"
+    mode_name = "C64 SID (HVSC)" if state.collection_mode == "hvsc" else "Atari SAP (ASMA)"
     total = len(state.tracks) if state.tracks else 0
     qlen = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing = "🎵 Yes" if (is_playing() or gst_is_playing()) else "⏸️ No"
+    playing_now = gst_is_playing() if state.collection_mode == "hvsc" else is_playing()
+    playing = "🎵 Yes" if playing_now else "⏸️ No"
     await ctx.send(
         f"{mode_icon} **Collection: {mode_name}**\n"
         f"• Tracks in archive: **{total}**\n"
@@ -1314,12 +1389,11 @@ async def status(ctx: commands.Context):
 @bot.command(aliases=["switch", "toggle", "przelacz"])
 async def flip(ctx: commands.Context):
     """Toggle between Atari SAP (ASMA) and C64 SID (HVSC) collections."""
-    global COLLECTION_MODE
+    state = get_state(ctx.guild.id)
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    if COLLECTION_MODE == "hvsc":
+    if state.collection_mode == "hvsc":
         # Switch to ASMA
-        COLLECTION_MODE = "asma"
-        state = get_state(ctx.guild.id)
+        state.collection_mode = "asma"
         cached = load_cached_tracklist()
         if cached:
             state.tracks = cached
@@ -1330,7 +1404,7 @@ async def flip(ctx: commands.Context):
         log.info("ASMA: collection switched via flip")
     else:
         # Switch to HVSC
-        COLLECTION_MODE = "hvsc"
+        state.collection_mode = "hvsc"
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
         if not tracks:
             await ctx.send("🔄 Loading C64 SID collection (60,000+ tracks)...")
@@ -1343,7 +1417,7 @@ async def flip(ctx: commands.Context):
             metadata_index = {}
         else:
             await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
-            COLLECTION_MODE = "asma"  # revert
+            state.collection_mode = "asma"  # revert
         log.info("HVSC: collection switched via flip")
 
 
@@ -1355,6 +1429,7 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
     GRACE_SECONDS = 3
     while vc.is_connected():
         await asyncio.sleep(1)
+        state = get_state(guild_id)
 
         # Check for empty channel
         if vc.channel and len(vc.channel.members) <= 1:
@@ -1377,8 +1452,7 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
 
         # For HVSC SID: check if current track exceeded its expected duration
         # GStreamer siddec never exits (loops forever), so we advance by time
-        if playing and COLLECTION_MODE == "hvsc":
-            state = get_state(guild_id)
+        if playing and state.collection_mode == "hvsc":
             if state.sid_start_time > 0 and state.sid_duration > 0:
                 elapsed = time.time() - state.sid_start_time
                 if elapsed >= state.sid_duration:

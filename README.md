@@ -59,8 +59,8 @@ React with **any emoji** to a Now Playing embed to save the track to your favori
 sudo apt update
 sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse gstreamer1.0-plugins-good gstreamer1.0-plugins-bad sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
-cd robbo-obibot-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/asma-discord-bot.git
+cd asma-discord-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -71,8 +71,8 @@ pip install -r requirements.txt
 ```bash
 sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpeg pipewire-utils gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
-cd robbo-obibot-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/asma-discord-bot.git
+cd asma-discord-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -83,8 +83,8 @@ pip install -r requirements.txt
 ```bash
 sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
-cd robbo-obibot-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/asma-discord-bot.git
+cd asma-discord-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -93,7 +93,7 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
-cd robbo-obibot-ulimate-chiptune-bot
+cd asma-discord-bot
 source venv/bin/activate
 
 # Set your bot token
@@ -101,12 +101,6 @@ export DISCORD_BOT_TOKEN="your-token-here"
 
 # Run
 ./venv/bin/python3 asma-bot.py
-```
-
-Or use the wrapper (reads token from base64 in runner.py):
-
-```bash
-./venv/bin/python3 runner.py
 ```
 
 > **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`
@@ -124,12 +118,11 @@ Or use the wrapper (reads token from base64 in runner.py):
 Run as a background service:
 
 ```bash
-# Copy service file
-cp asma-bot.service ~/.config/systemd/user/
 mkdir -p ~/.config/systemd/user
+cp asma-bot.service ~/.config/systemd/user/
 
-# Store token securely (or use runner.py with embedded token)
-echo "YOUR_TOKEN_HERE" > ~/.asma-bot-token
+# Store token for systemd EnvironmentFile=
+printf 'DISCORD_BOT_TOKEN=%s\n' "YOUR_TOKEN_HERE" > ~/.asma-bot-token
 chmod 600 ~/.asma-bot-token
 
 # Enable and start
@@ -194,7 +187,7 @@ auto:
 ## File Structure
 
 ```
-robbo-obibot/
+asma-discord-bot/
 ├── asma-bot.py          # Main bot code
 ├── config.yaml          # Configuration file
 ├── requirements.txt     # Python dependencies
@@ -205,5 +198,6 @@ robbo-obibot/
 ├── favorites.json       # Reaction-based favorites (generated)
 ├── queues/              # Persisted queues per guild (generated)
 ├── metadata_cache.json  # Search metadata index (generated)
+├── venv/                # Virtualenv (optional local setup)
 └── README.md            # This file
 ```

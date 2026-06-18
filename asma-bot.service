@@ -6,9 +6,9 @@ Wants=pulseaudio.service
 [Service]
 Type=simple
 User=%i
-WorkingDirectory=%h/robbo-obibot-ulimate-chiptune-bot
-Environment=DISCORD_BOT_TOKEN=%h/.asma-bot-token
-ExecStart=%h/robbo-obibot-ulimate-chiptune-bot/venv/bin/python3 -u asma-bot.py
+WorkingDirectory=%h/asma-discord-bot
+EnvironmentFile=%h/.asma-bot-token
+ExecStart=%h/asma-discord-bot/venv/bin/python3 -u asma-bot.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
