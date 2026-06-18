@@ -708,6 +708,8 @@ async def skip_to_next(ctx):
 @bot.event
 async def on_ready():
     log.info("Ready: %s", bot.user)
+    # Kill any orphaned GStreamer/Audacious from crashed bot sessions
+    await asyncio.get_event_loop().run_in_executor(None, cleanup_orphan_players)
     await asyncio.get_event_loop().run_in_executor(None, setup_virtual_sink)
     await asyncio.get_event_loop().run_in_executor(None, ensure_audacious)
     
@@ -1321,6 +1323,12 @@ def gst_is_playing() -> bool:
     """Check if GStreamer SID is still playing."""
     global gst_process
     return gst_process is not None and gst_process.poll() is None
+
+
+def cleanup_orphan_players():
+    """Kill any orphaned gst-launch-1.0 and ffmpeg processes from previous bot sessions."""
+    subprocess.run(["pkill", "-f", "gst-launch-1.0.*siddec"], capture_output=True)
+    subprocess.run(["pkill", "-f", "ffmpeg.*asma_bot"], capture_output=True)
 
 
 def stop_all_players():
