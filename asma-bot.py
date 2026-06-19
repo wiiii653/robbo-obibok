@@ -936,6 +936,11 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         log.error("Auto-start failed: %s", e)
 
 # ── Commands ────────────────────────────────────────────────────
+@bot.command()
+async def radi(ctx: commands.Context):
+    """NI MA RADI"""
+    await ctx.send("https://tenor.com/view/ni-ma-radi-mieciu-szpeniolek-gif-27070286")
+
 @bot.command(aliases=["radio"])
 async def play(ctx: commands.Context, *, query: str = ""):
     """Start shuffled radio. Usage: !play, !play <number>, or !play <search query>"""
@@ -1097,6 +1102,22 @@ async def np(ctx: commands.Context):
     if copyright_info:
         embed.add_field(name="Copyright", value=copyright_info, inline=True)
     embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    # Add elapsed time info
+    elapsed_r = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: subprocess.run(["audtool", "current-song-output-length-seconds"], capture_output=True, text=True)
+    )
+    total_r = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: subprocess.run(["audtool", "current-song-length-seconds"], capture_output=True, text=True)
+    )
+    try:
+        elapsed = int(elapsed_r.stdout.strip())
+        total_s = int(total_r.stdout.strip())
+        if total_s > 0:
+            elapsed_m, elapsed_s = divmod(elapsed, 60)
+            total_m, total_ss = divmod(total_s, 60)
+            embed.add_field(name="Duration", value=f"{elapsed_m}:{elapsed_s:02d} / {total_m}:{total_ss:02d}", inline=True)
+    except (ValueError, OSError):
+        pass
     embed.set_footer(text=info["footer"])
     await ctx.send(embed=embed)
     return
@@ -1276,6 +1297,31 @@ async def clear(ctx: commands.Context):
         await ctx.voice_client.disconnect()
     
     await ctx.send("🗑️ Queue cleared.")
+
+
+@bot.command()
+async def export(ctx: commands.Context):
+    """Export the current queue to a text message. Usage: !export"""
+    state = get_state(ctx.guild.id)
+    if not state.queue:
+        return await ctx.send("Queue is empty.")
+    
+    total = len(state.queue)
+    pos = max(0, state.index)
+    lines = [f"🎵 Robbo Queue Export ({total} tracks)"]
+    
+    for i, url in enumerate(state.queue):
+        name = url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
+        marker = "→ " if i == pos else "  "
+        if len(name) > 60:
+            name = name[:57] + "..."
+        lines.append(f"{marker}{i+1}. {name}")
+    
+    text = "\n".join(lines)
+    if len(text) > 1900:
+        text = text[:1900] + f"\n... and {len(text) - 1900} more chars"
+    
+    await ctx.send(f"```\n{text}\n```")
 
 
 @bot.command()
