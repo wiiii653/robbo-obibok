@@ -1204,6 +1204,80 @@ async def sleep(ctx: commands.Context, *, minutes: str = ""):
         await ctx.send("Usage: `!sleep <minutes>` — e.g. `!sleep 30`")
 
 
+@bot.command(aliases=["repeat"])
+async def loop(ctx: commands.Context):
+    """Toggle playlist loop. Usage: !loop"""
+    state = get_state(ctx.guild.id)
+    state.loop = not state.loop
+    status = "🔁 On" if state.loop else "➡️ Off"
+    save_queue(state)
+    embed = discord.Embed(title=f"Loop {status}", color=discord.Color.blue())
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def history(ctx: commands.Context):
+    """Show last 10 played tracks. Usage: !history"""
+    state = get_state(ctx.guild.id)
+    if not state.queue or state.index < 0:
+        return await ctx.send("Nothing has been played yet.")
+    
+    start = max(0, state.index - 10)
+    played = state.queue[start:state.index]
+    if not played:
+        return await ctx.send("Nothing has been played yet.")
+    
+    lines = [f"📜 **Last {len(played)} tracks**"]
+    for i, url in enumerate(reversed(played), 1):
+        name = url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
+        if len(name) > 55:
+            name = name[:52] + "..."
+        lines.append(f"`{i}.` {name}")
+    
+    await ctx.send("\n".join(lines))
+
+
+@bot.command()
+async def jump(ctx: commands.Context, *, position: str = ""):
+    """Jump to a specific track in the queue. Usage: !jump <number>"""
+    if not position:
+        return await ctx.send("Usage: `!jump <number>` — jump to track position in queue.")
+    
+    state = get_state(ctx.guild.id)
+    if not state.queue:
+        return await ctx.send("Queue is empty.")
+    
+    try:
+        idx = int(position) - 1
+        if idx < 0 or idx >= len(state.queue):
+            return await ctx.send(f"Position must be between 1 and {len(state.queue)}.")
+        
+        await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+        state.index = idx
+        if await play_current_track(ctx):
+            save_queue(state)
+    except ValueError:
+        await ctx.send("Usage: `!jump <number>` — e.g. `!jump 5`")
+
+
+@bot.command()
+async def clear(ctx: commands.Context):
+    """Clear the queue and stop playback. Usage: !clear"""
+    state = get_state(ctx.guild.id)
+    state.queue = []
+    state.index = -1
+    save_queue(state)
+    
+    if ctx.voice_client and ctx.voice_client.is_connected():
+        if state.guild_id and state.guild_id in active_streams:
+            active_streams[state.guild_id].cleanup()
+            del active_streams[state.guild_id]
+        await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+        await ctx.voice_client.disconnect()
+    
+    await ctx.send("🗑️ Queue cleared.")
+
+
 @bot.command()
 async def refresh(ctx: commands.Context):
     """Re-crawl ASMA and rebuild the playlist."""
