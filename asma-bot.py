@@ -274,6 +274,20 @@ def setup_audacious_sid_config():
     log.info("Audacious SID plugin config set")
 
 
+# ── Volume normalization per collection ──────────────────────────
+COLLECTION_VOLUMES = {
+    "hvsc": 150,       # SIDy są cichsze, boost
+    "asma": 100,       # SAPy normalnie
+    "modarchive": 100, # MODy normalnie
+}
+
+def set_volume_for_collection(mode: str):
+    """Set playback volume based on collection for consistent loudness."""
+    vol = COLLECTION_VOLUMES.get(mode, 100)
+    subprocess.run(["pactl", "set-sink-volume", "asma_bot", f"{vol}%"], capture_output=True)
+    log.info("Volume set to %d%% for collection %s", vol, mode)
+
+
 def move_playback_to_sink():
     result = subprocess.run(
         ["pactl", "list", "sink-inputs", "short"], capture_output=True, text=True
@@ -941,7 +955,7 @@ async def radi(ctx: commands.Context):
     """NI MA RADI"""
     await ctx.send("https://tenor.com/view/ni-ma-radi-mieciu-szpeniolek-gif-27070286")
 
-@bot.command(aliases=["radio"])
+@bot.command(aliases=["radio", "uruchom"])
 async def play(ctx: commands.Context, *, query: str = ""):
     """Start shuffled radio. Usage: !play, !play <number>, or !play <search query>"""
     if not ctx.author.voice:
@@ -1297,6 +1311,21 @@ async def clear(ctx: commands.Context):
         await ctx.voice_client.disconnect()
     
     await ctx.send("🗑️ Queue cleared.")
+
+
+@bot.command()
+async def ocko(ctx: commands.Context):
+    """Show a random ASCII owl. Usage: !ocko"""
+    owls = [
+        "🦉 **OCKO**\n      ___  \n     / _ \\ \n  _ | |_| |\n / | | __ |\n|  | | |_| |\n \\  \\|  _  |\n  \\   \\_/  |\n   |       |\n   |   |   |\n   |___|___|",
+        "🦉 **OCKO**\n    .---.\n   / .-._)\n .´:  _  `.\n |  (_)  |\n :       ;\n  `.___.´",
+        "🦉 **OCKO**\n  ,___,\n  {o,o}\n  |)__)\n  -\"--\"-\n  m   m",
+        "🦉 **OCKO**\n    ___  \n   (o o) \n  (  V  )\n  --m-m---",
+        "🦉 **OCKO**\n  .------.\n  |O  O  |\n  |  V   |\n  `------´\n    ww ww",
+    ]
+    import random
+    owl = random.choice(owls)
+    await ctx.send(f"```\n{owl}\n```")
 
 
 @bot.command()
@@ -1699,6 +1728,7 @@ async def hvsc(ctx: commands.Context):
     if not tracks:
         return await ctx.send("❌ Failed to load HVSC index. Check config or try again.")
     state.collection_mode = "hvsc"
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "hvsc")
     state.tracks = tracks
     await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**\nUse `!play` to shuffle and play.")
     # Update the search index
@@ -1720,6 +1750,7 @@ async def asma(ctx: commands.Context):
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     state = get_state(ctx.guild.id)
     state.collection_mode = "asma"
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "asma")
     cached = load_cached_tracklist()
     if cached:
         state.tracks = cached
@@ -1744,6 +1775,7 @@ async def mod(ctx: commands.Context):
         return await ctx.send("❌ ModArchive cache not found. Run `build_modarchive_index.py` first!\n"
                               "The index builder is running in the background — wait a few minutes and try again.")
     state.collection_mode = "modarchive"
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "modarchive")
     state.tracks = tracks
     await ctx.send(f"🟠 **ModArchive collection ready — {len(tracks)} modules!**\n"
                    "FastTracker / ProTracker / ScreamTracker / Impulse Tracker — all formats!")
@@ -1783,6 +1815,7 @@ async def flip(ctx: commands.Context):
     if state.collection_mode == "hvsc":
         # HVSC → ASMA
         state.collection_mode = "asma"
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         cached = load_cached_tracklist()
         if cached:
             state.tracks = cached
@@ -1795,6 +1828,7 @@ async def flip(ctx: commands.Context):
     elif state.collection_mode == "asma":
         # ASMA → ModArchive
         state.collection_mode = "modarchive"
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = load_modarchive_cache()
         if tracks:
             state.tracks = tracks
@@ -1807,6 +1841,7 @@ async def flip(ctx: commands.Context):
     else:
         # ModArchive → HVSC
         state.collection_mode = "hvsc"
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
         if not tracks:
             await ctx.send("🔄 Loading C64 SID collection (60,000+ tracks)...")
