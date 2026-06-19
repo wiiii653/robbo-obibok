@@ -1103,6 +1103,108 @@ async def np(ctx: commands.Context):
 
 
 @bot.command()
+async def volume(ctx: commands.Context, *, level: str = ""):
+    """Set or show playback volume (0-200%). Usage: !volume <level>"""
+    if not level:
+        r = subprocess.run(["pactl", "get-sink-volume", "asma_bot"], capture_output=True, text=True)
+        m = re.search(r"(\d+)%", r.stdout)
+        if m:
+            current = m.group(1)
+            embed = discord.Embed(title=f"🔊 Current volume: **{current}%**", color=discord.Color.green())
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Could not read volume.")
+        return
+
+    try:
+        vol = int(level)
+        if vol < 0 or vol > 200:
+            await ctx.send("Volume must be between 0 and 200.")
+            return
+        subprocess.run(["pactl", "set-sink-volume", "asma_bot", f"{vol}%"], capture_output=True)
+        embed = discord.Embed(title=f"🔊 Volume set to **{vol}%**", color=discord.Color.green())
+        await ctx.send(embed=embed)
+    except ValueError:
+        await ctx.send("Usage: `!volume <0-200>` or `!volume` to show current.")
+
+
+@bot.command(aliases=["q"])
+async def queue(ctx: commands.Context):
+    """Show the next 10 tracks in queue. Usage: !queue"""
+    state = get_state(ctx.guild.id)
+    if not state.queue:
+        return await ctx.send("Queue is empty. Use !play to start.")
+
+    total = len(state.queue)
+    pos = state.index
+
+    if pos < 0 or pos >= total:
+        return await ctx.send("Nothing currently playing.")
+
+    upcoming = state.queue[pos+1:pos+11]
+    if not upcoming:
+        await ctx.send("No upcoming tracks — this is the last one.")
+        return
+
+    info = get_collection_info(state.collection_mode)
+    lines = [f"📜 **Upcoming tracks ({len(upcoming)}/{total-pos-1} remaining)**"]
+
+    for i, url in enumerate(upcoming, 1):
+        name = url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
+        if len(name) > 60:
+            name = name[:57] + "..."
+        lines.append(f"`{i}.` {name}")
+
+    embed = discord.Embed(
+        title="🎵 Queue",
+        description="\n".join(lines),
+        color=discord.Color.blue()
+    )
+    embed.set_footer(text=info["footer"])
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def sleep(ctx: commands.Context, *, minutes: str = ""):
+    """Stop playback after N minutes. Usage: !sleep 30"""
+    if not minutes:
+        await ctx.send("Usage: `!sleep <minutes>` — stops playback after N minutes.")
+        return
+
+    try:
+        mins = float(minutes.replace(",", "."))
+        if mins <= 0:
+            await ctx.send("Time must be positive.")
+            return
+        if mins > 360:
+            await ctx.send("Max 360 minutes (6 hours).")
+            return
+
+        secs = int(mins * 60)
+        embed = discord.Embed(
+            title="⏰ Sleep timer set",
+            description=f"Playback will stop in **{mins:.0f} minute{s if mins != 1 else ''}**.",
+            color=discord.Color.dark_blue()
+        )
+        await ctx.send(embed=embed)
+
+        await asyncio.sleep(secs)
+
+        # Check if still playing
+        state = get_state(ctx.guild.id)
+        if ctx.voice_client and ctx.voice_client.is_connected():
+            # Stop and disconnect
+            if state.guild_id and state.guild_id in active_streams:
+                active_streams[state.guild_id].cleanup()
+                del active_streams[state.guild_id]
+            await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+            await ctx.voice_client.disconnect()
+            await ctx.send("🌙 **Sleep timer expired.** Radio stopped.")
+    except ValueError:
+        await ctx.send("Usage: `!sleep <minutes>` — e.g. `!sleep 30`")
+
+
+@bot.command()
 async def refresh(ctx: commands.Context):
     """Re-crawl ASMA and rebuild the playlist."""
     await ctx.send("🔍 Re-crawling ASMA archive... this may take a minute.")
