@@ -27,6 +27,12 @@ hvsc:
   cache_ttl: 168            # hours before re-download (1 week)
   enabled: false            # set true to use HVSC by default
 
+# ModArchive (Amiga tracker modules: MOD/XM/S3M/IT)
+modarchive:
+  base_url: "https://modarchive.org/index.php"
+  download_url: "https://api.modarchive.org/downloads.php"
+  cache_file: "modarchive_cache.json"
+
 # Audio settings
 audio:
   sink_name: "asma_bot"         # PulseAudio null-sink name

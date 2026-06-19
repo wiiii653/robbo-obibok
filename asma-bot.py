@@ -105,7 +105,12 @@ HVSC_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hvsc
 DEFAULT_COLLECTION_MODE = "hvsc" if CONFIG.get("hvsc", {}).get("enabled", False) else "asma"
 
 # ── ModArchive Collection (FastTracker / MOD / XM / S3M / IT) ──────
-MODARCHIVE_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modarchive_cache.json")
+MODARCHIVE_BASE = CONFIG.get("modarchive", {}).get("base_url", "https://modarchive.org/index.php")
+MODARCHIVE_DOWNLOAD = CONFIG.get("modarchive", {}).get("download_url", "https://api.modarchive.org/downloads.php")
+MODARCHIVE_CACHE_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    CONFIG.get("modarchive", {}).get("cache_file", "modarchive_cache.json")
+)
 modarchive_name_map: dict[str, str] = {}  # URL -> real module name
 
 CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)

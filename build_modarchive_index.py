@@ -30,11 +30,27 @@ logging.basicConfig(
 log = logging.getLogger("modarchive-indexer")
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-FINAL_CACHE = os.path.join(ROOT_DIR, "modarchive_cache.json")
-PARTIAL_CACHE = os.path.join(ROOT_DIR, "modarchive_cache_partial.json")
 
-BASE_URL = "https://modarchive.org/index.php"
-DOWNLOAD_BASE = "https://api.modarchive.org/downloads.php"
+# Load config.yaml for ModArchive URLs (fallback to hardcoded defaults)
+try:
+    import yaml
+    cfg_path = os.path.join(ROOT_DIR, "config.yaml")
+    if os.path.exists(cfg_path):
+        with open(cfg_path) as f:
+            _cfg = yaml.safe_load(f) or {}
+        ma = _cfg.get("modarchive", {})
+        BASE_URL = ma.get("base_url", "https://modarchive.org/index.php")
+        DOWNLOAD_BASE = ma.get("download_url", "https://api.modarchive.org/downloads.php")
+        cache_file = ma.get("cache_file", "modarchive_cache.json")
+    else:
+        raise FileNotFoundError
+except Exception:
+    BASE_URL = "https://modarchive.org/index.php"
+    DOWNLOAD_BASE = "https://api.modarchive.org/downloads.php"
+    cache_file = "modarchive_cache.json"
+
+FINAL_CACHE = os.path.join(ROOT_DIR, cache_file)
+PARTIAL_CACHE = os.path.join(ROOT_DIR, cache_file.replace(".json", "_partial.json"))
 
 # Letters to scan
 LETTERS = [chr(i) for i in range(ord("A"), ord("Z") + 1)]
