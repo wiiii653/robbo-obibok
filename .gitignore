@@ -11,3 +11,4 @@ runner.py
 *.log
 queues/
 modarchive_cache.json
+robbo.pid

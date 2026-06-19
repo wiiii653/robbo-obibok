@@ -42,5 +42,5 @@ playback:
 
 # Auto-start / Auto-stop
 auto:
-  start_channel: ""             # voice channel name to auto-start (empty = disabled)
-  empty_timeout: 60             # seconds of empty channel before auto-disconnect (0 = disabled)
+  start_channel: "ASMA Radio"   # voice channel name to auto-start (empty = disabled)
+  empty_timeout: 60             # seconds before disconnect when channel is empty (0 = disabled)

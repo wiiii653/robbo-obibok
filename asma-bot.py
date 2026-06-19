@@ -251,7 +251,13 @@ def ensure_audacious():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        time.sleep(2)
+        # Wait for D-Bus to be ready (audtool can take 5-10s to connect)
+        for _ in range(20):
+            r = subprocess.run(["audtool", "version"], capture_output=True, timeout=2)
+            if r.returncode == 0:
+                return
+            time.sleep(1)
+        log.warning("Audacious D-Bus not ready after 20s, continuing anyway")
 
 
 def setup_audacious_sid_config():
@@ -589,7 +595,7 @@ async def play_current_sid_track(ctx, state, url):
     copyright_info = meta.get("copyright", "")
 
     # Play via Audacious
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     await asyncio.get_event_loop().run_in_executor(None, audacious_play, sid_path)
 
     state.current_sap_path = sid_path
@@ -643,7 +649,7 @@ async def play_current_modarchive_track(ctx, state, url):
     fname = os.path.basename(filepath) if filepath else url.split("moduleid=")[-1]
 
     # Play via Audacious
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
 
     state.current_sap_path = filepath
@@ -778,7 +784,7 @@ async def play_current_track(ctx):
             state.pre_downloaded = None
         else:
             filepath = await download_sap(url)
-        await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+        await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
         await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
         
         state.current_sap_path = filepath
@@ -1724,9 +1730,56 @@ async def health_watchdog():
         except Exception as e:
             log.error("Watchdog error: %s", e)
 
+# ── PID Lock (zapobiega duplikatom) ─────────────────────────────
+LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "robbo.pid")
+
+def acquire_lock() -> int:
+    """Sprawdź czy inna instancja bota już żyje. Jeśli tak — wyjdź.
+    Jeśli lock jest stary (proces nie żyje) — nadpisz.
+    Zwraca własne PID.
+    """
+    my_pid = os.getpid()
+    try:
+        if os.path.exists(LOCK_FILE):
+            with open(LOCK_FILE) as f:
+                old_pid_str = f.read().strip()
+            if old_pid_str:
+                old_pid = int(old_pid_str)
+                # Sprawdź czy ten PID jeszcze żyje i czy to nasz bot
+                try:
+                    os.kill(old_pid, 0)  # test czy proces istnieje
+                    # Żyje — sprawdź czy to na pewno bot, a nie przypadkowy PID
+                    with open(f"/proc/{old_pid}/cmdline", "rb") as cf:
+                        cmd = cf.read().decode("utf-8", errors="replace")
+                    if "asma-bot.py" in cmd:
+                        print(f"PID {old_pid} już uruchomiony. Zabij go najpierw lub poczekaj aż zgaśnie.")
+                        sys.exit(1)
+                except (OSError, ProcessLookupError):
+                    # Stary PID nie żyje — nadpisujemy
+                    pass
+    except Exception as e:
+        print(f"Błąd locka ({e}), startuję mimo wszystko...")
+
+    with open(LOCK_FILE, "w") as f:
+        f.write(str(my_pid))
+    return my_pid
+
+def release_lock():
+    """Usuń lock file przy czystym wyjściu."""
+    try:
+        if os.path.exists(LOCK_FILE):
+            with open(LOCK_FILE) as f:
+                lock_pid = f.read().strip()
+            if lock_pid == str(os.getpid()):
+                os.unlink(LOCK_FILE)
+    except Exception:
+        pass
+
 # ── Main ────────────────────────────────────────────────────────
 if not BOT_TOKEN:
     raise SystemExit("Set DISCORD_BOT_TOKEN environment variable.")
+
+acquire_lock()
 
 def cleanup_temp():
     """Remove temp directory and all downloaded SAP files."""
@@ -1740,6 +1793,7 @@ def cleanup_temp():
 async def graceful_shutdown():
     """Disconnect all voice clients and stop Audacious."""
     log.info("Shutting down gracefully...")
+    release_lock()
     for guild_id, source in list(active_streams.items()):
         source.cleanup()
     del active_streams
@@ -1759,4 +1813,9 @@ def handle_signal(signum, frame):
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
-    bot.run(BOT_TOKEN)
+    ate = __import__("atexit")
+    ate.register(release_lock)
+    try:
+        bot.run(BOT_TOKEN)
+    finally:
+        release_lock()
