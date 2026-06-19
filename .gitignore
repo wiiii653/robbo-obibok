@@ -10,3 +10,4 @@ metadata_cache.json
 runner.py
 *.log
 queues/
+modarchive_cache.json

@@ -103,7 +103,10 @@ HVSC_SONGLENGTHS_URL = CONFIG.get("hvsc", {}).get("songlengths_url", "")
 HVSC_CACHE_TTL = CONFIG.get("hvsc", {}).get("cache_ttl", 168)
 HVSC_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hvsc_cache.json")
 DEFAULT_COLLECTION_MODE = "hvsc" if CONFIG.get("hvsc", {}).get("enabled", False) else "asma"
-gst_process: subprocess.Popen | None = None  # GStreamer process for SID playback
+
+# ── ModArchive Collection (FastTracker / MOD / XM / S3M / IT) ──────
+MODARCHIVE_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modarchive_cache.json")
+modarchive_name_map: dict[str, str] = {}  # URL -> real module name
 
 CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)
 AUTO_START_CHANNEL = CONFIG["auto"].get("start_channel", "")
@@ -130,10 +133,6 @@ class PlaylistState:
         self.crawling: bool = False
         self.pre_downloaded: str | None = None  # next track pre-downloaded
         self.search_results: list[str] = []     # last search results
-        # SID duration-based auto-advance tracking
-        self.sid_start_time: float = 0          # when current SID track started (0 = no track)
-        self.sid_current_url: str = ""          # URL of current SID track (for duration lookup)
-        self.sid_duration: int = 120            # expected duration in seconds
 
 
 guilds: dict[int, PlaylistState] = {}
@@ -254,6 +253,16 @@ def ensure_audacious():
         )
         time.sleep(2)
 
+
+def setup_audacious_sid_config():
+    """Ensure Audacious SID plugin config and Songlengths.md5 are set for auto-advance."""
+    # Set SID plugin configuration
+    subprocess.run(["audtool", "config-set", "SID Player:playMaxTimeEnable", "TRUE"], capture_output=True)
+    subprocess.run(["audtool", "config-set", "SID Player:playMaxTime", "180"], capture_output=True)
+    subprocess.run(["audtool", "config-set", "SID Player:playMaxTimeUnknown", "TRUE"], capture_output=True)
+    log.info("Audacious SID plugin config set")
+
+
 def move_playback_to_sink():
     result = subprocess.run(
         ["pactl", "list", "sink-inputs", "short"], capture_output=True, text=True
@@ -335,9 +344,16 @@ def extract_searchable_text(url: str) -> str:
     """Extract searchable text from a SAP URL (directories + filename)."""
     # https://asma.atari.org/asma/Composers/Krzysztof_Bryla/Track_Name.sap
     # -> "krzysztof bryla track name"
-    path = url.replace(ASMA_BASE, "")
-    parts = path.replace(".sap", "").replace("_", " ").split("/")
-    return " ".join(parts).lower()
+    # For ModArchive URLs, use the module name from cache
+    if url.startswith("https://api.modarchive.org/") or "modarchive" in url:
+        name = modarchive_name_map.get(url, "")
+        return name.lower().replace("_", " ")
+    path = url.replace(ASMA_BASE, "").replace(HVSC_BASE, "")
+    name_part = path.split("/")[-1]
+    # Strip known extensions for search
+    for ext in [".sap", ".sid", ".mod", ".xm", ".s3m", ".it"]:
+        name_part = name_part.replace(ext, "")
+    return name_part.replace("_", " ").lower()
 
 # ── Metadata Index ──────────────────────────────────────────────
 metadata_index: dict[str, dict[str, str]] = {}  # url -> {author, name, ...}
@@ -406,7 +422,13 @@ def search_tracks(query: str, tracks: list[str], limit: int = 10) -> list[str]:
     
     for url in tracks:
         # 1. Filename match
-        filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
+        if url.startswith("https://api.modarchive.org/") or "modarchive" in url:
+            filename = modarchive_name_map.get(url, "").replace("_", " ")
+        else:
+            filename = url.split("/")[-1]
+            for ext in [".sap", ".sid", ".mod", ".xm", ".s3m", ".it"]:
+                filename = filename.replace(ext, "")
+            filename = filename.replace("_", " ")
         if query_lower in filename.lower():
             results.append(url)
             if len(results) >= limit:
@@ -544,11 +566,10 @@ async def pre_download_next(state: PlaylistState):
 
 
 async def play_current_sid_track(ctx, state, url):
-    """Download and play a SID track via GStreamer."""
+    """Download and play a SID track via Audacious."""
     # Download full SID to temp (they're small, ~5-15KB)
     sid_path = build_temp_path(url)
     try:
-        # Use async HTTP download
         timeout = aiohttp.ClientTimeout(total=30)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url) as resp:
@@ -567,15 +588,11 @@ async def play_current_sid_track(ctx, state, url):
     author = meta.get("author", "")
     copyright_info = meta.get("copyright", "")
 
-    # Play via GStreamer — stop Audacious first so they don't bleed
+    # Play via Audacious
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    await asyncio.get_event_loop().run_in_executor(None, gst_play_sid, sid_path)
-    state.current_sap_path = sid_path
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, sid_path)
 
-    # Record SID timing for duration-based auto-advance
-    state.sid_start_time = time.time()
-    state.sid_current_url = url
-    state.sid_duration = sid_durations.get(url, 120)  # fallback 120s if unknown
+    state.current_sap_path = sid_path
 
     # Setup MonitorAudioSource if needed
     if state.vc and state.vc.is_connected():
@@ -613,6 +630,130 @@ async def play_current_sid_track(ctx, state, url):
     return True
 
 
+async def play_current_modarchive_track(ctx, state, url):
+    """Download and play a module (MOD/XM/S3M/IT) from ModArchive via Audacious."""
+    try:
+        filepath = await download_modarchive_module(url)
+    except Exception as e:
+        log.error("ModArchive download failed: %s", e)
+        await ctx.send(f"❌ Download failed: {e}")
+        return False
+
+    # Extract filename for display
+    fname = os.path.basename(filepath) if filepath else url.split("moduleid=")[-1]
+
+    # Play via Audacious
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
+
+    state.current_sap_path = filepath
+
+    # Setup MonitorAudioSource if needed
+    if state.vc and state.vc.is_connected():
+        if state.guild_id not in active_streams:
+            source = MonitorAudioSource(SINK_NAME)
+            state.vc.play(
+                source,
+                after=lambda e: log.info("Stream ended: %s", e),
+            )
+            active_streams[state.guild_id] = source
+
+    total = len(state.queue)
+    pos = state.index + 1
+
+    # Try to extract a human-friendly name from the filename
+    display_name = fname
+    if "." in fname:
+        display_name = fname.rsplit(".", 1)[0]
+    # Replace underscores with spaces for readability
+    display_name = display_name.replace("_", " ").strip()
+
+    embed = discord.Embed(
+        title=display_name[:256],
+        color=discord.Color.from_str("#E67E22"),  # orange / tracker vibe
+    )
+    fmt = fname.rsplit(".", 1)[-1].upper() if "." in fname else "MODULE"
+    embed.add_field(name="Format", value=fmt, inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.set_footer(text="ModArchive Radio — FastTracker / MOD / XM / S3M / IT")
+    np_msg = await ctx.send(embed=embed)
+
+    # Track for reaction-based favorites
+    message_track_map[np_msg.id] = {
+        "url": url,
+        "name": display_name,
+        "author": "",
+        "timestamp": time.time(),
+    }
+    log.info("ModArchive now playing: %s (%s)", display_name, fmt)
+    return True
+
+
+# ── Collection Helpers ──────────────────────────────────────────────
+
+COLLECTION_INFO = {
+    "asma": {
+        "icon": "🟢",
+        "name": "Atari SAP (ASMA)",
+        "station": "ASMA Radio",
+        "footer": "ASMA Radio",
+        "color": discord.Color.green(),
+        "load_tracks": lambda: refresh_tracklist(),
+        "download": lambda url: download_sap(url),
+    },
+    "hvsc": {
+        "icon": "🟣",
+        "name": "C64 SID (HVSC)",
+        "station": "C64 SID Radio",
+        "footer": "C64 SID Radio",
+        "color": discord.Color.purple(),
+        "load_tracks": lambda: load_cached_hvsc(),
+        "fallback_load": lambda: download_hvsc_index(),
+        "download": lambda url: None,  # SID has its own download in play_current_sid_track
+    },
+    "modarchive": {
+        "icon": "🟠",
+        "name": "Tracker Modules (ModArchive)",
+        "station": "ModArchive Radio",
+        "footer": "ModArchive Radio — FastTracker / MOD / XM / S3M / IT",
+        "color": discord.Color.from_str("#E67E22"),
+        "load_tracks": lambda: load_modarchive_cache(),
+        "download": lambda url: None,  # uses download_modarchive_module in play func
+    },
+}
+
+
+def get_collection_info(mode: str) -> dict:
+    return COLLECTION_INFO.get(mode, COLLECTION_INFO["asma"])
+
+
+async def load_tracks_for_mode(mode: str) -> list | None:
+    """Load track list for the given collection mode."""
+    info = get_collection_info(mode)
+    result = info["load_tracks"]()
+    if asyncio.iscoroutine(result):
+        tracks = await result
+    else:
+        tracks = result
+    # Fallback for HVSC
+    if not tracks and mode == "hvsc" and "fallback_load" in info:
+        log.info("HVSC: cache empty, downloading index...")
+        result = info["fallback_load"]()
+        if asyncio.iscoroutine(result):
+            tracks = await result
+        else:
+            tracks = result
+    return tracks
+
+
+async def ensure_tracks(state) -> bool:
+    """Ensure tracks are loaded for the current collection mode. Returns True if ready."""
+    if state.tracks:
+        return True
+    state.tracks = await load_tracks_for_mode(state.collection_mode)
+    return bool(state.tracks)
+
+
 async def play_current_track(ctx):
     """Download and play the current track from the queue."""
     state = get_state(ctx.guild.id)
@@ -626,6 +767,9 @@ async def play_current_track(ctx):
     try:
         if state.collection_mode == "hvsc":
             return await play_current_sid_track(ctx, state, url)
+        
+        if state.collection_mode == "modarchive":
+            return await play_current_modarchive_track(ctx, state, url)
         
         # ── ASMA SAP Playback ────────────────────────────────────
         # Use pre-downloaded track if available, otherwise download now
@@ -708,10 +852,12 @@ async def skip_to_next(ctx):
 @bot.event
 async def on_ready():
     log.info("Ready: %s", bot.user)
-    # Kill any orphaned GStreamer/Audacious from crashed bot sessions
+    # Kill any orphaned Audacious from crashed bot sessions
     await asyncio.get_event_loop().run_in_executor(None, cleanup_orphan_players)
     await asyncio.get_event_loop().run_in_executor(None, setup_virtual_sink)
     await asyncio.get_event_loop().run_in_executor(None, ensure_audacious)
+    # Ensure Audacious SID plugin config is set for song-length-based auto-advance
+    await asyncio.get_event_loop().run_in_executor(None, setup_audacious_sid_config)
     
     # Preload cached tracklist for all guilds
     cached = load_cached_tracklist()
@@ -748,12 +894,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         state.loop = PLAYBACK_LOOP
 
         if not state.tracks:
-            if state.collection_mode == "hvsc":
-                state.tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
-                if not state.tracks:
-                    state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
-            else:
-                state.tracks = await refresh_tracklist()
+            await ensure_tracks(state)
 
         if not state.tracks:
             log.warning("Auto-start: no tracks available")
@@ -773,8 +914,8 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 
         # Use system channel or first text channel for messages
         text_channel = member.guild.system_channel or member.guild.text_channels[0]
-        station_name = "C64 SID Radio" if state.collection_mode == "hvsc" else "ASMA Radio"
-        ctx = await bot.get_context(await text_channel.send(f"📻 **Auto-starting {station_name}...**"))
+        info = get_collection_info(state.collection_mode)
+        ctx = await bot.get_context(await text_channel.send(f"📻 **Auto-starting {info['station']}...**"))
         state.ctx = ctx
 
         if await play_current_track(ctx):
@@ -798,13 +939,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
         if not state.search_results or idx < 0 or idx >= len(state.search_results):
             return await ctx.send("Invalid number. Use !search first.")
         if not state.tracks:
-            state.tracks = await (
-                asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
-                if state.collection_mode == "hvsc"
-                else refresh_tracklist()
-            )
-            if not state.tracks and state.collection_mode == "hvsc":
-                state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
+            await ensure_tracks(state)
         url = state.search_results[idx]
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
@@ -829,12 +964,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
     # Search and play first result
     if query:
         if not state.tracks:
-            if state.collection_mode == "hvsc":
-                state.tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
-                if not state.tracks:
-                    state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
-            else:
-                state.tracks = await refresh_tracklist()
+            await ensure_tracks(state)
         query_lower = query.lower()
         matches = [u for u in state.tracks if query_lower in u.split("/")[-1].rsplit(".", 1)[0].replace("_", " ").lower()]
         if matches:
@@ -871,32 +1001,15 @@ async def play(ctx: commands.Context, *, query: str = ""):
     state.ctx = ctx
     state.loop = PLAYBACK_LOOP
     
-    station_name = "C64 SID Radio" if state.collection_mode == "hvsc" else "ASMA Radio"
-    await ctx.send(f"🎛️ **{station_name} starting...**")
+    info = get_collection_info(state.collection_mode)
+    await ctx.send(f"🎛️ **{info['station']} starting...**")
     
     # Ensure we have tracks
     if not state.tracks:
-        if state.collection_mode == "hvsc":
-            await ctx.send("🔍 Loading HVSC index...")
-            state.tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
-            if not state.tracks:
-                state.tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
-        else:
-            await ctx.send("🔍 Crawling ASMA archive (6400+ tracks)... this may take a minute.")
-            state.crawling = True
-            try:
-                tracks = await refresh_tracklist()
-                state.tracks = tracks
-                log.info("ASMA crawl complete: %d tracks found", len(tracks))
-            except Exception as e:
-                log.error("CRASH during crawl: %s", e, exc_info=True)
-                state.tracks = []
-                await ctx.send(f"❌ Crawl failed: {e}")
-            state.crawling = False
-        await ctx.send(f"📀 Found **{len(state.tracks)}** tracks!")
-    else:
-        tracks = state.tracks
-        await ctx.send(f"📀 Using cached playlist: **{len(tracks)}** tracks")
+        await ensure_tracks(state)
+
+    track_count = len(state.tracks) if state.tracks else 0
+    await ctx.send(f"📀 Ready with **{track_count}** tracks!")
     
     # Shuffle and start
     saved = load_queue(ctx.guild.id)
@@ -928,9 +1041,6 @@ async def stop(ctx: commands.Context):
         await ctx.voice_client.disconnect()
     state.queue = []
     state.index = -1
-    state.sid_start_time = 0
-    state.sid_current_url = ""
-    state.sid_duration = 120
     save_queue(state)
     await ctx.send("⏹️ Stopped.")
 
@@ -948,32 +1058,6 @@ async def skip(ctx: commands.Context):
 async def np(ctx: commands.Context):
     """Show current track info."""
     state = get_state(ctx.guild.id)
-    if state.collection_mode == "hvsc":
-        if not gst_is_playing():
-            return await ctx.send("Nothing playing right now.")
-        meta = {}
-        if state.current_sap_path and os.path.exists(state.current_sap_path):
-            try:
-                with open(state.current_sap_path, "rb") as f:
-                    meta = parse_sid_header(f.read(0x76))
-            except Exception:
-                meta = {}
-        name = meta.get("name") or state.sid_current_url.split("/")[-1].replace(".sid", "")
-        author = meta.get("author", "")
-        copyright_info = meta.get("copyright", "")
-        embed = discord.Embed(
-            title=f"Now Playing: {name}",
-            color=discord.Color.blue(),
-        )
-        if author:
-            embed.add_field(name="Composer", value=author, inline=True)
-        if copyright_info:
-            embed.add_field(name="Copyright", value=copyright_info, inline=True)
-        embed.add_field(name="Position", value=f"{state.index + 1}/{len(state.queue)}", inline=True)
-        embed.set_footer(text="C64 SID Radio")
-        await ctx.send(embed=embed)
-        return
-
     if not is_playing():
         return await ctx.send("Nothing playing right now.")
     track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
@@ -981,22 +1065,30 @@ async def np(ctx: commands.Context):
     pos = state.index + 1
     meta = {}
     if state.current_sap_path:
-        meta = parse_sap_header(state.current_sap_path)
-    name = meta.get("NAME", track)
-    author = meta.get("AUTHOR", "")
-    songs = meta.get("SONGS", "")
-
+        if state.current_sap_path.lower().endswith(".sid"):
+            try:
+                with open(state.current_sap_path, "rb") as f:
+                    meta = parse_sid_header(f.read(0x76))
+            except Exception:
+                meta = {}
+        else:
+            meta = parse_sap_header(state.current_sap_path)
+    name = meta.get("name", meta.get("NAME", track))
+    author = meta.get("author", "") or meta.get("AUTHOR", "")
+    copyright_info = meta.get("copyright", "")
+    info = get_collection_info(state.collection_mode)
     embed = discord.Embed(
         title=f"Now Playing: {name}",
-        color=discord.Color.blue(),
+        color=info["color"],
     )
     if author:
         embed.add_field(name="Composer", value=author, inline=True)
-    if songs:
-        embed.add_field(name="Songs", value=songs, inline=True)
+    if copyright_info:
+        embed.add_field(name="Copyright", value=copyright_info, inline=True)
     embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
-    embed.set_footer(text="ASMA Radio")
+    embed.set_footer(text=info["footer"])
     await ctx.send(embed=embed)
+    return
 
 
 @bot.command()
@@ -1036,7 +1128,7 @@ async def stats(ctx: commands.Context):
     total = len(state.tracks)
     queue_len = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing_now = gst_is_playing() if state.collection_mode == "hvsc" else is_playing()
+    playing_now = is_playing()
     playing = "🎵 Yes" if playing_now else "⏸️ No"
     loop = "🔁 On" if state.loop else "➡️ Off"
     await ctx.send(
@@ -1063,13 +1155,23 @@ async def search(ctx: commands.Context, *, query: str):
     state.search_results = matches
     lines = [f"🔍 **Results for `{query}`**"]
     for i, url in enumerate(matches, 1):
-        filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
-        # Show directory info if available
-        path_parts = url.replace(ASMA_BASE, "").replace(".sap", "").split("/")
-        if len(path_parts) > 1:
-            dir_name = path_parts[-2].replace("_", " ")
-            lines.append(f"`{i}.` {filename} *({dir_name})*")
+        if url.startswith("https://api.modarchive.org/") or "modarchive" in url:
+            filename = modarchive_name_map.get(url, url.split("=")[-1]).replace("_", " ")
+            lines.append(f"`{i}.` {filename}")
+        elif ASMA_BASE in url:
+            filename = url.split("/")[-1].replace(".sap", "").replace("_", " ")
+            path_parts = url.replace(ASMA_BASE, "").replace(".sap", "").split("/")
+            if len(path_parts) > 1:
+                dir_name = path_parts[-2].replace("_", " ")
+                lines.append(f"`{i}.` {filename} *({dir_name})*")
+            else:
+                lines.append(f"`{i}.` {filename}")
         else:
+            # HVSC or others - just filename
+            filename = url.split("/")[-1]
+            for ext in [".sap", ".sid", ".mod", ".xm", ".s3m", ".it"]:
+                filename = filename.replace(ext, "")
+            filename = filename.replace("_", " ")
             lines.append(f"`{i}.` {filename}")
     lines.append("")
     lines.append("Type `!play <number>` to play a track")
@@ -1253,6 +1355,54 @@ def load_cached_hvsc() -> list[str] | None:
         return None
 
 
+def load_modarchive_cache() -> list[str] | None:
+    """Load ModArchive track list from cache."""
+    try:
+        if not os.path.exists(MODARCHIVE_CACHE_FILE):
+            return None
+        with open(MODARCHIVE_CACHE_FILE) as f:
+            modules = json.load(f)
+        if not isinstance(modules, list) or len(modules) < 10:
+            log.warning("ModArchive cache too small (%d entries), rebuilding needed", len(modules))
+            return None
+        global modarchive_name_map
+        modarchive_name_map = {}
+        # Convert to URL list (like HVSC/ASMA track lists)
+        tracks = []
+        for m in modules:
+            if isinstance(m, dict) and "url" in m:
+                tracks.append(m["url"])
+                modarchive_name_map[m["url"]] = m.get("name", m["url"].split("=")[-1])
+        log.info("ModArchive: loaded %d tracks from cache (%d raw entries)", len(tracks), len(modules))
+        return tracks
+    except Exception as e:
+        log.warning("ModArchive cache load error: %s", e)
+        return None
+
+
+async def download_modarchive_module(url: str) -> str:
+    """Download a module from ModArchive API and return local filepath.
+    Preserves the real filename from Content-Disposition header."""
+    filepath = build_temp_path(url)
+    timeout = aiohttp.ClientTimeout(total=60)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
+            resp.raise_for_status()
+            data = await resp.read()
+            # Try to get real filename from Content-Disposition
+            cd = resp.headers.get("Content-Disposition", "")
+            m = re.search(r'filename=([^;]+)', cd)
+            if m:
+                fname = m.group(1).strip('" ')
+                if fname:
+                    # Use real filename in temp path
+                    digest = sha1(url.encode("utf-8")).hexdigest()[:12]
+                    filepath = os.path.join(TEMP_DIR, f"{digest}_{fname}")
+    with open(filepath, "wb") as f:
+        f.write(data)
+    return filepath
+
+
 def parse_sid_header(data: bytes) -> dict[str, str]:
     """Parse PSID/RSID header for metadata."""
     meta = {"name": "", "author": "", "copyright": ""}
@@ -1287,55 +1437,15 @@ async def download_sid_for_meta(url: str) -> dict[str, str]:
     return meta
 
 
-def gst_play_sid(filepath: str):
-    """Play a SID file via GStreamer into the asma_bot PulseAudio sink."""
-    global gst_process
-    gst_stop()
-    gst_process = subprocess.Popen(
-        [
-            "gst-launch-1.0", "-q",
-            "filesrc", f"location={filepath}",
-            "!", "siddec",
-            "!", "audioconvert",
-            "!", "audioresample",
-            "!", "pulsesink", f"device={SINK_NAME}",
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    log.info("GStreamer SID started (PID %d)", gst_process.pid)
-
-
-def gst_stop():
-    """Stop GStreamer SID playback."""
-    global gst_process
-    if gst_process and gst_process.poll() is None:
-        gst_process.terminate()
-        try:
-            gst_process.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            gst_process.kill()
-            gst_process.wait()
-    gst_process = None
-
-
-def gst_is_playing() -> bool:
-    """Check if GStreamer SID is still playing."""
-    global gst_process
-    return gst_process is not None and gst_process.poll() is None
-
-
 def cleanup_orphan_players():
-    """Kill orphaned gst-launch-1.0 processes from crashed bot sessions.
+    """Kill orphaned audacious/ffmpeg processes from crashed bot sessions.
     Does NOT kill ffmpeg (MonitorAudioSource) since that's managed in-band."""
-    subprocess.run(["pkill", "-f", "gst-launch-1.0.*siddec"], capture_output=True)
+    subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
 
 
 def stop_all_players():
-    """Stop Audacious AND GStreamer — ensures no bleed between collections.
-    Kills Audacious so it can't keep playing stale tracks after mode switch."""
+    """Stop Audacious — ensures no bleed between collections."""
     audacious_kill()
-    gst_stop()
     # Kill any orphaned players that escaped the global tracker
     cleanup_orphan_players()
 
@@ -1387,16 +1497,40 @@ async def asma(ctx: commands.Context):
     log.info("ASMA: collection switched")
 
 
+@bot.command(aliases=["modarchive", "tracker", "modules"])
+async def mod(ctx: commands.Context):
+    """Switch to ModArchive collection (MOD/XM/S3M/IT modules)."""
+    state = get_state(ctx.guild.id)
+    if state.collection_mode == "modarchive" and state.tracks:
+        await ctx.send("🟠 **Already in ModArchive mode.** Use `!play` to start!")
+        return
+    await ctx.send("🟠 **Loading ModArchive collection (100,000+ modules)...**")
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
+    if not tracks:
+        return await ctx.send("❌ ModArchive cache not found. Run `build_modarchive_index.py` first!\n"
+                              "The index builder is running in the background — wait a few minutes and try again.")
+    state.collection_mode = "modarchive"
+    state.tracks = tracks
+    await ctx.send(f"🟠 **ModArchive collection ready — {len(tracks)} modules!**\n"
+                   "FastTracker / ProTracker / ScreamTracker / Impulse Tracker — all formats!")
+    log.info("ModArchive: collection switched, %d tracks loaded", len(tracks))
+
+
 @bot.command(aliases=["mode", "collection"])
 async def status(ctx: commands.Context):
     """Show current collection mode and playlist stats."""
     state = get_state(ctx.guild.id)
-    mode_icon = "🟣" if state.collection_mode == "hvsc" else "🟢"
-    mode_name = "C64 SID (HVSC)" if state.collection_mode == "hvsc" else "Atari SAP (ASMA)"
+    mode_map = {
+        "hvsc": ("🟣", "C64 SID (HVSC)"),
+        "asma": ("🟢", "Atari SAP (ASMA)"),
+        "modarchive": ("🟠", "Tracker Modules (ModArchive)"),
+    }
+    mode_icon, mode_name = mode_map.get(state.collection_mode, ("⚪", "Unknown"))
     total = len(state.tracks) if state.tracks else 0
     qlen = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing_now = gst_is_playing() if state.collection_mode == "hvsc" else is_playing()
+    playing_now = is_playing()
     playing = "🎵 Yes" if playing_now else "⏸️ No"
     await ctx.send(
         f"{mode_icon} **Collection: {mode_name}**\n"
@@ -1409,11 +1543,12 @@ async def status(ctx: commands.Context):
 
 @bot.command(aliases=["switch", "toggle", "przelacz"])
 async def flip(ctx: commands.Context):
-    """Toggle between Atari SAP (ASMA) and C64 SID (HVSC) collections."""
+    """Toggle between collections: HVSC (SID) → ASMA (SAP) → ModArchive → HVSC ..."""
     state = get_state(ctx.guild.id)
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+
     if state.collection_mode == "hvsc":
-        # Switch to ASMA
+        # HVSC → ASMA
         state.collection_mode = "asma"
         cached = load_cached_tracklist()
         if cached:
@@ -1423,8 +1558,21 @@ async def flip(ctx: commands.Context):
             state.tracks = []
             await ctx.send("🟢 **Switched to Atari SAP (ASMA).** Use `!play` to crawl the archive.")
         log.info("ASMA: collection switched via flip")
+
+    elif state.collection_mode == "asma":
+        # ASMA → ModArchive
+        state.collection_mode = "modarchive"
+        tracks = load_modarchive_cache()
+        if tracks:
+            state.tracks = tracks
+            await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!** Use `!play` to start.")
+        else:
+            state.tracks = []
+            await ctx.send("🟠 **Switched to ModArchive.** Cache not ready — run build_modarchive_index.py or wait.")
+        log.info("ModArchive: collection switched via flip")
+
     else:
-        # Switch to HVSC
+        # ModArchive → HVSC
         state.collection_mode = "hvsc"
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
         if not tracks:
@@ -1434,17 +1582,16 @@ async def flip(ctx: commands.Context):
             state = get_state(ctx.guild.id)
             state.tracks = tracks
             await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!** Use `!play` to start.")
-            global metadata_index
-            metadata_index = {}
         else:
             await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
-            state.collection_mode = "asma"  # revert
+            state.collection_mode = "modarchive"
         log.info("HVSC: collection switched via flip")
 
 
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
-    """Monitor playback, auto-advance tracks, and disconnect on empty channel."""
+    """Monitor playback, auto-advance tracks, and disconnect on empty channel.
+    Uses Audacious is_playing() for ALL formats (SAP, SID, MOD)."""
     empty_since = None
     not_playing_since = None
     GRACE_SECONDS = 3
@@ -1464,22 +1611,28 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                     del active_streams[guild_id]
                 await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
                 await vc.disconnect()
-                await ctx.send("🌙 No one listening. Stopping ASMA Radio.")
+                await ctx.send("🌙 No one listening. Stopping Radio.")
                 break
         else:
             empty_since = None
 
-        playing = await asyncio.get_event_loop().run_in_executor(None, lambda: is_playing() or gst_is_playing())
+        # Check if Audacious is still playing
+        # For SID: Songlengths.md5 tells Audacious when to stop, so it auto-advances
+        # For SAP/MOD: natural end triggers stop
+        # When stopped → grace 3s → skip to next track
+        playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
 
-        # For HVSC SID: check if current track exceeded its expected duration
-        # GStreamer siddec never exits (loops forever), so we advance by time
-        if playing and state.collection_mode == "hvsc":
-            if state.sid_start_time > 0 and state.sid_duration > 0:
-                elapsed = time.time() - state.sid_start_time
-                if elapsed >= state.sid_duration:
-                    log.info("SID track duration reached (%ds), advancing", state.sid_duration)
-                    state.sid_start_time = 0
-                    await asyncio.get_event_loop().run_in_executor(None, gst_stop)
+        # Also stop tracks with unknown length after max time (fallback for SID and modarchive)
+        timeout_secs = 180 if state.collection_mode == "hvsc" else 300  # 3min for SID, 5min for modules
+        if playing and state.current_sap_path:
+            elapsed_s = await asyncio.get_event_loop().run_in_executor(None, lambda: subprocess.run(
+                ["audtool", "current-song-output-length-seconds"], capture_output=True, text=True
+            ))
+            try:
+                secs = int(elapsed_s.stdout.strip())
+                if secs > timeout_secs and secs < 10000:
+                    log.info("Track exceeded %ds fallback (%ds), force-stopping", timeout_secs, secs)
+                    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
                     not_playing_since = None
                     if state.loop or state.index < len(state.queue) - 1:
                         await skip_to_next(ctx)
@@ -1492,6 +1645,8 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                             await vc.disconnect()
                         await ctx.send("Playlist ended. Use !play to restart.")
                         break
+            except (ValueError, OSError):
+                pass
 
         if playing:
             not_playing_since = None
