@@ -1533,6 +1533,67 @@ async def favorites(ctx: commands.Context):
         await ctx.send("\n".join(chunk))
 
 
+@bot.command(aliases=["fp"])
+async def favplay(ctx: commands.Context, *, number: str = ""):
+    """Play your favorited tracks. Usage: !favplay or !favplay <number>"""
+    favs = load_favorites()
+    user_favs = favs.get(str(ctx.author.id), {}).get("tracks", [])
+
+    if not user_favs:
+        return await ctx.send("📭 **No favorites yet.** React to any Now Playing embed with an emoji to save tracks!")
+
+    if not ctx.author.voice:
+        return await ctx.send("Join a voice channel first!")
+
+    # Single track by number
+    if number:
+        try:
+            idx = int(number) - 1
+            if idx < 0 or idx >= len(user_favs):
+                return await ctx.send(f"Number must be between 1 and {len(user_favs)}.")
+            tracks_to_play = [user_favs[idx]]
+        except ValueError:
+            return await ctx.send("Usage: `!favplay <number>` or `!favplay` to play all.")
+    else:
+        # Play all shuffled
+        tracks_to_play = list(user_favs)
+        random.shuffle(tracks_to_play)
+
+    # Detect URL types and set collection mode
+    state = get_state(ctx.guild.id)
+    first_url = tracks_to_play[0]["url"]
+
+    if "asma.atari.org" in first_url or first_url.endswith(".sap"):
+        state.collection_mode = "asma"
+    elif "hvsc.c64.org" in first_url or first_url.endswith(".sid"):
+        state.collection_mode = "hvsc"
+    elif "modarchive" in first_url:
+        state.collection_mode = "modarchive"
+
+    # Ensure tracks loaded
+    if not state.tracks:
+        await ensure_tracks(state)
+
+    # Connect to voice
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
+    vc = await ctx.author.voice.channel.connect()
+    state.vc = vc
+    state.guild_id = ctx.guild.id
+    state.ctx = ctx
+    state.loop = True
+
+    # Build queue from favorite URLs
+    state.queue = [t["url"] for t in tracks_to_play]
+    state.index = 0
+
+    await ctx.send(f"🎵 **Playing {len(tracks_to_play)} favorites!**")
+
+    if await play_current_track(ctx):
+        save_queue(state)
+        bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+
+
 # ── HVSC C64 SID Collection ─────────────────────────────────────
 # URL → duration in seconds, parsed from Songlengths.txt
 sid_durations: dict[str, int] = {}
