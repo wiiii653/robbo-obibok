@@ -1104,7 +1104,7 @@ async def radi(ctx: commands.Context):
     """NI MA RADI"""
     await ctx.send("https://www.youtube.com/watch?v=SbuBkGrpSl0")
 
-@bot.command(aliases=["radio", "start"])
+@bot.command(aliases=["radio", "start", "pl"])
 async def play(ctx: commands.Context, *, query: str = ""):
     """Start shuffled radio. Usage: !play, !play <number>, or !play <search query>"""
     if not ctx.author.voice:
@@ -1231,7 +1231,7 @@ async def stop(ctx: commands.Context):
     await ctx.send("⏹️ Stopped.")
 
 
-@bot.command(aliases=["next"])
+@bot.command(aliases=["next", "nt"])
 async def skip(ctx: commands.Context):
     """Skip to next track."""
     state = get_state(ctx.guild.id)
