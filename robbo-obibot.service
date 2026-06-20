@@ -1,5 +1,5 @@
 [Unit]
-Description=Robbo Obibot — Discord Chiptune Radio
+Description=Robbo Obibok — Discord Chiptune Radio
 After=network-online.target
 Wants=network-online.target
 

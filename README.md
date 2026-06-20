@@ -1,13 +1,14 @@
 ```
-__________      ___.  ___.            ________ ___.   ._____.           __   
-\______   \ ____\_ |__\_ |__   ____   \_____  \\\_ |__ |__\_ |__   _____/  |_ 
- |       _//  _ \| __ \| __ \ /  _ \   /   |   \| __ \|  || __ \ /  _ \   __\
- |    |   (  <_> ) \_\ \ \_\ (  <_> ) /    |    \ \_\ \  || \_\ (  <_> )  |  
- |____|_  /\____/|___  /___  /\____/  \_______  /___  /__||___  /\____/|__|  
-        \/           \/    \/                 \/    \/        \/              
+__________      ___.  ___.            ________ ___.   ._____.           __    
+\______   \ ____\_ |__\_ |__   ____   \_____  \\_ |__ |__\_ |__   ____ |  | __
+ |       _//  _ \| __ \| __ \ /  _ \   /   |   \| __ \|  || __ \ /  _ \|  |/ /
+ |    |   (  <_> ) \_\ \ \_\ (  <_> ) /    |    \ \_\ \  || \_\ (  <_> )    < 
+ |____|_  /\____/|___  /___  /\____/  \_______  /___  /__||___  /\____/|__|_ \
+        \/           \/    \/                 \/    \/        \/            \/
+                                                                              
 ```
 
-# Robbo Obibot — The Ultimate Chiptune Bot
+# Robbo Obibok — The Ultimate Chiptune Bot
 
 Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Six collections, one bot — **the biggest chiptune radio on Discord.**
 

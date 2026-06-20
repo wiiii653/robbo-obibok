@@ -1,5 +1,5 @@
 [Unit]
-Description=Robbo Obibot - ASMA Chiptune Radio Bot
+Description=Robbo Obibok - ASMA Chiptune Radio Bot
 After=network.target pulseaudio.service
 Wants=pulseaudio.service
 
