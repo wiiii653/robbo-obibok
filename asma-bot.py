@@ -413,6 +413,13 @@ def is_playing() -> bool:
     r = subprocess.run(["audtool", "playback-playing"], capture_output=True)
     return r.returncode == 0
 
+def is_playing_mode(mode: str) -> bool:
+    """Check if the active player for this mode is running."""
+    if mode == "ay":
+        r = subprocess.run(["pgrep", "-x", "ffplay"], capture_output=True)
+        return r.returncode == 0
+    return is_playing()
+
 # ── SAP Metadata Parser ──────────────────────────────────────────
 SAP_HEADER_RE = re.compile(rb'^;(.+)', re.MULTILINE)
 
@@ -1277,8 +1284,15 @@ async def skip(ctx: commands.Context):
 async def np(ctx: commands.Context):
     """Show current track info."""
     state = get_state(ctx.guild.id)
-    if not is_playing():
+    if not is_playing_mode(state.collection_mode):
         return await ctx.send("Nothing playing right now.")
+    if state.collection_mode == "ay":
+        idx = state.index
+        if 0 <= idx < len(state.queue):
+            await ctx.send(f"Now playing: `{state.queue[idx].split('/')[-1]}`")
+        else:
+            await ctx.send("Now playing an AY track.")
+        return
     track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
     total = len(state.queue)
     pos = state.index + 1
@@ -1586,7 +1600,7 @@ async def stats(ctx: commands.Context):
     total = len(state.tracks)
     queue_len = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing_now = is_playing()
+    playing_now = is_playing_mode(state.collection_mode)
     playing = "🎵 Yes" if playing_now else "⏸️ No"
     loop = "🔁 On" if state.loop else "➡️ Off"
     await ctx.send(
@@ -2113,7 +2127,7 @@ async def status(ctx: commands.Context):
     total = len(state.tracks) if state.tracks else 0
     qlen = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing_now = is_playing()
+    playing_now = is_playing_mode(state.collection_mode)
     playing = "🎵 Yes" if playing_now else "⏸️ No"
     await ctx.send(
         f"{mode_icon} **Collection: {mode_name}**\n"
@@ -2233,7 +2247,7 @@ async def auto_play_after_switch(ctx: commands.Context, state) -> None:
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
     """Monitor playback, auto-advance tracks, and disconnect on empty channel.
-    Uses Audacious is_playing() for ALL formats (SAP, SID, MOD)."""
+    Uses is_playing_mode() which checks Audacious or ffplay depending on collection."""
     empty_since = None
     not_playing_since = None
     GRACE_SECONDS = 3
@@ -2265,7 +2279,9 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
         # For SID: Songlengths.md5 tells Audacious when to stop, so it auto-advances
         # For SAP/MOD: natural end triggers stop
         # When stopped → grace 3s → skip to next track
-        playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
+        playing = await asyncio.get_event_loop().run_in_executor(
+            None, is_playing_mode, state.collection_mode
+        )
 
         # Also stop tracks with unknown length after max time (fallback for SID and modarchive)
         timeout_secs = 180 if state.collection_mode == "hvsc" else 300  # 3min for SID, 5min for modules
