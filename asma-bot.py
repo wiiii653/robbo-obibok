@@ -827,13 +827,26 @@ async def play_current_track(ctx):
     await ctx.send(f"Loading... `{url.split('/')[-1]}`")
     
     try:
-        if state.collection_mode == "hvsc":
+        # Detect archive type from current URL (supports mixed playlists like !favplay)
+        is_hvsc = "hvsc.c64.org" in url or url.endswith(".sid")
+        is_modarchive = "modarchive" in url or url.endswith((".mod", ".xm", ".s3m", ".it"))
+        
+        if is_hvsc:
+            if state.collection_mode != "hvsc":
+                state.collection_mode = "hvsc"
+                await ensure_tracks(state)
             return await play_current_sid_track(ctx, state, url)
         
-        if state.collection_mode == "modarchive":
+        if is_modarchive:
+            if state.collection_mode != "modarchive":
+                state.collection_mode = "modarchive"
+                await ensure_tracks(state)
             return await play_current_modarchive_track(ctx, state, url)
         
-        # ── ASMA SAP Playback ────────────────────────────────────
+        # ── ASMA SAP Playback (default) ──
+        if state.collection_mode != "asma":
+            state.collection_mode = "asma"
+            await ensure_tracks(state)
         # Use pre-downloaded track if available, otherwise download now
         if state.pre_downloaded and os.path.exists(state.pre_downloaded):
             filepath = state.pre_downloaded

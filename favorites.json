@@ -16,13 +16,6 @@
         "emoji": "\u2764\ufe0f"
       },
       {
-        "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/H/Highway_Guy/How_the_Earth_Was_Destroyed_by_a_Giant_Nazi_Hentai_Loli.sid",
-        "name": "How the Earth Was Destroyed...",
-        "author": "William Fay (Highway Guy)",
-        "added_at": 1781772342.5634186,
-        "emoji": "\u2764\ufe0f"
-      },
-      {
         "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/A/Ace64/Tune_19.sid",
         "name": "Tune 19",
         "author": "Ace64",
@@ -132,6 +125,13 @@
         "name": "Dance Attack",
         "author": "Antti & Janne Hannula",
         "added_at": 1781946276.5264685,
+        "emoji": "\u2764\ufe0f"
+      },
+      {
+        "url": "https://api.modarchive.org/downloads.php?moduleid=150833",
+        "name": "9e0318240334 sour field",
+        "author": "",
+        "added_at": 1781946977.2443368,
         "emoji": "\u2764\ufe0f"
       }
     ]
