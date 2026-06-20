@@ -649,15 +649,18 @@ async def play_current_sid_track(ctx, state, url):
 
     state.current_sap_path = sid_path
 
-    # Setup MonitorAudioSource if needed
+    # Setup MonitorAudioSource (always stop old and create fresh)
     if state.vc and state.vc.is_connected():
-        if state.guild_id not in active_streams:
-            source = MonitorAudioSource(SINK_NAME)
-            state.vc.play(
-                source,
-                after=lambda e: _after_stream_end(state.guild_id, e),
-            )
-            active_streams[state.guild_id] = source
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e: _after_stream_end(state.guild_id, e),
+        )
+        active_streams[state.guild_id] = source
 
     total = len(state.queue)
     pos = state.index + 1
@@ -703,15 +706,18 @@ async def play_current_modarchive_track(ctx, state, url):
 
     state.current_sap_path = filepath
 
-    # Setup MonitorAudioSource if needed
+    # Setup MonitorAudioSource (always stop old and create fresh)
     if state.vc and state.vc.is_connected():
-        if state.guild_id not in active_streams:
-            source = MonitorAudioSource(SINK_NAME)
-            state.vc.play(
-                source,
-                after=lambda e: _after_stream_end(state.guild_id, e),
-            )
-            active_streams[state.guild_id] = source
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e: _after_stream_end(state.guild_id, e),
+        )
+        active_streams[state.guild_id] = source
 
     total = len(state.queue)
     pos = state.index + 1
@@ -839,16 +845,19 @@ async def play_current_track(ctx):
         
         state.current_sap_path = filepath
         
-        # Only create MonitorAudioSource once per guild; reuse across tracks
+        # Setup MonitorAudioSource (always stop old and create fresh)
         if state.vc and state.vc.is_connected():
-            if state.guild_id not in active_streams:
-                source = MonitorAudioSource(SINK_NAME)
-                state.vc.play(
-                    source,
-                    after=lambda e: _after_stream_end(state.guild_id, e)
-                )
-                active_streams[state.guild_id] = source
-        
+            state.vc.stop()
+            old_source = active_streams.pop(state.guild_id, None)
+            if old_source:
+                old_source.cleanup()
+            source = MonitorAudioSource(SINK_NAME)
+            state.vc.play(
+                source,
+                after=lambda e: _after_stream_end(state.guild_id, e)
+            )
+            active_streams[state.guild_id] = source
+
         track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
         total = len(state.queue)
         pos = state.index + 1
