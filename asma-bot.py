@@ -158,6 +158,7 @@ class PlaylistState:
         self.index: int = -1             # current position in queue
         self.loop: bool = True
         self.collection_mode: str = load_last_collection() or DEFAULT_COLLECTION_MODE
+        self.loaded_collection: str = "" # which collection is actually loaded into self.tracks
         self.guild_id: int | None = None
         self.ctx = None
         self.vc = None
@@ -165,6 +166,7 @@ class PlaylistState:
         self.crawling: bool = False
         self.pre_downloaded: str | None = None  # next track pre-downloaded
         self.search_results: list[str] = []     # last search results
+        self.monitor_task: asyncio.Task | None = None
 
 
 guilds: dict[int, PlaylistState] = {}
@@ -187,6 +189,7 @@ def save_queue(state: PlaylistState):
         "queue": state.queue,
         "index": state.index,
         "loop": state.loop,
+        "collection_mode": state.collection_mode,
     }
     try:
         with open(path, "w") as f:
@@ -800,9 +803,10 @@ async def load_tracks_for_mode(mode: str) -> list | None:
 
 async def ensure_tracks(state) -> bool:
     """Ensure tracks are loaded for the current collection mode. Returns True if ready."""
-    if state.tracks:
+    if state.tracks and state.loaded_collection == state.collection_mode:
         return True
     state.tracks = await load_tracks_for_mode(state.collection_mode)
+    state.loaded_collection = state.collection_mode if state.tracks else state.loaded_collection
     return bool(state.tracks)
 
 
@@ -966,7 +970,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
             return
 
         saved = load_queue(member.guild.id)
-        if saved and saved.get("queue") and saved["queue"][0] in state.tracks:
+        if saved and saved.get("queue") and saved["queue"][0] in state.tracks and saved.get("collection_mode") == state.collection_mode:
             state.queue = saved["queue"]
             state.index = saved.get("index", 0)
             state.loop = saved.get("loop", PLAYBACK_LOOP)
@@ -983,7 +987,9 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 
         if await play_current_track(ctx):
             save_queue(state)
-            bot.loop.create_task(monitor_playback(ctx, vc, member.guild.id))
+            if state.monitor_task and not state.monitor_task.done():
+                state.monitor_task.cancel()
+            state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, member.guild.id))
     except Exception as e:
         log.error("Auto-start failed: %s", e)
 
@@ -1026,7 +1032,9 @@ async def play(ctx: commands.Context, *, query: str = ""):
             state.index = 0
         if await play_current_track(ctx):
             save_queue(state)
-            bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+            if state.monitor_task and not state.monitor_task.done():
+                state.monitor_task.cancel()
+            state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
         return
 
     # Search and play first result
@@ -1054,7 +1062,9 @@ async def play(ctx: commands.Context, *, query: str = ""):
                 state.index = 0
             if await play_current_track(ctx):
                 save_queue(state)
-                bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+                if state.monitor_task and not state.monitor_task.done():
+                    state.monitor_task.cancel()
+                state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
             return
         return await ctx.send(f"No tracks matching `{query}`. Try !search.")
 
@@ -1081,7 +1091,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
     
     # Shuffle and start
     saved = load_queue(ctx.guild.id)
-    if saved and saved.get("queue") and saved["queue"][0] in state.tracks:
+    if saved and saved.get("queue") and saved["queue"][0] in state.tracks and saved.get("collection_mode") == state.collection_mode:
         state.queue = saved["queue"]
         state.index = saved.get("index", 0)
         state.loop = saved.get("loop", PLAYBACK_LOOP)
@@ -1094,7 +1104,9 @@ async def play(ctx: commands.Context, *, query: str = ""):
     
     if await play_current_track(ctx):
         save_queue(state)
-        bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+        if state.monitor_task and not state.monitor_task.done():
+            state.monitor_task.cancel()
+        state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
 
 
 @bot.command()
@@ -1636,7 +1648,9 @@ async def favplay(ctx: commands.Context, *, number: str = ""):
 
     if await play_current_track(ctx):
         save_queue(state)
-        bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+        if state.monitor_task and not state.monitor_task.done():
+            state.monitor_task.cancel()
+        state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
 
 
 # ── HVSC C64 SID Collection ─────────────────────────────────────
@@ -1845,10 +1859,9 @@ async def hvsc(ctx: commands.Context):
     save_last_collection("hvsc")
     await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "hvsc")
     state.tracks = tracks
+    state.queue = []
+    state.index = -1
     await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**\nUse `!play` to shuffle and play.")
-    # Update the search index
-    global metadata_index
-    metadata_index = {}
     log.info("HVSC: collection switched, %d tracks loaded", len(tracks))
     await cleanup_hvsc_file(ctx, tracks)
 
@@ -1874,6 +1887,8 @@ async def asma(ctx: commands.Context):
     else:
         state.tracks = []
         await ctx.send("📀 **Switched to ASMA Atari SAP.** Use `!play` to crawl the archive.")
+    state.queue = []
+    state.index = -1
     log.info("ASMA: collection switched")
 
 
@@ -1894,6 +1909,8 @@ async def mod(ctx: commands.Context):
     save_last_collection("modarchive")
     await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "modarchive")
     state.tracks = tracks
+    state.queue = []
+    state.index = -1
     await ctx.send(f"🟠 **ModArchive collection ready — {len(tracks)} modules!**\n"
                    "FastTracker / ProTracker / ScreamTracker / Impulse Tracker — all formats!")
     log.info("ModArchive: collection switched, %d tracks loaded", len(tracks))
@@ -1928,13 +1945,14 @@ async def flip(ctx: commands.Context):
     """Toggle between collections: HVSC (SID) → ASMA (SAP) → ModArchive → HVSC ..."""
     state = get_state(ctx.guild.id)
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    state.pre_downloaded = None
 
     if state.collection_mode == "hvsc":
         # HVSC → ASMA
         state.collection_mode = "asma"
         save_last_collection("asma")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        cached = load_cached_tracklist()
+        cached = await asyncio.get_event_loop().run_in_executor(None, load_cached_tracklist)
         if cached:
             state.tracks = cached
             await ctx.send("🟢 **Switched to Atari SAP (ASMA)!** Use `!play` to start.")
@@ -1945,20 +1963,25 @@ async def flip(ctx: commands.Context):
 
     elif state.collection_mode == "asma":
         # ASMA → ModArchive
+        old_tracks = list(state.tracks) if state.tracks else []
         state.collection_mode = "modarchive"
         save_last_collection("modarchive")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = load_modarchive_cache()
+        tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
         if tracks:
             state.tracks = tracks
             await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!** Use `!play` to start.")
         else:
-            state.tracks = []
-            await ctx.send("🟠 **Switched to ModArchive.** Cache not ready — run build_modarchive_index.py or wait.")
+            await ctx.send("🟠 **ModArchive cache not ready.** Staying on ASMA.")
+            state.collection_mode = "asma"
+            state.tracks = old_tracks
+            save_last_collection("asma")
         log.info("ModArchive: collection switched via flip")
 
     else:
         # ModArchive → HVSC
+        old_mode = state.collection_mode
+        old_tracks = list(state.tracks) if state.tracks else []
         state.collection_mode = "hvsc"
         save_last_collection("hvsc")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
@@ -1972,8 +1995,9 @@ async def flip(ctx: commands.Context):
             await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!** Use `!play` to start.")
         else:
             await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
-            state.collection_mode = "modarchive"
-            save_last_collection("modarchive")
+            state.collection_mode = old_mode
+            state.tracks = old_tracks
+            save_last_collection(old_mode)
         log.info("HVSC: collection switched via flip")
 
     # ── Auto-play after switching if user is in voice ──
@@ -1994,7 +2018,9 @@ async def flip(ctx: commands.Context):
         state.ctx = ctx
         if await play_current_track(ctx):
             save_queue(state)
-            bot.loop.create_task(monitor_playback(ctx, state.vc, ctx.guild.id))
+            if state.monitor_task and not state.monitor_task.done():
+                state.monitor_task.cancel()
+            state.monitor_task = bot.loop.create_task(monitor_playback(ctx, state.vc, ctx.guild.id))
 
 
 # ── Playback Monitor ────────────────────────────────────────────
@@ -2005,7 +2031,10 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
     not_playing_since = None
     GRACE_SECONDS = 3
     while vc.is_connected() and not _shutdown_flag.is_set():
-        await asyncio.sleep(1)
+        try:
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            break
         state = get_state(guild_id)
 
         # Check for empty channel
