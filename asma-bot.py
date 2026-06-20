@@ -892,6 +892,7 @@ async def play_current_track(ctx):
         return False
     
     url = state.queue[state.index]
+    log.info("play_current_track: url=%s, index=%d", url, state.index)
     await ctx.send(f"Loading... `{url.split('/')[-1]}`")
     
     try:
@@ -1947,10 +1948,8 @@ def cleanup_orphan_players():
 
 
 def stop_all_players():
-    """Stop Audacious — ensures no bleed between collections."""
-    audacious_kill()
-    # Kill any orphaned players that escaped the global tracker
-    cleanup_orphan_players()
+    """Stop Audacious playback and clear playlist for collection switch."""
+    audacious_stop()
 
 
 # ── Collection Commands ─────────────────────────────────────────
@@ -2202,6 +2201,7 @@ async def auto_play_after_switch(ctx: commands.Context, state) -> None:
     """Auto-play after collection switch if user is in voice."""
     if not ctx.author.voice or not state.tracks:
         return
+    log.info("auto_play_after_switch: queue_len=%d, index=%d", len(state.queue), state.index)
     state.queue = list(state.tracks)
     if PLAYBACK_SHUFFLE:
         random.shuffle(state.queue)
@@ -2216,7 +2216,9 @@ async def auto_play_after_switch(ctx: commands.Context, state) -> None:
             return
     state.guild_id = ctx.guild.id
     state.ctx = ctx
-    if await play_current_track(ctx):
+    result = await play_current_track(ctx)
+    log.info("auto_play_after_switch: play_current_track returned %s", result)
+    if result:
         save_queue(state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
@@ -2273,6 +2275,7 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
                     not_playing_since = None
                     if state.loop or state.index < len(state.queue) - 1:
+                        log.info("monitor_playback: skip_to_next (timeout_exceeded)")
                         await skip_to_next(ctx)
                         continue
                     else:
