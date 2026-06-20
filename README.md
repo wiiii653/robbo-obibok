@@ -47,7 +47,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!volume <0-200>` | Set playback volume |
 | `!loop` / `!repeat` | Toggle playlist loop mode |
 | `!sleep <minutes>` | Auto‑stop after N minutes (max 360) |
-| `!radi` | NI MA RADI 😈 (easter egg) |
+| `!radi` | 😈 |
 | `!ocko` | Random ASCII owl |
 | `!export` | Dump the full playlist as a code block |
 | `!stats` | Show radio statistics |
