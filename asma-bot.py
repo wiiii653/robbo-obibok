@@ -1870,9 +1870,10 @@ async def hvsc(ctx: commands.Context):
     state.tracks = tracks
     state.queue = []
     state.index = -1
-    await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**\nUse `!play` to shuffle and play.")
+    await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**")
     log.info("HVSC: collection switched, %d tracks loaded", len(tracks))
     await cleanup_hvsc_file(ctx, tracks)
+    await auto_play_after_switch(ctx, state)
 
 
 async def cleanup_hvsc_file(ctx, tracks):
@@ -1899,6 +1900,7 @@ async def asma(ctx: commands.Context):
     state.queue = []
     state.index = -1
     log.info("ASMA: collection switched")
+    await auto_play_after_switch(ctx, state)
 
 
 @bot.command(aliases=["modarchive", "tracker", "modules"])
@@ -1923,6 +1925,7 @@ async def mod(ctx: commands.Context):
     await ctx.send(f"🟠 **ModArchive collection ready — {len(tracks)} modules!**\n"
                    "FastTracker / ProTracker / ScreamTracker / Impulse Tracker — all formats!")
     log.info("ModArchive: collection switched, %d tracks loaded", len(tracks))
+    await auto_play_after_switch(ctx, state)
 
 
 @bot.command(aliases=["mode", "collection"])
@@ -2010,26 +2013,32 @@ async def flip(ctx: commands.Context):
         log.info("HVSC: collection switched via flip")
 
     # ── Auto-play after switching if user is in voice ──
-    if ctx.author.voice and state.tracks:
-        state.queue = list(state.tracks)
-        if PLAYBACK_SHUFFLE:
-            random.shuffle(state.queue)
-        state.index = 0
-        state.loop = PLAYBACK_LOOP
+    await auto_play_after_switch(ctx, state)
 
-        if not state.vc or not state.vc.is_connected():
-            try:
-                state.vc = await ctx.author.voice.channel.connect()
-            except Exception as e:
-                await ctx.send(f"❌ Could not connect: {e}")
-                return
-        state.guild_id = ctx.guild.id
-        state.ctx = ctx
-        if await play_current_track(ctx):
-            save_queue(state)
-            if state.monitor_task and not state.monitor_task.done():
-                state.monitor_task.cancel()
-            state.monitor_task = bot.loop.create_task(monitor_playback(ctx, state.vc, ctx.guild.id))
+
+async def auto_play_after_switch(ctx: commands.Context, state) -> None:
+    """Auto-play after collection switch if user is in voice."""
+    if not ctx.author.voice or not state.tracks:
+        return
+    state.queue = list(state.tracks)
+    if PLAYBACK_SHUFFLE:
+        random.shuffle(state.queue)
+    state.index = 0
+    state.loop = PLAYBACK_LOOP
+
+    if not state.vc or not state.vc.is_connected():
+        try:
+            state.vc = await ctx.author.voice.channel.connect()
+        except Exception as e:
+            await ctx.send(f"❌ Could not connect: {e}")
+            return
+    state.guild_id = ctx.guild.id
+    state.ctx = ctx
+    if await play_current_track(ctx):
+        save_queue(state)
+        if state.monitor_task and not state.monitor_task.done():
+            state.monitor_task.cancel()
+        state.monitor_task = bot.loop.create_task(monitor_playback(ctx, state.vc, ctx.guild.id))
 
 
 # ── Playback Monitor ────────────────────────────────────────────

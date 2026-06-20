@@ -74,7 +74,7 @@ If you missed it, type `!np` and react to that embed instead.
 
 ### Collection Switching
 
-When you switch collections with `!flip` **while in a voice channel**, playback restarts automatically with the new collection.  
+When you switch collections with `!flip`, `!asma`, `!hvsc` or `!mod` **while in a voice channel**, playback restarts automatically with the new collection.  
 No manual `!play` needed.
 
 ## Quick Start
