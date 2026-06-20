@@ -12,3 +12,4 @@ runner.py
 queues/
 modarchive_cache.json
 robbo.pid
+favorites.json

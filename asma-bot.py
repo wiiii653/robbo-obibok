@@ -953,7 +953,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 @bot.command()
 async def radi(ctx: commands.Context):
     """NI MA RADI"""
-    await ctx.send("https://tenor.com/view/ni-ma-radi-mieciu-szpeniolek-gif-27070286")
+    await ctx.send("https://www.youtube.com/watch?v=SbuBkGrpSl0")
 
 @bot.command(aliases=["radio", "uruchom"])
 async def play(ctx: commands.Context, *, query: str = ""):
@@ -1133,7 +1133,14 @@ async def np(ctx: commands.Context):
     except (ValueError, OSError):
         pass
     embed.set_footer(text=info["footer"])
-    await ctx.send(embed=embed)
+    np_msg = await ctx.send(embed=embed)
+    # Track for reaction-based favorites
+    message_track_map[np_msg.id] = {
+        "url": state.queue[state.index] if state.queue and 0 <= state.index < len(state.queue) else "unknown",
+        "name": name,
+        "author": author,
+        "timestamp": time.time(),
+    }
     return
 
 
@@ -1915,6 +1922,26 @@ async def flip(ctx: commands.Context):
             await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
             state.collection_mode = "modarchive"
         log.info("HVSC: collection switched via flip")
+
+    # ── Auto-play after switching if user is in voice ──
+    if ctx.author.voice and state.tracks:
+        state.queue = list(state.tracks)
+        if PLAYBACK_SHUFFLE:
+            random.shuffle(state.queue)
+        state.index = 0
+        state.loop = PLAYBACK_LOOP
+
+        if not state.vc or not state.vc.is_connected():
+            try:
+                state.vc = await ctx.author.voice.channel.connect()
+            except Exception as e:
+                await ctx.send(f"❌ Could not connect: {e}")
+                return
+        state.guild_id = ctx.guild.id
+        state.ctx = ctx
+        if await play_current_track(ctx):
+            save_queue(state)
+            bot.loop.create_task(monitor_playback(ctx, state.vc, ctx.guild.id))
 
 
 # ── Playback Monitor ────────────────────────────────────────────
