@@ -1214,7 +1214,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
         state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
 
 
-@bot.command()
+@bot.command(aliases=["st"])
 async def stop(ctx: commands.Context):
     """Stop playback and disconnect."""
     state = get_state(ctx.guild.id)
