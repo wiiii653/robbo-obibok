@@ -1964,10 +1964,10 @@ async def flip(ctx: commands.Context):
         cached = await asyncio.get_event_loop().run_in_executor(None, load_cached_tracklist)
         if cached:
             state.tracks = cached
-            await ctx.send("🟢 **Switched to Atari SAP (ASMA)!** Use `!play` to start.")
+            await ctx.send("🟢 **Switched to Atari SAP (ASMA)!**")
         else:
             state.tracks = []
-            await ctx.send("🟢 **Switched to Atari SAP (ASMA).** Use `!play` to crawl the archive.")
+            await ctx.send("🟢 **Switched to Atari SAP (ASMA).**")
         log.info("ASMA: collection switched via flip")
 
     elif state.collection_mode == "asma":
@@ -1979,7 +1979,7 @@ async def flip(ctx: commands.Context):
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
         if tracks:
             state.tracks = tracks
-            await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!** Use `!play` to start.")
+            await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!**")
         else:
             await ctx.send("🟠 **ModArchive cache not ready.** Staying on ASMA.")
             state.collection_mode = "asma"
@@ -2001,7 +2001,7 @@ async def flip(ctx: commands.Context):
         if tracks:
             state = get_state(ctx.guild.id)
             state.tracks = tracks
-            await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!** Use `!play` to start.")
+            await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!**")
         else:
             await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
             state.collection_mode = old_mode

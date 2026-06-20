@@ -57,7 +57,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!asma` | Switch to **Atari SAP** collection |
 | `!hvsc` / `!c64` / `!sid` | Switch to **Commodore 64 SID** collection |
 | `!mod` / `!modarchive` / `!tracker` / `!modules` | Switch to **ModArchive** collection |
-| `!flip` / `!switch` / `!toggle` | Toggle HVSC → ASMA → ModArchive → HVSC … |
+| `!flip` / `!switch` / `!toggle` | Toggle HVSC → ASMA → ModArchive → HVSC … (auto-play if in voice) |
 | `!status` / `!mode` / `!collection` | Show current collection and queue info |
 | `!favorites` / `!favs` / `!playlist` | Show your reaction‑based favorites |
 | `!favplay` / `!fp` | Play all (or a specific) favorited tracks |
@@ -74,7 +74,7 @@ If you missed it, type `!np` and react to that embed instead.
 
 ### Collection Switching
 
-When you switch collections with `!flip`, `!asma`, `!hvsc` or `!mod` **while in a voice channel**, playback restarts automatically with the new collection.  
+When you switch collections with `!flip` **while in a voice channel**, playback restarts automatically with the new collection.  
 No manual `!play` needed.
 
 ## Quick Start
@@ -83,10 +83,10 @@ No manual `!play` needed.
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse gstreamer1.0-plugins-good gstreamer1.0-plugins-bad sidplayfp libopenmpt-dev
+sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse sidplayfp libopenmpt-dev
 
-git clone git@github.com:wiiii653/asma-discord-bot.git
-cd asma-discord-bot
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -119,7 +119,7 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
-cd asma-discord-bot
+cd robbo-obibot-ulimate-chiptune-bot
 source venv/bin/activate
 
 # Set your bot token
@@ -142,24 +142,28 @@ export DISCORD_BOT_TOKEN="your-token-here"
 
 ## Systemd Service (Linux)
 
-Run as a background service:
+Run as a background service with system-level auto-restart:
 
 ```bash
-mkdir -p ~/.config/systemd/user
-cp asma-bot.service ~/.config/systemd/user/
+# Copy service file
+sudo cp asma-bot.service /etc/systemd/system/
 
-# Store token for systemd EnvironmentFile=
-printf 'DISCORD_BOT_TOKEN=%s\n' "YOUR_TOKEN_HERE" > ~/.asma-bot-token
-chmod 600 ~/.asma-bot-token
+# Store Discord token in .env file
+# (create /home/boruta/robbo-obibot/.env with content:)
+# DISCORD_BOT_TOKEN=your-token-here
 
 # Enable and start
-systemctl --user daemon-reload
-systemctl --user enable asma-bot
-systemctl --user start asma-bot
+sudo systemctl daemon-reload
+sudo systemctl enable --now asma-bot.service
 
-# Check logs
-journalctl --user -u asma-bot -f
+# Check status
+sudo systemctl status asma-bot.service
+
+# View logs
+journalctl -u asma-bot.service -f
 ```
+
+The bot will restart automatically on failure (`Restart=on-failure`).
 
 ## Troubleshooting
 
@@ -201,9 +205,9 @@ hvsc:
   cache_ttl: 168          # hours before re-download (1 week)
   enabled: false           # set true to start with C64 by default
 modarchive:
-  base_url: "https://modarchive.org/"
-  download_url: "https://modarchive.org/download.php"
-  cache_ttl: 168
+  base_url: "https://modarchive.org/index.php"
+  download_url: "https://api.modarchive.org/downloads.php"
+  cache_file: "modarchive_cache.json"
 audio:
   sink_name: "asma_bot"
   sample_rate: 48000
@@ -221,7 +225,7 @@ auto:
 ## File Structure
 
 ```
-asma-discord-bot/
+robbo-obibot-ulimate-chiptune-bot/
 ├── asma-bot.py              # Main bot code
 ├── config.yaml              # Configuration file
 ├── requirements.txt         # Python dependencies
