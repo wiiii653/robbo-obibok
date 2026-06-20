@@ -14,7 +14,7 @@ venv_python = os.path.expanduser('~/robbo-obibot/venv/bin/python3')
 log = open(os.path.expanduser('~/robbo-obibot/bot_output.log'), 'a')
 
 proc = subprocess.Popen(
-    [venv_python, '-u', 'asma-bot.py'],
+    [venv_python, '-u', 'robbo-obibok.py'],
     stdout=log,
     stderr=subprocess.STDOUT,
     close_fds=True

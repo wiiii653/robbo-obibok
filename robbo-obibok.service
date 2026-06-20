@@ -10,7 +10,7 @@ Group=boruta
 WorkingDirectory=/home/boruta/robbo-obibot
 EnvironmentFile=/home/boruta/robbo-obibot/.env
 Environment=XDG_RUNTIME_DIR=/run/user/1000
-ExecStart=/home/boruta/robbo-obibot/venv/bin/python3 -u /home/boruta/robbo-obibot/asma-bot.py
+ExecStart=/home/boruta/robbo-obibot/venv/bin/python3 -u /home/boruta/robbo-obibot/robbo-obibok.py
 ExecStartPre=/usr/bin/env sh -c 'rm -f /home/boruta/robbo-obibot/obibok.pid'
 Restart=on-failure
 RestartSec=5

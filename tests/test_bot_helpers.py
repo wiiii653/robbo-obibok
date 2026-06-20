@@ -7,8 +7,8 @@ from pathlib import Path
 
 def load_bot_module():
     os.environ.setdefault("DISCORD_BOT_TOKEN", "test-token")
-    module_path = Path(__file__).resolve().parents[1] / "asma-bot.py"
-    spec = importlib.util.spec_from_file_location("asma_bot", module_path)
+    module_path = Path(__file__).resolve().parents[1] / "robbo-obibok.py"
+    spec = importlib.util.spec_from_file_location("robbo_obibok", module_path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)

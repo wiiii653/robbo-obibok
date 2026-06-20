@@ -136,7 +136,7 @@ sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipew
 cd robbo-obibot-ulimate-chiptune-bot
 source venv/bin/activate
 export DISCORD_BOT_TOKEN="your-token-here"
-./venv/bin/python3 asma-bot.py
+./venv/bin/python3 robbo-obibok.py
 ```
 
 ### Systemd (recommended)
@@ -217,7 +217,7 @@ This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between request
 
 ```
 robbo-obibot-ulimate-chiptune-bot/
-├── asma-bot.py                  # Main bot code (2850+ lines)
+├── robbo-obibok.py              # Main bot code (2850+ lines)
 ├── config.yaml                  # Configuration
 ├── requirements.txt             # Python dependencies
 ├── robbo-obibok.service         # Systemd unit (auto-start on boot)

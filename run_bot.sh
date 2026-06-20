@@ -4,4 +4,4 @@ cd "$(dirname "$0")"
 set -a
 source .env
 set +a
-exec ./venv/bin/python3 -u asma-bot.py
+exec ./venv/bin/python3 -u robbo-obibok.py

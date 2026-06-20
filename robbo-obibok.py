@@ -32,7 +32,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-log = logging.getLogger("asma-bot")
+log = logging.getLogger("robbo-obibok")
 
 # ── Config Loader ────────────────────────────────────────────────
 def load_config() -> dict:
@@ -2864,7 +2864,7 @@ def acquire_lock() -> int:
                     # Żyje — sprawdź czy to na pewno bot, a nie przypadkowy PID
                     with open(f"/proc/{old_pid}/cmdline", "rb") as cf:
                         cmd = cf.read().decode("utf-8", errors="replace")
-                    if "asma-bot.py" in cmd:
+                    if "robbo-obibok.py" in cmd:
                         print(f"PID {old_pid} już uruchomiony. Zabij go najpierw lub poczekaj aż zgaśnie.")
                         sys.exit(1)
                 except (OSError, ProcessLookupError):
