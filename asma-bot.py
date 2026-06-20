@@ -310,7 +310,7 @@ def setup_audacious_sid_config():
 
 # ── Volume normalization per collection ──────────────────────────
 COLLECTION_VOLUMES = {
-    "hvsc": 150,       # SIDy są cichsze, boost
+    "hvsc": 120,       # SIDy są cichsze, lekki boost
     "asma": 100,       # SAPy normalnie
     "modarchive": 100, # MODy normalnie
     "ay": 100,         # AY normalnie
