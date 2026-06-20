@@ -143,20 +143,20 @@ export DISCORD_BOT_TOKEN="your-token-here"
 
 ```bash
 # Copy service file
-sudo cp robbo-obibot.service /etc/systemd/system/
+sudo cp robbo-obibok.service /etc/systemd/system/
 
 # Make sure .env exists with DISCORD_BOT_TOKEN
 echo 'DISCORD_BOT_TOKEN=your-token-here' > .env
 
 # Enable and start
 sudo systemctl daemon-reload
-sudo systemctl enable --now robbo-obibot.service
+sudo systemctl enable --now robbo-obibok.service
 
 # Check status
-sudo systemctl status robbo-obibot.service
+sudo systemctl status robbo-obibok.service
 
 # View logs
-journalctl -u robbo-obibot.service -f
+journalctl -u robbo-obibok.service -f
 # Or tail the log file
 tail -f bot_output.log
 ```
@@ -203,7 +203,7 @@ This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between request
 | HVSC index download fails | Check `hvsc.songlengths_url` in config — HVSC may be temporarily down |
 | SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
 | SAP plays but no "Now Playing" embed | Bot was still starting up — use `!np` to see the current track |
-| Duplicate bot responses | PID lock prevents this — if it happens, `sudo systemctl restart robbo-obibot.service` |
+| Duplicate bot responses | PID lock prevents this — if it happens, `sudo systemctl restart robbo-obibok.service` |
 
 ## Invite the Bot
 
@@ -220,7 +220,7 @@ robbo-obibot-ulimate-chiptune-bot/
 ├── asma-bot.py                  # Main bot code (2850+ lines)
 ├── config.yaml                  # Configuration
 ├── requirements.txt             # Python dependencies
-├── robbo-obibot.service         # Systemd unit (auto-start on boot)
+├── robbo-obibok.service         # Systemd unit (auto-start on boot)
 ├── run_bot.sh                   # Quick-start wrapper (loads .env)
 ├── build_snes_index.py          # SNESmusic.org cache builder
 ├── build_modarchive_index.py    # ModArchive index builder

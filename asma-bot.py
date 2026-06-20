@@ -2844,7 +2844,7 @@ async def health_watchdog():
             log.error("Watchdog error: %s", e)
 
 # ── PID Lock (zapobiega duplikatom) ─────────────────────────────
-LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "robbo.pid")
+LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "obibok.pid")
 
 def acquire_lock() -> int:
     """Sprawdź czy inna instancja bota już żyje. Jeśli tak — wyjdź.
