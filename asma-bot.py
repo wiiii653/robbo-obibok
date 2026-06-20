@@ -374,51 +374,15 @@ def audacious_kill():
     subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
 
 
-# ── FFplay Player (for AY / libgme formats) ──────────────────────
-FFPLAY_PIDS: dict[int, int] = {}  # guild_id -> ffplay PID
-
-def ffplay_play(filepath: str, guild_id: int):
-    """Play a local file via ffplay with libgme, routed to the asma_bot sink."""
-    ffplay_stop(guild_id)
-    env = os.environ.copy()
-    env["PULSE_SINK"] = SINK_NAME
-    proc = subprocess.Popen(
-        ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", filepath],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    FFPLAY_PIDS[guild_id] = proc.pid
-    time.sleep(0.5)
-    move_playback_to_sink()
-
-def ffplay_stop(guild_id: int):
-    """Kill ffplay for a guild if running."""
-    if guild_id:
-        pid = FFPLAY_PIDS.pop(guild_id, None)
-        if pid:
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-    # Also pkill any stray ffplay instances (safety net)
-    subprocess.run(["pkill", "-x", "ffplay"], capture_output=True)
-
-
 def audacious_song() -> str:
     r = subprocess.run(["audtool", "current-song"], capture_output=True, text=True)
     return r.stdout.strip()
+
 
 def is_playing() -> bool:
     r = subprocess.run(["audtool", "playback-playing"], capture_output=True)
     return r.returncode == 0
 
-def is_playing_mode(mode: str) -> bool:
-    """Check if the active player for this mode is running."""
-    if mode == "ay":
-        r = subprocess.run(["pgrep", "-x", "ffplay"], capture_output=True)
-        return r.returncode == 0
-    return is_playing()
 
 # ── SAP Metadata Parser ──────────────────────────────────────────
 SAP_HEADER_RE = re.compile(rb'^;(.+)', re.MULTILINE)
@@ -875,9 +839,9 @@ async def play_current_ay_track(ctx, state, filepath):
         await ctx.send(f"❌ File not found: `{filepath}`")
         return False
 
-    # Stop any existing playback
+    # Stop any existing playback and play via Audacious (console.so handles AY through GME)
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
-    await asyncio.get_event_loop().run_in_executor(None, ffplay_play, full_path, ctx.guild.id)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, full_path)
 
     # Setup MonitorAudioSource (same sink as Audacious)
     if state.vc and state.vc.is_connected():
@@ -895,22 +859,10 @@ async def play_current_ay_track(ctx, state, filepath):
     total = len(state.queue)
     pos = state.index + 1
 
-    # Extract metadata via ffprobe
-    name = filepath.split("/")[-1].replace(".ay", "")
+    # Get metadata from Audacious (console.so/GME provides it)
+    track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
+    name = track or filepath.split("/")[-1].replace(".ay", "")
     author = ""
-    try:
-        result = subprocess.run(
-            ["ffprobe", "-hide_banner", "-show_format", "-of", "json", full_path],
-            capture_output=True, text=True, timeout=10
-        )
-        data = json.loads(result.stdout)
-        tags = data.get("format", {}).get("tags", {})
-        if tags.get("song"):
-            name = tags["song"]
-        if tags.get("author"):
-            author = tags["author"]
-    except Exception:
-        pass
 
     embed = discord.Embed(
         title=name[:256],
@@ -1284,15 +1236,8 @@ async def skip(ctx: commands.Context):
 async def np(ctx: commands.Context):
     """Show current track info."""
     state = get_state(ctx.guild.id)
-    if not is_playing_mode(state.collection_mode):
+    if not is_playing():
         return await ctx.send("Nothing playing right now.")
-    if state.collection_mode == "ay":
-        idx = state.index
-        if 0 <= idx < len(state.queue):
-            await ctx.send(f"Now playing: `{state.queue[idx].split('/')[-1]}`")
-        else:
-            await ctx.send("Now playing an AY track.")
-        return
     track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
     total = len(state.queue)
     pos = state.index + 1
@@ -1600,7 +1545,7 @@ async def stats(ctx: commands.Context):
     total = len(state.tracks)
     queue_len = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing_now = is_playing_mode(state.collection_mode)
+    playing_now = is_playing()
     playing = "🎵 Yes" if playing_now else "⏸️ No"
     loop = "🔁 On" if state.loop else "➡️ Off"
     await ctx.send(
@@ -1996,16 +1941,14 @@ async def download_sid_for_meta(url: str) -> dict[str, str]:
 
 
 def cleanup_orphan_players():
-    """Kill orphaned audacious/ffmpeg/ffplay processes from crashed bot sessions.
+    """Kill orphaned audacious/ffmpeg processes from crashed bot sessions.
     Does NOT kill ffmpeg (MonitorAudioSource) since that's managed in-band."""
     subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
-    subprocess.run(["pkill", "-x", "ffplay"], capture_output=True)
 
 
 def stop_all_players():
-    """Stop Audacious and ffplay — ensures no bleed between collections."""
+    """Stop Audacious — ensures no bleed between collections."""
     audacious_kill()
-    ffplay_stop(0)  # guild_id=0 kills all via pkill
     # Kill any orphaned players that escaped the global tracker
     cleanup_orphan_players()
 
@@ -2127,7 +2070,7 @@ async def status(ctx: commands.Context):
     total = len(state.tracks) if state.tracks else 0
     qlen = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
-    playing_now = is_playing_mode(state.collection_mode)
+    playing_now = is_playing()
     playing = "🎵 Yes" if playing_now else "⏸️ No"
     await ctx.send(
         f"{mode_icon} **Collection: {mode_name}**\n"
@@ -2247,7 +2190,7 @@ async def auto_play_after_switch(ctx: commands.Context, state) -> None:
 # ── Playback Monitor ────────────────────────────────────────────
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
     """Monitor playback, auto-advance tracks, and disconnect on empty channel.
-    Uses is_playing_mode() which checks Audacious or ffplay depending on collection."""
+    Uses Audacious is_playing() for ALL formats (SAP, SID, MOD, AY via console/GME)."""
     empty_since = None
     not_playing_since = None
     GRACE_SECONDS = 3
@@ -2279,9 +2222,7 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
         # For SID: Songlengths.md5 tells Audacious when to stop, so it auto-advances
         # For SAP/MOD: natural end triggers stop
         # When stopped → grace 3s → skip to next track
-        playing = await asyncio.get_event_loop().run_in_executor(
-            None, is_playing_mode, state.collection_mode
-        )
+        playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
 
         # Also stop tracks with unknown length after max time (fallback for SID and modarchive)
         timeout_secs = 180 if state.collection_mode == "hvsc" else 300  # 3min for SID, 5min for modules
