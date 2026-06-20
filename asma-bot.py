@@ -95,6 +95,10 @@ COMMAND_PREFIX = CONFIG["command_prefix"]
 PLAYBACK_LOOP = CONFIG["playback"]["loop"]
 PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 
+# ── Local AY Archive (ZX Spectrum) ──────────────────────────────
+AY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ay")
+AY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ay_cache.json")
+
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
 
@@ -105,7 +109,7 @@ def load_last_collection() -> str | None:
     try:
         with open(LAST_COLLECTION_FILE) as f:
             mode = f.read().strip()
-            if mode in ("asma", "hvsc", "modarchive"):
+            if mode in ("asma", "hvsc", "modarchive", "ay"):
                 return mode
     except (FileNotFoundError, OSError):
         pass
@@ -309,6 +313,7 @@ COLLECTION_VOLUMES = {
     "hvsc": 150,       # SIDy są cichsze, boost
     "asma": 100,       # SAPy normalnie
     "modarchive": 100, # MODy normalnie
+    "ay": 100,         # AY normalnie
 }
 
 def set_volume_for_collection(mode: str):
@@ -367,6 +372,37 @@ def audacious_kill():
     """Kill the Audacious process entirely — prevents audio bleed between collections."""
     subprocess.run(["audtool", "playback-stop"], capture_output=True)
     subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
+
+
+# ── FFplay Player (for AY / libgme formats) ──────────────────────
+FFPLAY_PIDS: dict[int, int] = {}  # guild_id -> ffplay PID
+
+def ffplay_play(filepath: str, guild_id: int):
+    """Play a local file via ffplay with libgme, routed to the asma_bot sink."""
+    ffplay_stop(guild_id)
+    env = os.environ.copy()
+    env["PULSE_SINK"] = SINK_NAME
+    proc = subprocess.Popen(
+        ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", filepath],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    FFPLAY_PIDS[guild_id] = proc.pid
+    time.sleep(0.5)
+    move_playback_to_sink()
+
+def ffplay_stop(guild_id: int):
+    """Kill ffplay for a guild if running."""
+    if guild_id:
+        pid = FFPLAY_PIDS.pop(guild_id, None)
+        if pid:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+    # Also pkill any stray ffplay instances (safety net)
+    subprocess.run(["pkill", "-x", "ffplay"], capture_output=True)
 
 
 def audacious_song() -> str:
@@ -781,6 +817,14 @@ COLLECTION_INFO = {
         "load_tracks": lambda: load_modarchive_cache(),
         "download": lambda url: None,  # uses download_modarchive_module in play func
     },
+    "ay": {
+        "icon": "🔵",
+        "name": "ZX Spectrum AY (Local Archive)",
+        "station": "ZX Spectrum Radio",
+        "footer": "ZX Spectrum Radio — AY chiptunes",
+        "color": discord.Color.blue(),
+        "load_tracks": lambda: load_ay_cache(),
+    },
 }
 
 
@@ -816,6 +860,71 @@ async def ensure_tracks(state) -> bool:
     return bool(state.tracks)
 
 
+async def play_current_ay_track(ctx, state, filepath):
+    """Play a local AY file via ffplay (libgme)."""
+    full_path = os.path.join(AY_DIR, filepath)
+
+    if not os.path.exists(full_path):
+        await ctx.send(f"❌ File not found: `{filepath}`")
+        return False
+
+    # Stop any existing playback
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    await asyncio.get_event_loop().run_in_executor(None, ffplay_play, full_path, ctx.guild.id)
+
+    # Setup MonitorAudioSource (same sink as Audacious)
+    if state.vc and state.vc.is_connected():
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e: _after_stream_end(state.guild_id, e),
+        )
+        active_streams[state.guild_id] = source
+
+    total = len(state.queue)
+    pos = state.index + 1
+
+    # Extract metadata via ffprobe
+    name = filepath.split("/")[-1].replace(".ay", "")
+    author = ""
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-hide_banner", "-show_format", "-of", "json", full_path],
+            capture_output=True, text=True, timeout=10
+        )
+        data = json.loads(result.stdout)
+        tags = data.get("format", {}).get("tags", {})
+        if tags.get("song"):
+            name = tags["song"]
+        if tags.get("author"):
+            author = tags["author"]
+    except Exception:
+        pass
+
+    embed = discord.Embed(
+        title=name[:256],
+        color=discord.Color.blue(),
+    )
+    if author:
+        embed.add_field(name="Composer", value=author, inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.set_footer(text="ZX Spectrum AY — via libgme")
+
+    np_msg = await ctx.send(embed=embed)
+    message_track_map[np_msg.id] = {
+        "url": filepath,
+        "name": name,
+        "author": author,
+        "timestamp": time.time(),
+    }
+    log.info("AY now playing: %s — %s", name, author)
+    return True
+
+
 async def play_current_track(ctx):
     """Download and play the current track from the queue."""
     state = get_state(ctx.guild.id)
@@ -842,7 +951,15 @@ async def play_current_track(ctx):
                 state.collection_mode = "modarchive"
                 await ensure_tracks(state)
             return await play_current_modarchive_track(ctx, state, url)
-        
+
+        # ── Local AY Archive (ZX Spectrum) ──
+        is_ay = url.endswith(".ay")
+        if is_ay:
+            if state.collection_mode != "ay":
+                state.collection_mode = "ay"
+                await ensure_tracks(state)
+            return await play_current_ay_track(ctx, state, url)
+
         # ── ASMA SAP Playback (default) ──
         if state.collection_mode != "asma":
             state.collection_mode = "asma"
@@ -1784,6 +1901,21 @@ def load_modarchive_cache() -> list[str] | None:
         return None
 
 
+def load_ay_cache() -> list[str] | None:
+    """Load AY track list from local cache."""
+    try:
+        if not os.path.exists(AY_CACHE):
+            return None
+        with open(AY_CACHE) as f:
+            data = json.load(f)
+        tracks = [t["path"] for t in data.get("tracks", [])]
+        log.info("AY: loaded %d tracks from cache", len(tracks))
+        return tracks
+    except Exception as e:
+        log.warning("AY cache load error: %s", e)
+        return None
+
+
 async def download_modarchive_module(url: str, retries: int = 2) -> str:
     """Download a module from ModArchive API and return local filepath.
     Preserves the real filename from Content-Disposition header."""
@@ -1850,14 +1982,16 @@ async def download_sid_for_meta(url: str) -> dict[str, str]:
 
 
 def cleanup_orphan_players():
-    """Kill orphaned audacious/ffmpeg processes from crashed bot sessions.
+    """Kill orphaned audacious/ffmpeg/ffplay processes from crashed bot sessions.
     Does NOT kill ffmpeg (MonitorAudioSource) since that's managed in-band."""
     subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
+    subprocess.run(["pkill", "-x", "ffplay"], capture_output=True)
 
 
 def stop_all_players():
-    """Stop Audacious — ensures no bleed between collections."""
+    """Stop Audacious and ffplay — ensures no bleed between collections."""
     audacious_kill()
+    ffplay_stop(0)  # guild_id=0 kills all via pkill
     # Kill any orphaned players that escaped the global tracker
     cleanup_orphan_players()
 
@@ -1941,6 +2075,30 @@ async def mod(ctx: commands.Context):
     await auto_play_after_switch(ctx, state)
 
 
+@bot.command(aliases=["zx", "zxspectrum", "spectrum"])
+async def ay(ctx: commands.Context):
+    """Switch to local ZX Spectrum AY archive."""
+    state = get_state(ctx.guild.id)
+    if state.collection_mode == "ay" and state.tracks:
+        await ctx.send("🔵 **Already in ZX Spectrum AY mode.** Use `!play` to start!")
+        return
+    await ctx.send("🔵 **Loading local AY archive (4,500+ tracks)...**")
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
+    if not tracks:
+        return await ctx.send("❌ AY cache not found. Run `build_ay_index.py` first!")
+    state.collection_mode = "ay"
+    save_last_collection("ay")
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "ay")
+    state.tracks = tracks
+    state.queue = []
+    state.index = -1
+    await ctx.send(f"🔵 **ZX Spectrum AY archive ready — {len(tracks)} tracks!**\\n"
+                   "AY-3-8910 chiptunes — AYGOR / Ironfist / Tr_Songs / SoLOCPC / Bulba")
+    log.info("AY: collection switched, %d tracks loaded", len(tracks))
+    await auto_play_after_switch(ctx, state)
+
+
 @bot.command(aliases=["mode", "collection"])
 async def status(ctx: commands.Context):
     """Show current collection mode and playlist stats."""
@@ -1949,6 +2107,7 @@ async def status(ctx: commands.Context):
         "hvsc": ("🟣", "C64 SID (HVSC)"),
         "asma": ("🟢", "Atari SAP (ASMA)"),
         "modarchive": ("🟠", "Tracker Modules (ModArchive)"),
+        "ay": ("🔵", "ZX Spectrum AY (Local Archive)"),
     }
     mode_icon, mode_name = mode_map.get(state.collection_mode, ("⚪", "Unknown"))
     total = len(state.tracks) if state.tracks else 0
@@ -2003,8 +2162,25 @@ async def flip(ctx: commands.Context):
             save_last_collection("asma")
         log.info("ModArchive: collection switched via flip")
 
+    elif state.collection_mode == "modarchive":
+        # ModArchive → AY
+        old_tracks = list(state.tracks) if state.tracks else []
+        state.collection_mode = "ay"
+        save_last_collection("ay")
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
+        tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
+        if tracks:
+            state.tracks = tracks
+            await ctx.send(f"🔵 **Switched to ZX Spectrum AY — {len(tracks)} tracks!**")
+        else:
+            await ctx.send("🔵 **AY cache not ready.** Staying on ModArchive.")
+            state.collection_mode = "modarchive"
+            state.tracks = old_tracks
+            save_last_collection("modarchive")
+        log.info("AY: collection switched via flip")
+
     else:
-        # ModArchive → HVSC
+        # AY → HVSC
         old_mode = state.collection_mode
         old_tracks = list(state.tracks) if state.tracks else []
         state.collection_mode = "hvsc"
