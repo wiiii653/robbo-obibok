@@ -5,14 +5,14 @@ Wants=pulseaudio.service
 
 [Service]
 Type=simple
-User=%i
-WorkingDirectory=%h/asma-discord-bot
-EnvironmentFile=%h/.asma-bot-token
-ExecStart=%h/asma-discord-bot/venv/bin/python3 -u asma-bot.py
+User=boruta
+WorkingDirectory=/home/boruta/robbo-obibot
+EnvironmentFile=/home/boruta/robbo-obibot/.env
+ExecStart=/home/boruta/robbo-obibot/venv/bin/python3 -u asma-bot.py
 Restart=on-failure
 RestartSec=10
-StandardOutput=journal
-StandardError=journal
+StandardOutput=append:/home/boruta/robbo-obibot/bot_output.log
+StandardError=append:/home/boruta/robbo-obibot/bot_output.log
 
 [Install]
 WantedBy=default.target

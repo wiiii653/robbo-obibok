@@ -97,6 +97,27 @@ PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
+
+# ── Last Collection Mode ────────────────────────────────────────
+LAST_COLLECTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "last_collection.txt")
+
+def load_last_collection() -> str | None:
+    try:
+        with open(LAST_COLLECTION_FILE) as f:
+            mode = f.read().strip()
+            if mode in ("asma", "hvsc", "modarchive"):
+                return mode
+    except (FileNotFoundError, OSError):
+        pass
+    return None
+
+def save_last_collection(mode: str):
+    try:
+        with open(LAST_COLLECTION_FILE, "w") as f:
+            f.write(mode)
+    except OSError:
+        pass
+
 # ── HVSC Collection (C64 SID) ────────────────────────────────────
 HVSC_BASE = CONFIG.get("hvsc", {}).get("base_url", "https://www.hvsc.c64.org/download/C64Music/")
 HVSC_SONGLENGTHS_URL = CONFIG.get("hvsc", {}).get("songlengths_url", "")
@@ -123,6 +144,12 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 active_streams: dict[int, "MonitorAudioSource"] = {}
 
+def _after_stream_end(guild_id: int | None, error: Exception | None) -> None:
+    """Cleanup callback for vc.play() — logs and removes from active_streams."""
+    log.info("Stream ended for guild %s: %s", guild_id, error)
+    if guild_id is not None:
+        active_streams.pop(guild_id, None)
+
 # ── Playlist state ──────────────────────────────────────────────
 class PlaylistState:
     def __init__(self):
@@ -130,7 +157,7 @@ class PlaylistState:
         self.queue: list[str] = []       # shuffled play queue
         self.index: int = -1             # current position in queue
         self.loop: bool = True
-        self.collection_mode: str = DEFAULT_COLLECTION_MODE
+        self.collection_mode: str = load_last_collection() or DEFAULT_COLLECTION_MODE
         self.guild_id: int | None = None
         self.ctx = None
         self.vc = None
@@ -625,7 +652,7 @@ async def play_current_sid_track(ctx, state, url):
             source = MonitorAudioSource(SINK_NAME)
             state.vc.play(
                 source,
-                after=lambda e: log.info("Stream ended: %s", e),
+                after=lambda e: _after_stream_end(state.guild_id, e),
             )
             active_streams[state.guild_id] = source
 
@@ -679,7 +706,7 @@ async def play_current_modarchive_track(ctx, state, url):
             source = MonitorAudioSource(SINK_NAME)
             state.vc.play(
                 source,
-                after=lambda e: log.info("Stream ended: %s", e),
+                after=lambda e: _after_stream_end(state.guild_id, e),
             )
             active_streams[state.guild_id] = source
 
@@ -814,7 +841,7 @@ async def play_current_track(ctx):
                 source = MonitorAudioSource(SINK_NAME)
                 state.vc.play(
                     source,
-                    after=lambda e: log.info("Stream ended: %s", e)
+                    after=lambda e: _after_stream_end(state.guild_id, e)
                 )
                 active_streams[state.guild_id] = source
         
@@ -1710,27 +1737,35 @@ def load_modarchive_cache() -> list[str] | None:
         return None
 
 
-async def download_modarchive_module(url: str) -> str:
+async def download_modarchive_module(url: str, retries: int = 2) -> str:
     """Download a module from ModArchive API and return local filepath.
     Preserves the real filename from Content-Disposition header."""
-    filepath = build_temp_path(url)
-    timeout = aiohttp.ClientTimeout(total=60)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
-            resp.raise_for_status()
-            data = await resp.read()
-            # Try to get real filename from Content-Disposition
-            cd = resp.headers.get("Content-Disposition", "")
-            m = re.search(r'filename=([^;]+)', cd)
-            if m:
-                fname = m.group(1).strip('" ')
-                if fname:
-                    # Use real filename in temp path
-                    digest = sha1(url.encode("utf-8")).hexdigest()[:12]
-                    filepath = os.path.join(TEMP_DIR, f"{digest}_{fname}")
-    with open(filepath, "wb") as f:
-        f.write(data)
-    return filepath
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            filepath = build_temp_path(url)
+            timeout = aiohttp.ClientTimeout(total=60)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
+                    resp.raise_for_status()
+                    data = await resp.read()
+                    # Try to get real filename from Content-Disposition
+                    cd = resp.headers.get("Content-Disposition", "")
+                    m = re.search(r'filename=([^;]+)', cd)
+                    if m:
+                        fname = m.group(1).strip('" ')
+                        if fname:
+                            # Use real filename in temp path
+                            digest = sha1(url.encode("utf-8")).hexdigest()[:12]
+                            filepath = os.path.join(TEMP_DIR, f"{digest}_{fname}")
+            with open(filepath, "wb") as f:
+                f.write(data)
+            return filepath
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            last_err = e
+            if attempt < retries:
+                await asyncio.sleep(2)
+    raise last_err  # type: ignore[reportGeneralTypeIssues]
 
 
 def parse_sid_header(data: bytes) -> dict[str, str]:
@@ -1796,6 +1831,7 @@ async def hvsc(ctx: commands.Context):
     if not tracks:
         return await ctx.send("❌ Failed to load HVSC index. Check config or try again.")
     state.collection_mode = "hvsc"
+    save_last_collection("hvsc")
     await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "hvsc")
     state.tracks = tracks
     await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**\nUse `!play` to shuffle and play.")
@@ -1818,6 +1854,7 @@ async def asma(ctx: commands.Context):
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     state = get_state(ctx.guild.id)
     state.collection_mode = "asma"
+    save_last_collection("asma")
     await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "asma")
     cached = load_cached_tracklist()
     if cached:
@@ -1843,6 +1880,7 @@ async def mod(ctx: commands.Context):
         return await ctx.send("❌ ModArchive cache not found. Run `build_modarchive_index.py` first!\n"
                               "The index builder is running in the background — wait a few minutes and try again.")
     state.collection_mode = "modarchive"
+    save_last_collection("modarchive")
     await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "modarchive")
     state.tracks = tracks
     await ctx.send(f"🟠 **ModArchive collection ready — {len(tracks)} modules!**\n"
@@ -1883,6 +1921,7 @@ async def flip(ctx: commands.Context):
     if state.collection_mode == "hvsc":
         # HVSC → ASMA
         state.collection_mode = "asma"
+        save_last_collection("asma")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         cached = load_cached_tracklist()
         if cached:
@@ -1896,6 +1935,7 @@ async def flip(ctx: commands.Context):
     elif state.collection_mode == "asma":
         # ASMA → ModArchive
         state.collection_mode = "modarchive"
+        save_last_collection("modarchive")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = load_modarchive_cache()
         if tracks:
@@ -1909,6 +1949,7 @@ async def flip(ctx: commands.Context):
     else:
         # ModArchive → HVSC
         state.collection_mode = "hvsc"
+        save_last_collection("hvsc")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
         if not tracks:
@@ -1921,6 +1962,7 @@ async def flip(ctx: commands.Context):
         else:
             await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
             state.collection_mode = "modarchive"
+            save_last_collection("modarchive")
         log.info("HVSC: collection switched via flip")
 
     # ── Auto-play after switching if user is in voice ──
@@ -1951,7 +1993,7 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
     empty_since = None
     not_playing_since = None
     GRACE_SECONDS = 3
-    while vc.is_connected():
+    while vc.is_connected() and not _shutdown_flag.is_set():
         await asyncio.sleep(1)
         state = get_state(guild_id)
 
@@ -2142,23 +2184,27 @@ def cleanup_temp():
 
 async def graceful_shutdown():
     """Disconnect all voice clients and stop Audacious."""
+    global active_streams
+    _shutdown_flag.set()
     log.info("Shutting down gracefully...")
     release_lock()
     for guild_id, source in list(active_streams.items()):
         source.cleanup()
-    del active_streams
+    active_streams.clear()
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     for vc in list(bot.voice_clients):
         await vc.disconnect()
     cleanup_temp()
 
+_shutdown_flag = asyncio.Event()
+
 def handle_signal(signum, frame):
+    """Signal handler: close the bot gracefully. Thread-safe."""
     log.info("Received signal %d, shutting down...", signum)
     loop = asyncio.get_event_loop()
     if loop.is_running():
         loop.create_task(graceful_shutdown())
-    else:
-        loop.run_until_complete(graceful_shutdown())
+        loop.call_soon_threadsafe(lambda: asyncio.ensure_future(bot.close()))
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, handle_signal)
