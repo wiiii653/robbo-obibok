@@ -9,27 +9,44 @@ __________      ___.  ___.            ________ ___.   ._____.           __
 
 # Robbo Obibot — The Ultimate Chiptune Bot
 
-Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Plays **Atari `.sap`** files from the [ASMA archive](https://asma.atari.org/), **Commodore 64 `.sid`** files from the [High Voltage SID Collection](https://www.hvsc.c64.org/), and **Amiga `.mod`/`.xm`/`.s3m`/`.it`** modules from [ModArchive](https://modarchive.org/).
+Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Six collections, one bot — **the biggest chiptune radio on Discord.**
 
-**Join a voice channel, type `!play`, and let the chips play.**
+**Join a voice channel, `!play`, and let the chips fall where they may.**
 
 ## Features
 
-- 🎵 **Triple collection** — switch between **Atari SAP** (6400+), **C64 SID** (60 000+), and **ModArchive** (175 000+ modules) with `!flip`
+### 🎵 Six Collections (and growing)
+
+| # | Collection | Tracks | Source | Command |
+|---|-----------|--------|--------|---------|
+| 🟢 | **Atari SAP (ASMA)** | ~6 300 | asma.atari.org | `!asma` |
+| 🟣 | **C64 SID (HVSC)** | ~60 500 | hvsc.c64.org | `!hvsc` / `!c64` |
+| 🟠 | **Tracker Modules (ModArchive)** | ~175 000 | modarchive.org | `!mod` |
+| 🔵 | **ZX Spectrum AY** | ~4 500 | local `archiwum/ay/` | `!ay` / `!zx` |
+| 🎵 | **Tiny Music** | ~418 | local `archiwum/tiny/` | `!tiny` |
+| 🔴 | **SNES SPC** | ~60 000 tracks, 2 612 games | snesmusic.org | `!snes` / `!spc` |
+
+Switch between them with `!flip`, check all counts with `!status`.
+
+### 🎮 Playback & Control
+
 - 🔀 **Shuffle loop** — never hear the same track twice in a row
-- 🎼 **Rich metadata** — track name, composer, copyright from `.sap`, `.sid` and module headers
-- ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks, play them with `!favplay`
-- 🔊 **Volume control** — per‑collection normalization (SID 150%, SAP 100%, MOD 100%), manual override with `!volume`
+- 🎼 **Rich metadata** — track name, composer, copyright from headers
+- ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks, play with `!favplay`
+- 🔊 **Per‑collection volume normalization** — SID at 120%, SAP/SAP/AY/Tiny at 100%
 - ⏭️ **Skip**, **Stop**, **Jump**, **Queue**, **History**, **Now Playing**, **Search**
 - 🔄 **Auto-advance** — moves to next track when current ends
-- 🔁 **Loop mode** — toggle playlist reshuffle with `!loop`
-- 💾 **Queue persistence** — saves/restores queue across restarts
+- 🔁 **Loop mode** — toggle with `!loop`
+- 💾 **Queue persistence** — survives restarts
+- 🔍 **SNES search** — `!snes search <game name or composer>` finds games by title or artist
 - 📻 **Auto-start** — starts playing when someone joins a configured voice channel
 - 🌙 **Auto-stop** — disconnects after channel is empty for a timeout
 - 🏥 **Watchdog** — auto-restarts players and PulseAudio sink if they crash
 - ⚙️ **Configurable** via `config.yaml`
 
 ## Commands
+
+### Playback
 
 | Command | Description |
 |---------|-------------|
@@ -49,33 +66,42 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!sleep <minutes>` | Auto‑stop after N minutes (max 360) |
 | `!radi` | 😈 |
 | `!ocko` | Random ASCII owl |
-| `!export` | Dump the full playlist as a code block |
-| `!stats` | Show radio statistics |
+
+### Collections
+
+| Command | Switches to |
+|---------|-------------|
+| `!asma` | **Atari SAP** (ASMA) |
+| `!hvsc` / `!c64` / `!sid` | **Commodore 64 SID** (HVSC) |
+| `!mod` / `!modarchive` / `!tracker` | **Tracker modules** (ModArchive) |
+| `!ay` / `!zx` | **ZX Spectrum AY** |
+| `!tiny` | **Tiny Music** (curated demoscene modules) |
+| `!snes` / `!spc` / `!nintendo` | **SNES SPC** (Super Nintendo) |
+| `!snes search <term>` | Search SNES games by name or composer |
+| `!flip` / `!switch` / `!toggle` | Cycle: HVSC → ASMA → ModArchive → AY → Tiny → SNES → HVSC (shows sequence) |
+
+### Info & Management
+
+| Command | Description |
+|---------|-------------|
+| `!status` / `!mode` / `!collection` / `!all` | Show **all six collections** with track counts + current mode |
 | `!search <query>` | Search tracks by name, directory, or author |
 | `!refresh` | Re‑crawl archive and rebuild playlist |
 | `!reindex` | Re‑fetch metadata for search index |
-| `!asma` | Switch to **Atari SAP** collection |
-| `!hvsc` / `!c64` / `!sid` | Switch to **Commodore 64 SID** collection |
-| `!mod` / `!modarchive` / `!tracker` / `!modules` | Switch to **ModArchive** collection |
-| `!flip` / `!switch` / `!toggle` | Toggle HVSC → ASMA → ModArchive → HVSC … (auto-play if in voice) |
-| `!status` / `!mode` / `!collection` | Show current collection and queue info |
 | `!favorites` / `!favs` / `!playlist` | Show your reaction‑based favorites |
 | `!favplay` / `!fp` | Play all (or a specific) favorited tracks |
+| `!export` | Dump the full playlist as a code block |
+| `!stats` | Show radio statistics |
 
 ### Favorites System
 
-React with **any emoji** to a **Now Playing embed** (both the auto‑sent one and the one from `!np`) to save the track to your favorites.  
-React again to remove it (toggle).  
-Use `!favplay` to play all favorited tracks shuffled, or `!favplay N` to play a specific one.  
-Data persists in `favorites.json`.
+React with **any emoji** to a **Now Playing embed** (both the auto‑sent one and the one from `!np`) to save the track to your favorites. React again to remove it (toggle). Use `!favplay` to play all favorited tracks shuffled, or `!favplay N` to play a specific one. Data persists in `favorites.json`.
 
-**Tip:** The auto‑play embed that appears when a track starts is already tracked — just react to it.  
-If you missed it, type `!np` and react to that embed instead.
+**Tip:** The auto‑play embed that appears when a track starts is already tracked — just react to it. If you missed it, type `!np` and react to that embed instead.
 
 ### Collection Switching
 
-When you switch collections with `!flip`, `!asma`, `!hvsc` or `!mod` **while in a voice channel**, playback restarts automatically with the new collection.  
-No manual `!play` needed.
+When you switch collections with `!flip`, `!asma`, `!hvsc` or any collection command **while in a voice channel**, playback restarts automatically with the new collection. No manual `!play` needed.
 
 ## Quick Start
 
@@ -83,54 +109,100 @@ No manual `!play` needed.
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse sidplayfp libopenmpt-dev
+sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse sidplayfp libopenmpt-dev unrar
 
 git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
 cd robbo-obibot-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-```
-
-### Fedora
-
-```bash
-sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpeg pipewire-utils gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld sidplayfp libopenmpt
-
-git clone git@github.com:wiiii653/asma-discord-bot.git
-cd asma-discord-bot
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+cp config.yaml config.yaml  # edit to taste
+cp .env.example .env        # add DISCORD_BOT_TOKEN
 ```
 
 ### Arch Linux
 
 ```bash
-sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp libopenmpt
-
-git clone git@github.com:wiiii653/asma-discord-bot.git
-cd asma-discord-bot
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp libopenmpt unrar
+# Same clone + venv steps as above
 ```
 
 ## Running
 
+### Manual
+
 ```bash
 cd robbo-obibot-ulimate-chiptune-bot
 source venv/bin/activate
-
-# Set your bot token
 export DISCORD_BOT_TOKEN="your-token-here"
-
-# Run
 ./venv/bin/python3 asma-bot.py
 ```
 
-> **Note for C64 SID playback:** Audacious uses `sid.so` input plugin (bundled with `audacious-plugins`) which relies on `libsidplayfp`.  
-> **Note for ModArchive playback:** Audacious uses `openmpt.so` input plugin for MOD/XM/S3M/IT files (bundled with `audacious-plugins`).
+### Systemd (recommended)
+
+```bash
+# Copy service file
+sudo cp robbo-obibot.service /etc/systemd/system/
+
+# Make sure .env exists with DISCORD_BOT_TOKEN
+echo 'DISCORD_BOT_TOKEN=your-token-here' > .env
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable --now robbo-obibot.service
+
+# Check status
+sudo systemctl status robbo-obibot.service
+
+# View logs
+journalctl -u robbo-obibot.service -f
+# Or tail the log file
+tail -f bot_output.log
+```
+
+The bot restarts automatically on failure (`Restart=on-failure`) and on server reboot (`WantedBy=multi-user.target`).
+
+### Building the SNES index
+
+The SNES SPC collection (2 612 games, ~60 000 tracks) requires a one-time index build:
+
+```bash
+./venv/bin/python3 build_snes_index.py
+```
+
+This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between requests). The resulting `snes_cache.json` is ~650 KB.
+
+## Audio Requirements
+
+- **PipeWire** or **PulseAudio** running under the same user
+- Audacious **must** be installed with all plugin bundles (`audacious-plugins`)
+- The bot creates a virtual sink called `asma_bot` to route audio to Discord
+- **C64 SID:** `sid.so` input plugin (via `libsidplayfp`)
+- **Tracker modules:** `openmpt.so` input plugin (via `libopenmpt`)
+- **SPC/NSF/GBS:** `console.so` input plugin (via `libgme` — Game Music Emu)
+- **ZX Spectrum AY:** `console.so` input plugin (via `libgme`)
+- **SNES SPC:** `console.so` input plugin (via `libgme`)
+
+## Troubleshooting
+
+| Symptom | Likely Fix |
+|---------|-----------|
+| `RuntimeError: PyNaCl library needed` | `pip install pynacl` |
+| Bot doesn't respond to commands | Enable **Message Content Intent** in Discord Developer Portal |
+| Bot joins VC but no sound (titles show) | `XDG_RUNTIME_DIR` missing under systemd — add `Environment=XDG_RUNTIME_DIR=/run/user/1000` to service file |
+| Audacious fails to play (pa_context_connect) | Check `XDG_RUNTIME_DIR` is set; restart the service |
+| SNES download fails | `unrar` must be installed (`sudo apt install unrar`) |
+| SID doesn't play / no SID plugin | `ls /usr/lib/*/audacious/Input/sid.so` — install `audacious-plugins` with sidplayfp |
+| MOD doesn't play / no openmpt plugin | `ls /usr/lib/*/audacious/Input/openmpt.so` — install `libopenmpt` |
+| SPC doesn't play / no console plugin | `ls /usr/lib/*/audacious/Input/console.so` — install `libgme` (Game Music Emu) |
+| Both Atari and C64 play at once | Update to latest code — `stop_all_players()` fix prevents audio bleed |
+| Crawl seems stuck | Check `config.yaml` → `crawl_timeout` and `cache_ttl` |
+| `!play` says "Join a voice channel" | You must be on a voice channel when issuing the command |
+| Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
+| HVSC index download fails | Check `hvsc.songlengths_url` in config — HVSC may be temporarily down |
+| SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
+| SAP plays but no "Now Playing" embed | Bot was still starting up — use `!np` to see the current track |
+| Duplicate bot responses | PID lock prevents this — if it happens, `sudo systemctl restart robbo-obibot.service` |
 
 ## Invite the Bot
 
@@ -140,107 +212,52 @@ export DISCORD_BOT_TOKEN="your-token-here"
 4. Permissions: `Send Messages`, `Connect`, `Speak`, `Use Voice Activity`
 5. Use the generated URL to invite the bot to your server
 
-## Systemd Service (Linux)
-
-Run as a background service with system-level auto-restart:
-
-```bash
-# Copy service file
-sudo cp asma-bot.service /etc/systemd/system/
-
-# Store Discord token in .env file
-# (create /home/boruta/robbo-obibot/.env with content:)
-# DISCORD_BOT_TOKEN=your-token-here
-
-# Enable and start
-sudo systemctl daemon-reload
-sudo systemctl enable --now asma-bot.service
-
-# Check status
-sudo systemctl status asma-bot.service
-
-# View logs
-journalctl -u asma-bot.service -f
-```
-
-The bot will restart automatically on failure (`Restart=on-failure`).
-
-## Troubleshooting
-
-| Symptom | Likely Fix |
-|---------|-----------|
-| `RuntimeError: PyNaCl library needed` | `pip install pynacl` |
-| Bot doesn't respond to commands | Enable **Message Content Intent** in Discord Developer Portal |
-| Bot joins VC but no sound | Audacious not running — restart bot, or run `audacious --headless` manually |
-| SID doesn't play / no SID plugin | Verify `ls /usr/lib/*/audacious/Input/sid.so` — install `audacious-plugins` with sidplayfp |
-| MOD doesn't play / no openmpt plugin | Verify `ls /usr/lib/*/audacious/Input/openmpt.so` — install `libopenmpt` and `audacious-plugins` |
-| Both Atari and C64 play at once | Update to latest code — `stop_all_players()` fix prevents audio bleed |
-| Crawl seems stuck | Check `config.yaml` → `crawl_timeout` and `cache_ttl` |
-| `!play` says "Join a voice channel" | You must be on a voice channel when issuing the command |
-| Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
-| HVSC index download fails | Check `hvsc.songlengths_url` in config — HVSC may be temporarily down |
-| SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
-| SAP plays but no "Now Playing" embed | Bot was still starting up — use `!np` to see the current track |
-| Duplicate bot responses | PID lock prevents this normally — if it happens, `pkill -f asma-bot.py` and restart |
-
-## Configuration
-
-Edit `config.yaml`:
-
-```yaml
-command_prefix: "!"
-asma:
-  base_url: "https://asma.atari.org/asma/"
-  top_dirs:
-    - "Composers/"
-    - "Games/"
-    - "Groups/"
-    - "Misc/"
-    - "Unknown/"
-  crawl_timeout: 15
-  cache_ttl: 24
-hvsc:
-  base_url: "https://www.hvsc.c64.org/download/C64Music/"
-  songlengths_url: "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.txt"
-  cache_ttl: 168          # hours before re-download (1 week)
-  enabled: false           # set true to start with C64 by default
-modarchive:
-  base_url: "https://modarchive.org/index.php"
-  download_url: "https://api.modarchive.org/downloads.php"
-  cache_file: "modarchive_cache.json"
-audio:
-  sink_name: "asma_bot"
-  sample_rate: 48000
-  channels: 2
-  format: "s16le"
-playback:
-  loop: true
-  shuffle: true
-  crossfade: 0
-auto:
-  start_channel: ""        # voice channel name to auto-start (empty = disabled)
-  empty_timeout: 60        # seconds of empty channel before disconnect (0 = disabled)
-```
-
 ## File Structure
 
 ```
 robbo-obibot-ulimate-chiptune-bot/
-├── asma-bot.py              # Main bot code
-├── config.yaml              # Configuration file
-├── requirements.txt         # Python dependencies
-├── asma-bot.service         # Systemd service file
-├── run_robbo.sh             # Quick-start script
-├── runner.py                # Token-injecting launcher (base64 token)
-├── build_modarchive_index.py# ModArchive index builder (A–Z scan)
-├── asma_cache.json          # Cached ASMA track list (generated)
-├── hvsc_cache.json          # Cached HVSC track list (generated)
-├── modarchive_cache.json    # Cached ModArchive track list (generated, ~22 MB)
-├── favorites.json           # Reaction-based favorites (generated)
-├── queues/                  # Persisted queues per guild (generated)
-├── metadata_cache.json      # Search metadata index (generated)
-├── extras/                  # Extra utilities
-├── tests/                   # Test scripts
-├── venv/                    # Virtualenv (optional local setup)
-└── README.md                # This file
+├── asma-bot.py                  # Main bot code (2850+ lines)
+├── config.yaml                  # Configuration
+├── requirements.txt             # Python dependencies
+├── robbo-obibot.service         # Systemd unit (auto-start on boot)
+├── run_bot.sh                   # Quick-start wrapper (loads .env)
+├── build_snes_index.py          # SNESmusic.org cache builder
+├── build_modarchive_index.py    # ModArchive index builder
+├── build_ay_index.py            # AY archive index builder
+├── build_tiny_index.py          # Tiny Music index builder
+├── asma_cache.json              # ASMA track list cache
+├── ay_cache.json                # AY track list cache
+├── tiny_cache.json              # Tiny Music track list cache
+├── hvsc_cache.json              # HVSC (C64 SID) track list cache
+├── modarchive_cache.json        # ModArchive cache (~22 MB, 175k modules)
+├── snes_cache.json              # SNESmusic.org game list (2 612 games)
+├── favorites.json               # Reaction-based favorites
+├── metadata_cache.json          # Search metadata index
+├── queues/                      # Persisted queues per guild
+├── archiwum/ay/                 # Local AY files
+├── archiwum/tiny/               # Local tiny music modules
+├── archiwum/spc/                # Downloaded SNES SPC files (on-demand)
+├── extras/                      # Extra utilities
+├── tests/                       # Test scripts
+└── README.md                    # This file
 ```
+
+## Configuration
+
+See `config.yaml`. Key sections:
+
+```yaml
+hvsc:
+  enabled: true           # C64 as default collection
+asma:
+  base_url: "https://asma.atari.org/asma/"
+modarchive:
+  download_url: "https://api.modarchive.org/downloads.php"
+audio:
+  sink_name: "asma_bot"   # PipeWire/PulseAudio null-sink
+auto:
+  start_channel: "ASMA Radio"  # Voice channel that triggers auto-start
+  empty_timeout: 60            # Seconds before auto-disconnect
+```
+
+Full example in the repository.

@@ -113,7 +113,7 @@ def load_last_collection() -> str | None:
     try:
         with open(LAST_COLLECTION_FILE) as f:
             mode = f.read().strip()
-            if mode in ("asma", "hvsc", "modarchive", "ay", "tiny"):
+            if mode in ("asma", "hvsc", "modarchive", "ay", "tiny", "spc"):
                 return mode
     except (FileNotFoundError, OSError):
         pass
@@ -126,7 +126,10 @@ def save_last_collection(mode: str):
     except OSError:
         pass
 
-# ── HVSC Collection (C64 SID) ────────────────────────────────────
+# ── SNES SPC Collection (SNESmusic.org) ──────────────────────────
+SNES_BASE = "https://snesmusic.org/v2/"
+SNES_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snes_cache.json")
+SNES_SPC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "spc")
 HVSC_BASE = CONFIG.get("hvsc", {}).get("base_url", "https://www.hvsc.c64.org/download/C64Music/")
 HVSC_SONGLENGTHS_URL = CONFIG.get("hvsc", {}).get("songlengths_url", "")
 HVSC_CACHE_TTL = CONFIG.get("hvsc", {}).get("cache_ttl", 168)
@@ -319,6 +322,7 @@ COLLECTION_VOLUMES = {
     "modarchive": 100, # MODy normalnie
     "ay": 100,         # AY normalnie
     "tiny": 100,       # Tiny normalnie
+    "spc": 100,        # SPC normalnie
 }
 
 def set_volume_for_collection(mode: str):
@@ -815,6 +819,14 @@ COLLECTION_INFO = {
         "color": discord.Color.purple(),
         "load_tracks": lambda: load_tiny_cache(),
     },
+    "spc": {
+        "icon": "🔴",
+        "name": "SNES SPC (SNESmusic.org)",
+        "station": "SNES Radio",
+        "footer": "SNES Radio — Super Nintendo SPC chiptunes",
+        "color": discord.Color.from_str("#E74C3C"),
+        "load_tracks": lambda: load_snes_cache(),
+    },
 }
 
 
@@ -966,7 +978,16 @@ async def play_current_track(ctx):
         return False
     
     url = state.queue[state.index]
-    log.info("play_current_track: url=%s, index=%d", url, state.index)
+    log.info("play_current_track: url=%s, index=%d", str(url)[:80], state.index)
+
+    # ── SNES SPC (game entry dict) ──
+    if state.collection_mode == "spc" or url in snes_metadata:
+        game_entry = snes_metadata.get(url)
+        if not game_entry:
+            await ctx.send(f"❌ Unknown SNES track")
+            return False
+        return await play_current_spc_track(ctx, state, game_entry)
+
     await ctx.send(f"Loading... `{url.split('/')[-1]}`")
     
     try:
@@ -1842,37 +1863,68 @@ async def favplay(ctx: commands.Context, *, number: str = ""):
 # URL → duration in seconds, parsed from Songlengths.txt
 sid_durations: dict[str, int] = {}
 
+def _parse_duration(dur_str: str) -> int:
+    """Parse duration string 'M:SS', 'M:SS (alt X:XX)' → seconds."""
+    dur_str = dur_str.strip().split()[0].split("(")[0].strip()
+    if ":" in dur_str:
+        try:
+            parts = dur_str.split(":")
+            return int(parts[0]) * 60 + int(parts[1])
+        except (ValueError, IndexError):
+            pass
+    return 0
+
+
 def parse_songlengths_to_tracks(data: str) -> list[str]:
     """Parse Songlengths.txt → list of full SID URLs.
-    Also populates sid_durations with track durations (seconds)."""
-    urls = []
+
+    Handles both current HVSC MD5 format::
+
+        ; /MUSICIANS/A/Author/Track.sid
+        md5hash=1:23
+
+    And older plaintext format::
+
+        ; /MUSICIANS/A/Author/Track.sid = 1:23
+
+    Also populates sid_durations with track durations (seconds).
+    """
+    urls: list[str] = []
+    pending_path: str | None = None
+
     for line in data.splitlines():
         line = line.strip()
+        if not line:
+            continue
+
         if line.startswith("; /"):
-            # Extract path: "; /MUSICIANS/... = 3:02" → "/MUSICIANS/..."
-            rest = line[2:].strip()  # "/MUSICIANS/... = 3:02"
+            rest = line[2:].strip()  # e.g. "/MUSICIANS/A/Author/Track.sid[ = 1:23]"
             if " = " in rest:
+                # Old single-line format: "; /path = M:SS"
                 path_part, dur_part = rest.split(" = ", 1)
             else:
+                # MD5 format: path on its own line, duration follows
                 path_part = rest
-                dur_part = ""
-
-            # Parse duration "M:SS" or "M:SS (alt)" → seconds
-            dur_seconds = 0
-            if dur_part:
-                # Get first duration segment (before any parenthesis or space)
-                dur_str = dur_part.split()[0].split("(")[0].strip()
-                if ":" in dur_str:
-                    try:
-                        parts = dur_str.split(":")
-                        dur_seconds = int(parts[0]) * 60 + int(parts[1])
-                    except (ValueError, IndexError):
-                        pass
+                dur_part = None
+                pending_path = path_part
 
             full_url = HVSC_BASE.rstrip("/") + path_part
             urls.append(full_url)
-            if dur_seconds > 0:
-                sid_durations[full_url] = dur_seconds
+
+            if dur_part:
+                sec = _parse_duration(dur_part)
+                if sec:
+                    sid_durations[full_url] = sec
+
+        elif "=" in line and pending_path is not None:
+            # MD5 duration line: "hash=1:23" or "hash=1:23 (alt 2:34)"
+            dur_part = line.split("=", 1)[1]
+            full_url = HVSC_BASE.rstrip("/") + pending_path
+            sec = _parse_duration(dur_part)
+            if sec:
+                sid_durations[full_url] = sec
+            pending_path = None
+
     return urls
 
 
@@ -1893,7 +1945,11 @@ def download_hvsc_index() -> list[str] | None:
         # Cache to file
         try:
             with open(HVSC_CACHE_FILE, "w") as f:
-                json.dump({"tracks": tracks, "downloaded": time.time()}, f)
+                json.dump({
+                    "tracks": tracks,
+                    "durations": sid_durations,
+                    "downloaded": time.time(),
+                }, f)
         except Exception as e:
             log.warning("HVSC: cache write failed: %s", e)
         log.info("HVSC: loaded %d SID tracks", len(tracks))
@@ -1915,6 +1971,14 @@ def load_cached_hvsc() -> list[str] | None:
             log.info("HVSC cache expired (%.1f hours old)", age / 3600)
             return None
         tracks = data.get("tracks", [])
+        # Restore duration map from cache (if available)
+        cached_durs = data.get("durations", {})
+        if cached_durs:
+            sid_durations.clear()
+            # Convert string keys back to int if needed (JSON has string keys)
+            for k, v in cached_durs.items():
+                sid_durations[k] = int(v) if not isinstance(v, int) else v
+            log.info("HVSC: restored %d durations from cache", len(cached_durs))
         log.info("HVSC: loaded %d tracks from cache", len(tracks))
         return tracks
     except Exception as e:
@@ -1975,6 +2039,139 @@ def load_tiny_cache() -> list[str] | None:
     except Exception as e:
         log.warning("Tiny cache load error: %s", e)
         return None
+
+
+# ── SNES SPC Collection ────────────────────────────────────────────
+# RSN URL → game metadata
+snes_metadata: dict[str, dict] = {}
+
+def load_snes_cache() -> list[str] | None:
+    """Load SNES SPC game set list from cache. Returns list of RSN URLs."""
+    try:
+        if not os.path.exists(SNES_CACHE_FILE):
+            return None
+        with open(SNES_CACHE_FILE) as f:
+            data = json.load(f)
+        game_sets = data.get("tracks", [])
+        urls = []
+        snes_metadata.clear()
+        for g in game_sets:
+            url = g.get("rsn_url", "")
+            if url:
+                urls.append(url)
+                snes_metadata[url] = g
+        log.info("SNES: loaded %d game sets from cache", len(urls))
+        return urls
+    except Exception as e:
+        log.warning("SNES cache load error: %s", e)
+        return None
+
+
+async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str) -> str | None:
+    """Download an RSN file and extract SPC files to a local cache dir.
+    Returns the directory path containing extracted SPCs."""
+    game_dir = os.path.join(SNES_SPC_DIR, re.sub(r'[^a-zA-Z0-9_-]', '_', spc_now))
+    os.makedirs(game_dir, exist_ok=True)
+
+    # Check if already cached
+    existing = [f for f in os.listdir(game_dir) if f.endswith(".spc")]
+    if existing:
+        log.info("SNES: using cached SPCs for %s (%d files)", game_name, len(existing))
+        return game_dir
+
+    # Download RSN
+    rsn_path = os.path.join(game_dir, f"{spc_now}.rsn")
+    try:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(rsn_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
+                resp.raise_for_status()
+                data = await resp.read()
+        with open(rsn_path, "wb") as f:
+            f.write(data)
+    except Exception as e:
+        log.error("SNES: RSN download failed for %s: %s", game_name, e)
+        return None
+
+    # Extract SPC files
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "unrar", "e", "-y", rsn_path, game_dir + "/",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await proc.wait()
+        # Clean up RSN after extraction
+        os.remove(rsn_path)
+        extracted = [f for f in os.listdir(game_dir) if f.endswith(".spc")]
+        log.info("SNES: extracted %d SPC files for %s", len(extracted), game_name)
+        return game_dir
+    except Exception as e:
+        log.error("SNES: RSN extraction failed for %s: %s", game_name, e)
+        return None
+
+
+async def play_current_spc_track(ctx, state, game_entry: dict):
+    """Download RSN, extract SPCs, and play via Audacious."""
+    spc_now = game_entry["spc_now"]
+    game_name = game_entry.get("name", "Unknown")
+    composers = game_entry.get("composers", [])
+
+    # Download and extract
+    game_dir = await download_spc_rsn(game_entry["rsn_url"], spc_now, game_name)
+    if not game_dir:
+        await ctx.send(f"❌ Failed to download/extract `{game_name}`")
+        return False
+
+    # Get sorted SPC files
+    spc_files = sorted([f for f in os.listdir(game_dir) if f.endswith(".spc")])
+    if not spc_files:
+        await ctx.send(f"❌ No SPC files found for `{game_name}`")
+        return False
+
+    first_spc = os.path.join(game_dir, spc_files[0])
+
+    # Stop existing playback and play via Audacious
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, first_spc)
+
+    state.current_sap_path = first_spc
+
+    # Setup MonitorAudioSource
+    if state.vc and state.vc.is_connected():
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e: _after_stream_end(state.guild_id, e),
+        )
+        active_streams[state.guild_id] = source
+
+    total = len(state.queue)
+    pos = state.index + 1
+
+    embed = discord.Embed(
+        title=game_name[:256],
+        color=discord.Color.from_str("#E74C3C"),
+    )
+    if composers:
+        embed.add_field(name="Composer(s)", value=", ".join(composers[:5]), inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.add_field(name="Tracks", value=str(len(spc_files)), inline=True)
+    embed.set_footer(text="SNES Radio — Super Nintendo SPC")
+
+    np_msg = await ctx.send(embed=embed)
+    message_track_map[np_msg.id] = {
+        "url": game_entry["rsn_url"],
+        "name": game_name,
+        "author": ", ".join(composers) if composers else "Unknown",
+        "timestamp": time.time(),
+    }
+    log.info("SNES now playing: %s — %s", game_name, ", ".join(composers) if composers else "?")
+    return True
 
 
 async def download_modarchive_module(url: str, retries: int = 2) -> str:
@@ -2215,35 +2412,140 @@ async def tiny(ctx: commands.Context):
     await auto_play_after_switch(ctx, state)
 
 
-@bot.command(aliases=["mode", "collection"])
-async def status(ctx: commands.Context):
-    """Show current collection mode and playlist stats."""
+@bot.command(aliases=["snes", "spc", "supernintendo", "nintendo"])
+async def snes_cmd(ctx: commands.Context, *, query: str = None):
+    """Switch to SNES SPC or search. Usage: !snes [search <term>]"""
     state = get_state(ctx.guild.id)
-    mode_map = {
-        "hvsc": ("🟣", "C64 SID (HVSC)"),
-        "asma": ("🟢", "Atari SAP (ASMA)"),
-        "modarchive": ("🟠", "Tracker Modules (ModArchive)"),
-        "ay": ("🔵", "ZX Spectrum AY (Local Archive)"),
-        "tiny": ("🎵", "Tiny Music (Demoscene Modules)"),
+
+    # ── Search mode ──
+    if query:
+        query_lower = query.strip().lower()
+        # Load metadata if not already loaded
+        if not snes_metadata:
+            await asyncio.get_event_loop().run_in_executor(None, load_snes_cache)
+        if not snes_metadata:
+            return await ctx.send("❌ SNES SPC cache not found. Run `build_snes_index.py` first!")
+
+        results = []
+        for url, entry in snes_metadata.items():
+            name = entry.get("name", "")
+            composers = ", ".join(entry.get("composers", []))
+            haystack = (name + " " + composers).lower()
+            # Split query into words — all must match (AND search)
+            words = query_lower.split()
+            if all(w in haystack for w in words):
+                results.append(entry)
+                if len(results) >= 10:
+                    break
+
+        if not results:
+            return await ctx.send(f"🔍 **No SNES games matching `{query}`.**")
+
+        lines = [f"🔍 **SNES results for `{query}`**"]
+        for i, g in enumerate(results, 1):
+            c = ", ".join(g.get("composers", [])) or "Unknown"
+            lines.append(f"`{i}.` **{g.get('name', '?')}** — {c} ({g.get('tracks', '?')}t)")
+        lines.append("")
+        lines.append("Use `!play <number>` to play, or `!snes` to switch to SPC collection.")
+        state.search_results = [g["rsn_url"] for g in results]
+        return await ctx.send("\n".join(lines))
+
+    # ── Switch mode (original behaviour) ──
+    if state.collection_mode == "spc" and state.tracks:
+        await ctx.send("🔴 **Already in SNES SPC mode.** Use `!play` to start!")
+        return
+    await ctx.send("🔴 **Loading SNES SPC collection (Super Nintendo chiptunes)...**")
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    # ── Cancel old monitor IMMEDIATELY to prevent race ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except (asyncio.CancelledError, Exception):
+            pass
+    tracks = await asyncio.get_event_loop().run_in_executor(None, load_snes_cache)
+    if not tracks:
+        return await ctx.send("❌ SNES SPC cache not found. Run `build_snes_index.py` first!")
+    state.collection_mode = "spc"
+    save_last_collection("spc")
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "spc")
+    state.tracks = tracks
+    state.queue = []
+    state.index = -1
+    await ctx.send(f"🔴 **SNES SPC collection ready — {len(tracks)} games!**\n"
+                   "Super Nintendo chiptunes via SNESmusic.org — download & play on demand")
+    log.info("SNES: collection switched, %d game sets loaded", len(tracks))
+    await auto_play_after_switch(ctx, state)
+
+
+@bot.command(aliases=["mode", "collection", "all"])
+async def status(ctx: commands.Context):
+    """Show all collections overview and current playlist stats."""
+    state = get_state(ctx.guild.id)
+
+    # ── Quick cache counts (reads JSON headers only) ──
+    cache_counts = {}
+    cache_map = {
+        "hvsc_cache.json":     ("🟣", "C64 SID (HVSC)"),
+        "asma_cache.json":     ("🟢", "Atari SAP (ASMA)"),
+        "modarchive_cache.json": ("🟠", "Tracker (ModArchive)"),
+        "ay_cache.json":       ("🔵", "ZX Spectrum AY"),
+        "tiny_cache.json":     ("🎵", "Tiny Music"),
+        "snes_cache.json":     ("🔴", "SNES SPC"),
     }
-    mode_icon, mode_name = mode_map.get(state.collection_mode, ("⚪", "Unknown"))
+    for fname, (icon, label) in cache_map.items():
+        try:
+            import json
+            fpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
+            with open(fpath) as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                count = len(data)
+            elif isinstance(data, dict):
+                count = data.get("total_sets") or len(data.get("tracks", data.get("count", [])))
+            else:
+                count = "?"
+        except Exception:
+            count = "⚠️"
+        cache_counts[label] = (icon, count)
+
+    # ── Current state ──
+    mode_icons = {
+        "hvsc": "🟣", "asma": "🟢", "modarchive": "🟠",
+        "ay": "🔵", "tiny": "🎵", "spc": "🔴",
+    }
+    mode_labels = {
+        "hvsc": "HVSC", "asma": "ASMA", "modarchive": "ModArchive",
+        "ay": "AY", "tiny": "Tiny", "spc": "SNES",
+    }
+    current_icon = mode_icons.get(state.collection_mode, "⚪")
+    current_label = mode_labels.get(state.collection_mode, "Unknown")
     total = len(state.tracks) if state.tracks else 0
     qlen = len(state.queue)
     pos = state.index + 1 if state.index >= 0 else 0
     playing_now = is_playing()
     playing = "🎵 Yes" if playing_now else "⏸️ No"
-    await ctx.send(
-        f"{mode_icon} **Collection: {mode_name}**\n"
-        f"• Tracks in archive: **{total}**\n"
-        f"• Queue remaining: **{qlen - pos}/{qlen}**\n"
-        f"• Playing: {playing}\n"
-        f"• Loop: {'🔁 On' if state.loop else '➡️ Off'}"
-    )
+
+    # ── Build message ──
+    lines = [
+        f"🌲 **Robbo — wszystkie kolekcje**",
+        "",
+    ]
+    for label, (icon, count) in cache_counts.items():
+        hl = "◀" if label == current_label else ""
+        lines.append(f"{icon} **{label}**: `{count:,}` {hl}".replace(",", " "))
+    lines += [
+        "",
+        f"━━━━━━━━━━━━━━━━━",
+        f"{current_icon} **Teraz: {current_label}** — {total} tracków",
+        f"• Kolejka: **{qlen - pos}/{qlen}** | Odtwarzanie: {playing} | Pętla: {'🔁 On' if state.loop else '➡️ Off'}",
+    ]
+    await ctx.send("\n".join(lines))
 
 
 @bot.command(aliases=["switch", "toggle", "fl"])
 async def flip(ctx: commands.Context):
-    """Toggle between collections: HVSC (SID) → ASMA (SAP) → ModArchive → HVSC ..."""
+    """Toggle between collections: HVSC → ASMA → ModArchive → AY → Tiny → SNES → HVSC ..."""
     state = get_state(ctx.guild.id)
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
 
@@ -2256,18 +2558,22 @@ async def flip(ctx: commands.Context):
             pass
     state.pre_downloaded = None
 
+    # Flip sequence for visual indicator
+    flip_seq = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎵Tiny", "🔴SNES"]
+
     if state.collection_mode == "hvsc":
         # HVSC → ASMA
         state.collection_mode = "asma"
         save_last_collection("asma")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         cached = await asyncio.get_event_loop().run_in_executor(None, load_cached_tracklist)
+        seq = " → ".join("**" + s + "**" if s == "🟢ASMA" else s for s in flip_seq)
         if cached:
             state.tracks = cached
-            await ctx.send("🟢 **Switched to Atari SAP (ASMA)!**")
+            await ctx.send(f"🟢 **Switched to Atari SAP (ASMA)!**\n{seq}")
         else:
             state.tracks = []
-            await ctx.send("🟢 **Switched to Atari SAP (ASMA).**")
+            await ctx.send(f"🟢 **Switched to Atari SAP (ASMA).**\n{seq}")
         log.info("ASMA: collection switched via flip")
 
     elif state.collection_mode == "asma":
@@ -2277,11 +2583,12 @@ async def flip(ctx: commands.Context):
         save_last_collection("modarchive")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
+        seq = " → ".join("**" + s + "**" if s == "🟠Mod" else s for s in flip_seq)
         if tracks:
             state.tracks = tracks
-            await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!**")
+            await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!**\n{seq}")
         else:
-            await ctx.send("🟠 **ModArchive cache not ready.** Staying on ASMA.")
+            await ctx.send(f"🟠 **ModArchive cache not ready.** Staying on ASMA.\n{seq}")
             state.collection_mode = "asma"
             state.tracks = old_tracks
             save_last_collection("asma")
@@ -2294,11 +2601,12 @@ async def flip(ctx: commands.Context):
         save_last_collection("ay")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
+        seq = " → ".join("**" + s + "**" if s == "🔵AY" else s for s in flip_seq)
         if tracks:
             state.tracks = tracks
-            await ctx.send(f"🔵 **Switched to ZX Spectrum AY — {len(tracks)} tracks!**")
+            await ctx.send(f"🔵 **Switched to ZX Spectrum AY — {len(tracks)} tracks!**\n{seq}")
         else:
-            await ctx.send("🔵 **AY cache not ready.** Staying on ModArchive.")
+            await ctx.send(f"🔵 **AY cache not ready.** Staying on ModArchive.\n{seq}")
             state.collection_mode = "modarchive"
             state.tracks = old_tracks
             save_last_collection("modarchive")
@@ -2311,33 +2619,53 @@ async def flip(ctx: commands.Context):
         save_last_collection("tiny")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_tiny_cache)
+        seq = " → ".join("**" + s + "**" if s == "🎵Tiny" else s for s in flip_seq)
         if tracks:
             state.tracks = tracks
-            await ctx.send(f"🎵 **Switched to Tiny Music — {len(tracks)} modules!**")
+            await ctx.send(f"🎵 **Switched to Tiny Music — {len(tracks)} modules!**\n{seq}")
         else:
-            await ctx.send("🎵 **Tiny cache not ready.** Staying on AY.")
+            await ctx.send(f"🎵 **Tiny cache not ready.** Staying on AY.\n{seq}")
             state.collection_mode = "ay"
             state.tracks = old_tracks
             save_last_collection("ay")
         log.info("Tiny: collection switched via flip")
 
+    elif state.collection_mode == "tiny":
+        # Tiny → SNES SPC
+        old_tracks = list(state.tracks) if state.tracks else []
+        state.collection_mode = "spc"
+        save_last_collection("spc")
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
+        tracks = await asyncio.get_event_loop().run_in_executor(None, load_snes_cache)
+        seq = " → ".join("**" + s + "**" if s == "🔴SNES" else s for s in flip_seq)
+        if tracks:
+            state.tracks = tracks
+            await ctx.send(f"🔴 **Switched to SNES SPC — {len(tracks)} games!**\n{seq}")
+        else:
+            await ctx.send(f"🔴 **SNES cache not ready.** Staying on Tiny.\n{seq}")
+            state.collection_mode = "tiny"
+            state.tracks = old_tracks
+            save_last_collection("tiny")
+        log.info("SNES: collection switched via flip")
+
     else:
-        # Tiny → HVSC
+        # SPC → HVSC
         old_mode = state.collection_mode
         old_tracks = list(state.tracks) if state.tracks else []
         state.collection_mode = "hvsc"
         save_last_collection("hvsc")
         await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
         tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
+        seq = " → ".join("**" + s + "**" if s == "🟣HVSC" else s for s in flip_seq)
         if not tracks:
-            await ctx.send("🔄 Loading C64 SID collection (60,000+ tracks)...")
+            await ctx.send(f"🔄 Loading C64 SID collection (60,000+ tracks)...\n{seq}")
             tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
         if tracks:
             state = get_state(ctx.guild.id)
             state.tracks = tracks
-            await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!**")
+            await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!**\n{seq}")
         else:
-            await ctx.send("❌ Could not load HVSC. Try `!hvsc` manually.")
+            await ctx.send(f"❌ Could not load HVSC. Try `!hvsc` manually.\n{seq}")
             state.collection_mode = old_mode
             state.tracks = old_tracks
             save_last_collection(old_mode)

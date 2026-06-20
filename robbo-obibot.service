@@ -1,0 +1,21 @@
+[Unit]
+Description=Robbo Obibot — Discord Chiptune Radio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=boruta
+Group=boruta
+WorkingDirectory=/home/boruta/robbo-obibot
+EnvironmentFile=/home/boruta/robbo-obibot/.env
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+ExecStart=/home/boruta/robbo-obibot/venv/bin/python3 -u /home/boruta/robbo-obibot/asma-bot.py
+ExecStartPre=/usr/bin/env sh -c 'rm -f /home/boruta/robbo-obibot/robbo.pid'
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/boruta/robbo-obibot/bot_output.log
+StandardError=append:/home/boruta/robbo-obibot/bot_output.log
+
+[Install]
+WantedBy=multi-user.target

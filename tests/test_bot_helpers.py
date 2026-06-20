@@ -55,12 +55,39 @@ class TempPathTests(unittest.TestCase):
 
 
 class SonglengthParsingTests(unittest.TestCase):
-    def test_parse_songlengths_populates_duration_map(self):
+    def setUp(self):
         bot.sid_durations.clear()
+
+    def test_parse_old_format(self):
+        """Old single-line format: ; /path = M:SS"""
         tracks = bot.parse_songlengths_to_tracks("; /MUSICIANS/A/Author/Track.sid = 3:02")
 
         self.assertEqual(len(tracks), 1)
         self.assertEqual(bot.sid_durations[tracks[0]], 182)
+
+    def test_parse_md5_format(self):
+        """MD5 format: ; /path then hash=M:SS on next line"""
+        data = "; /MUSICIANS/A/Author/Track.sid\n6897307ef63533962667412848c92124=1:17"
+        tracks = bot.parse_songlengths_to_tracks(data)
+
+        self.assertEqual(len(tracks), 1)
+        self.assertEqual(bot.sid_durations[tracks[0]], 77)
+
+    def test_parse_md5_with_alt_duration(self):
+        """MD5 format with alternate duration: hash=M:SS (alt X:XX)"""
+        data = "; /MUSICIANS/A/Author/Track.sid\nabc123=3:02 (alt 4:15)"
+        tracks = bot.parse_songlengths_to_tracks(data)
+
+        self.assertEqual(len(tracks), 1)
+        self.assertEqual(bot.sid_durations[tracks[0]], 182)  # first dur wins
+
+    def test_parse_md5_no_duration(self):
+        """MD5 format without duration (should still extract track)."""
+        data = "; /MUSICIANS/A/Author/Track.sid\nnoise"
+        tracks = bot.parse_songlengths_to_tracks(data)
+
+        self.assertEqual(len(tracks), 1)  # path still extracted
+        self.assertNotIn(tracks[0], bot.sid_durations)
 
 
 if __name__ == "__main__":
