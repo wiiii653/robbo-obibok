@@ -955,7 +955,7 @@ async def radi(ctx: commands.Context):
     """NI MA RADI"""
     await ctx.send("https://www.youtube.com/watch?v=SbuBkGrpSl0")
 
-@bot.command(aliases=["radio", "uruchom"])
+@bot.command(aliases=["radio", "start"])
 async def play(ctx: commands.Context, *, query: str = ""):
     """Start shuffled radio. Usage: !play, !play <number>, or !play <search query>"""
     if not ctx.author.voice:
@@ -1520,7 +1520,7 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
     log.info("❤️ Removed from favorites via reaction removal: %s", url)
 
 
-@bot.command(aliases=["favs", "playlista"])
+@bot.command(aliases=["favs", "playlist"])
 async def favorites(ctx: commands.Context):
     """Show your favorited tracks. React to any Now Playing embed to add!"""
     favs = load_favorites()
@@ -1874,7 +1874,7 @@ async def status(ctx: commands.Context):
     )
 
 
-@bot.command(aliases=["switch", "toggle", "przelacz"])
+@bot.command(aliases=["switch", "toggle"])
 async def flip(ctx: commands.Context):
     """Toggle between collections: HVSC (SID) → ASMA (SAP) → ModArchive → HVSC ..."""
     state = get_state(ctx.guild.id)

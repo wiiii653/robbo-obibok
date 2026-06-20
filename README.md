@@ -33,7 +33,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 
 | Command | Description |
 |---------|-------------|
-| `!play` / `!radio` / `!uruchom` | Start shuffled radio from current collection |
+| `!play` / `!radio` / `!start` | Start shuffled radio from current collection |
 | `!play <query>` | Search and play first matching track |
 | `!play <number>` | Play a track from last search results |
 | `!stop` | Stop playback and disconnect |
@@ -57,9 +57,9 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!asma` | Switch to **Atari SAP** collection |
 | `!hvsc` / `!c64` / `!sid` | Switch to **Commodore 64 SID** collection |
 | `!mod` / `!modarchive` / `!tracker` / `!modules` | Switch to **ModArchive** collection |
-| `!flip` / `!switch` / `!toggle` / `!przelacz` | Toggle HVSC → ASMA → ModArchive → HVSC … |
+| `!flip` / `!switch` / `!toggle` | Toggle HVSC → ASMA → ModArchive → HVSC … |
 | `!status` / `!mode` / `!collection` | Show current collection and queue info |
-| `!favorites` / `!favs` / `!playlista` | Show your reaction‑based favorites |
+| `!favorites` / `!favs` / `!playlist` | Show your reaction‑based favorites |
 | `!favplay` / `!fp` | Play all (or a specific) favorited tracks |
 
 ### Favorites System
