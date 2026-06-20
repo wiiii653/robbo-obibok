@@ -358,8 +358,14 @@ def audacious_play(filepath: str):
     ensure_audacious()
     subprocess.run(["audtool", "playlist-clear"], capture_output=True)
     subprocess.run(["audtool", "playlist-addurl", filepath], capture_output=True)
-    subprocess.run(["audtool", "playback-play"], capture_output=True)
-    time.sleep(0.5)
+    # Retry play until it actually starts (first play after idle Audacious can fail)
+    for attempt in range(3):
+        subprocess.run(["audtool", "playback-play"], capture_output=True)
+        time.sleep(0.5)
+        r = subprocess.run(["audtool", "playback-playing"], capture_output=True)
+        if r.returncode == 0:
+            break
+        log.warning("audacious_play: attempt %d failed, retrying...", attempt + 1)
     move_playback_to_sink()
 
 def audacious_stop():
