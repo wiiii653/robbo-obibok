@@ -99,6 +99,10 @@ PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 AY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ay")
 AY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ay_cache.json")
 
+# ── Local Tiny Music (Demoscene Modules) ────────────────────────
+TINY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "tiny")
+TINY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny_cache.json")
+
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
 
@@ -109,7 +113,7 @@ def load_last_collection() -> str | None:
     try:
         with open(LAST_COLLECTION_FILE) as f:
             mode = f.read().strip()
-            if mode in ("asma", "hvsc", "modarchive", "ay"):
+            if mode in ("asma", "hvsc", "modarchive", "ay", "tiny"):
                 return mode
     except (FileNotFoundError, OSError):
         pass
@@ -314,6 +318,7 @@ COLLECTION_VOLUMES = {
     "asma": 100,       # SAPy normalnie
     "modarchive": 100, # MODy normalnie
     "ay": 100,         # AY normalnie
+    "tiny": 100,       # Tiny normalnie
 }
 
 def set_volume_for_collection(mode: str):
@@ -802,6 +807,14 @@ COLLECTION_INFO = {
         "color": discord.Color.blue(),
         "load_tracks": lambda: load_ay_cache(),
     },
+    "tiny": {
+        "icon": "🎵",
+        "name": "Tiny Music (Demoscene Modules)",
+        "station": "Tiny Music Radio",
+        "footer": "Tiny Music — curated demoscene modules",
+        "color": discord.Color.purple(),
+        "load_tracks": lambda: load_tiny_cache(),
+    },
 }
 
 
@@ -890,6 +903,61 @@ async def play_current_ay_track(ctx, state, filepath):
     return True
 
 
+async def play_current_tiny_track(ctx, state, filepath):
+    """Play a local Tiny Music module via Audacious."""
+    full_path = os.path.join(TINY_DIR, filepath)
+
+    if not os.path.exists(full_path):
+        await ctx.send(f"❌ File not found: `{filepath}`")
+        return False
+
+    # Stop existing playback and play via Audacious
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, full_path)
+
+    state.current_sap_path = full_path
+
+    # Setup MonitorAudioSource
+    if state.vc and state.vc.is_connected():
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e: _after_stream_end(state.guild_id, e),
+        )
+        active_streams[state.guild_id] = source
+
+    total = len(state.queue)
+    pos = state.index + 1
+
+    # Get metadata from Audacious
+    track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
+    name = track or filepath.split("/")[-1].replace(".mod", "").replace(".xm", "").replace(".it", "").replace(".s3m", "").replace(".med", "").replace(".dmf", "").replace(".mo3", "").replace(".mptm", "")
+    author = ""
+
+    embed = discord.Embed(
+        title=name[:256],
+        color=discord.Color.purple(),
+    )
+    if author:
+        embed.add_field(name="Composer", value=author, inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.set_footer(text="Tiny Music — curated demoscene modules")
+
+    np_msg = await ctx.send(embed=embed)
+    message_track_map[np_msg.id] = {
+        "url": filepath,
+        "name": name,
+        "author": author,
+        "timestamp": time.time(),
+    }
+    log.info("Tiny now playing: %s — %s", name, author)
+    return True
+
+
 async def play_current_track(ctx):
     """Download and play the current track from the queue."""
     state = get_state(ctx.guild.id)
@@ -904,6 +972,15 @@ async def play_current_track(ctx):
     try:
         # Detect archive type from current URL (supports mixed playlists like !favplay)
         is_hvsc = "hvsc.c64.org" in url or url.endswith(".sid")
+
+        # ── Local Tiny Music (Demoscene Modules) ──
+        is_tiny = "://" not in url and url.endswith((".mod", ".xm", ".it", ".s3m", ".med", ".dmf", ".mo3"))
+        if is_tiny:
+            if state.collection_mode != "tiny":
+                state.collection_mode = "tiny"
+                await ensure_tracks(state)
+            return await play_current_tiny_track(ctx, state, url)
+
         is_modarchive = "modarchive" in url or url.endswith((".mod", ".xm", ".s3m", ".it"))
         
         if is_hvsc:
@@ -1885,6 +1962,21 @@ def load_ay_cache() -> list[str] | None:
         return None
 
 
+def load_tiny_cache() -> list[str] | None:
+    """Load Tiny Music track list from local cache."""
+    try:
+        if not os.path.exists(TINY_CACHE):
+            return None
+        with open(TINY_CACHE) as f:
+            data = json.load(f)
+        tracks = [t["path"] for t in data.get("tracks", [])]
+        log.info("Tiny: loaded %d tracks from cache", len(tracks))
+        return tracks
+    except Exception as e:
+        log.warning("Tiny cache load error: %s", e)
+        return None
+
+
 async def download_modarchive_module(url: str, retries: int = 2) -> str:
     """Download a module from ModArchive API and return local filepath.
     Preserves the real filename from Content-Disposition header."""
@@ -2092,6 +2184,37 @@ async def ay(ctx: commands.Context):
     await auto_play_after_switch(ctx, state)
 
 
+@bot.command(aliases=["tm", "demoscene"])
+async def tiny(ctx: commands.Context):
+    """Switch to local Tiny Music demoscene module archive."""
+    state = get_state(ctx.guild.id)
+    if state.collection_mode == "tiny" and state.tracks:
+        await ctx.send("🎵 **Already in Tiny Music mode.** Use `!play` to start!")
+        return
+    await ctx.send("🎵 **Loading Tiny Music archive (418 curated demoscene modules)...**")
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    # ── Cancel old monitor IMMEDIATELY to prevent race ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except (asyncio.CancelledError, Exception):
+            pass
+    tracks = await asyncio.get_event_loop().run_in_executor(None, load_tiny_cache)
+    if not tracks:
+        return await ctx.send("❌ Tiny Music cache not found. Run `build_tiny_index.py` first!")
+    state.collection_mode = "tiny"
+    save_last_collection("tiny")
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "tiny")
+    state.tracks = tracks
+    state.queue = []
+    state.index = -1
+    await ctx.send(f"🎵 **Tiny Music archive ready — {len(tracks)} modules!**\n"
+                   "Curated demoscene — MOD / XM / IT / S3M / MED / DMF")
+    log.info("Tiny: collection switched, %d tracks loaded", len(tracks))
+    await auto_play_after_switch(ctx, state)
+
+
 @bot.command(aliases=["mode", "collection"])
 async def status(ctx: commands.Context):
     """Show current collection mode and playlist stats."""
@@ -2101,6 +2224,7 @@ async def status(ctx: commands.Context):
         "asma": ("🟢", "Atari SAP (ASMA)"),
         "modarchive": ("🟠", "Tracker Modules (ModArchive)"),
         "ay": ("🔵", "ZX Spectrum AY (Local Archive)"),
+        "tiny": ("🎵", "Tiny Music (Demoscene Modules)"),
     }
     mode_icon, mode_name = mode_map.get(state.collection_mode, ("⚪", "Unknown"))
     total = len(state.tracks) if state.tracks else 0
@@ -2180,8 +2304,25 @@ async def flip(ctx: commands.Context):
             save_last_collection("modarchive")
         log.info("AY: collection switched via flip")
 
+    elif state.collection_mode == "ay":
+        # AY → Tiny Music
+        old_tracks = list(state.tracks) if state.tracks else []
+        state.collection_mode = "tiny"
+        save_last_collection("tiny")
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
+        tracks = await asyncio.get_event_loop().run_in_executor(None, load_tiny_cache)
+        if tracks:
+            state.tracks = tracks
+            await ctx.send(f"🎵 **Switched to Tiny Music — {len(tracks)} modules!**")
+        else:
+            await ctx.send("🎵 **Tiny cache not ready.** Staying on AY.")
+            state.collection_mode = "ay"
+            state.tracks = old_tracks
+            save_last_collection("ay")
+        log.info("Tiny: collection switched via flip")
+
     else:
-        # AY → HVSC
+        # Tiny → HVSC
         old_mode = state.collection_mode
         old_tracks = list(state.tracks) if state.tracks else []
         state.collection_mode = "hvsc"
