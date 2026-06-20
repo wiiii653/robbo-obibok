@@ -1219,8 +1219,9 @@ async def stop(ctx: commands.Context):
     """Stop playback and disconnect."""
     state = get_state(ctx.guild.id)
     if state.guild_id and state.guild_id in active_streams:
-        active_streams[state.guild_id].cleanup()
-        del active_streams[state.guild_id]
+        stream = active_streams.pop(state.guild_id, None)
+        if stream:
+            stream.cleanup()
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
@@ -1392,8 +1393,9 @@ async def sleep(ctx: commands.Context, *, minutes: str = ""):
         if ctx.voice_client and ctx.voice_client.is_connected():
             # Stop and disconnect
             if state.guild_id and state.guild_id in active_streams:
-                active_streams[state.guild_id].cleanup()
-                del active_streams[state.guild_id]
+                stream = active_streams.pop(state.guild_id, None)
+                if stream:
+                    stream.cleanup()
             await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
             await ctx.voice_client.disconnect()
             await ctx.send("🌙 **Sleep timer expired.** Radio stopped.")
@@ -1467,8 +1469,9 @@ async def clear(ctx: commands.Context):
     
     if ctx.voice_client and ctx.voice_client.is_connected():
         if state.guild_id and state.guild_id in active_streams:
-            active_streams[state.guild_id].cleanup()
-            del active_streams[state.guild_id]
+            stream = active_streams.pop(state.guild_id, None)
+            if stream:
+                stream.cleanup()
         await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
         await ctx.voice_client.disconnect()
     
@@ -1973,7 +1976,7 @@ async def hvsc(ctx: commands.Context):
         state.monitor_task.cancel()
         try:
             await state.monitor_task
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, Exception):
             pass
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
     if not tracks:
@@ -2008,7 +2011,7 @@ async def asma(ctx: commands.Context):
         state.monitor_task.cancel()
         try:
             await state.monitor_task
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, Exception):
             pass
     state.collection_mode = "asma"
     save_last_collection("asma")
@@ -2040,7 +2043,7 @@ async def mod(ctx: commands.Context):
         state.monitor_task.cancel()
         try:
             await state.monitor_task
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, Exception):
             pass
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
     if not tracks:
@@ -2072,7 +2075,7 @@ async def ay(ctx: commands.Context):
         state.monitor_task.cancel()
         try:
             await state.monitor_task
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, Exception):
             pass
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
     if not tracks:
@@ -2125,7 +2128,7 @@ async def flip(ctx: commands.Context):
         state.monitor_task.cancel()
         try:
             await state.monitor_task
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, Exception):
             pass
     state.pre_downloaded = None
 
@@ -2252,9 +2255,9 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
             elif AUTO_EMPTY_TIMEOUT > 0 and (time.time() - empty_since) >= AUTO_EMPTY_TIMEOUT:
                 log.info("Channel empty for %ds, disconnecting", AUTO_EMPTY_TIMEOUT)
                 state = get_state(guild_id)
-                if guild_id in active_streams:
-                    active_streams[guild_id].cleanup()
-                    del active_streams[guild_id]
+                stream = active_streams.pop(guild_id, None)
+                if stream:
+                    stream.cleanup()
                 await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
                 await vc.disconnect()
                 await ctx.send("🌙 No one listening. Stopping Radio.")
@@ -2285,9 +2288,9 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                         await skip_to_next(ctx)
                         continue
                     else:
-                        if guild_id in active_streams:
-                            active_streams[guild_id].cleanup()
-                            del active_streams[guild_id]
+                        stream = active_streams.pop(guild_id, None)
+                        if stream:
+                            stream.cleanup()
                         if vc.is_connected():
                             await vc.disconnect()
                         await ctx.send("Playlist ended. Use !play to restart.")
@@ -2315,9 +2318,9 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                     await ctx.send("Playlist ended. Use !play to restart.")
                     break
     
-    if guild_id in active_streams:
-        active_streams[guild_id].cleanup()
-        del active_streams[guild_id]
+    stream = active_streams.pop(guild_id, None)
+    if stream:
+        stream.cleanup()
 
 
 # ── Background Metadata Fetcher ──────────────────────────────────
