@@ -1963,6 +1963,13 @@ async def hvsc(ctx: commands.Context):
         return
     await ctx.send("🔄 **Loading C64 SID collection (60,000+ tracks)...**")
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except asyncio.CancelledError:
+            pass
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
     if not tracks:
         tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
@@ -1991,6 +1998,13 @@ async def asma(ctx: commands.Context):
     """Switch back to Atari SAP collection (ASMA)."""
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     state = get_state(ctx.guild.id)
+    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except asyncio.CancelledError:
+            pass
     state.collection_mode = "asma"
     save_last_collection("asma")
     await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "asma")
@@ -2016,6 +2030,13 @@ async def mod(ctx: commands.Context):
         return
     await ctx.send("🟠 **Loading ModArchive collection (100,000+ modules)...**")
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except asyncio.CancelledError:
+            pass
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
     if not tracks:
         return await ctx.send("❌ ModArchive cache not found. Run `build_modarchive_index.py` first!\n"
@@ -2041,6 +2062,13 @@ async def ay(ctx: commands.Context):
         return
     await ctx.send("🔵 **Loading local AY archive (4,500+ tracks)...**")
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except asyncio.CancelledError:
+            pass
     tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
     if not tracks:
         return await ctx.send("❌ AY cache not found. Run `build_ay_index.py` first!")
@@ -2086,6 +2114,14 @@ async def flip(ctx: commands.Context):
     """Toggle between collections: HVSC (SID) → ASMA (SAP) → ModArchive → HVSC ..."""
     state = get_state(ctx.guild.id)
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+
+    # ── Cancel old monitor IMMEDIATELY — prevent race with 3s grace timer ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except asyncio.CancelledError:
+            pass
     state.pre_downloaded = None
 
     if state.collection_mode == "hvsc":
