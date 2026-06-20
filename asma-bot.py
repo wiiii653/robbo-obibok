@@ -2117,7 +2117,7 @@ async def status(ctx: commands.Context):
     )
 
 
-@bot.command(aliases=["switch", "toggle"])
+@bot.command(aliases=["switch", "toggle", "fl"])
 async def flip(ctx: commands.Context):
     """Toggle between collections: HVSC (SID) → ASMA (SAP) → ModArchive → HVSC ..."""
     state = get_state(ctx.guild.id)
