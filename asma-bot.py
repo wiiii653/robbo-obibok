@@ -976,10 +976,9 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
                 random.shuffle(state.queue)
             state.index = 0
 
-        # Use system channel or first text channel for messages
-        text_channel = member.guild.system_channel or member.guild.text_channels[0]
+        # Send messages to the voice channel (Discord supports text in voice channels)
         info = get_collection_info(state.collection_mode)
-        ctx = await bot.get_context(await text_channel.send(f"📻 **Auto-starting {info['station']}...**"))
+        ctx = await bot.get_context(await after.channel.send(f"📻 **Auto-starting {info['station']}...**"))
         state.ctx = ctx
 
         if await play_current_track(ctx):
