@@ -272,7 +272,7 @@ def setup_virtual_sink():
                 f"sink_name={SINK_NAME}",
                 f"sink_properties=device.description=ASMA_Bot",
             ],
-            check=True,
+            check=False,
         )
 
 def ensure_audacious():
@@ -905,11 +905,23 @@ async def skip_to_next(ctx):
 async def on_ready():
     log.info("Ready: %s", bot.user)
     # Kill any orphaned Audacious from crashed bot sessions
-    await asyncio.get_event_loop().run_in_executor(None, cleanup_orphan_players)
-    await asyncio.get_event_loop().run_in_executor(None, setup_virtual_sink)
-    await asyncio.get_event_loop().run_in_executor(None, ensure_audacious)
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, cleanup_orphan_players)
+    except Exception as e:
+        log.error("cleanup_orphan_players failed: %s", e)
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, setup_virtual_sink)
+    except Exception as e:
+        log.error("setup_virtual_sink failed: %s", e)
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, ensure_audacious)
+    except Exception as e:
+        log.error("ensure_audacious failed: %s", e)
     # Ensure Audacious SID plugin config is set for song-length-based auto-advance
-    await asyncio.get_event_loop().run_in_executor(None, setup_audacious_sid_config)
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, setup_audacious_sid_config)
+    except Exception as e:
+        log.error("setup_audacious_sid_config failed: %s", e)
     
     # Preload cached tracklist for all guilds
     cached = load_cached_tracklist()
