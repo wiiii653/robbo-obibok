@@ -106,6 +106,9 @@ TINY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny_cach
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
 
+# ── Blacklist System ────────────────────────────────────────────
+BLACKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blacklist.json")
+
 # ── Last Collection Mode ────────────────────────────────────────
 LAST_COLLECTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "last_collection.txt")
 
@@ -1225,7 +1228,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
         state.guild_id = ctx.guild.id
         state.ctx = ctx
         state.loop = PLAYBACK_LOOP
-        state.queue = list(state.tracks)
+        state.queue = filter_blacklisted(list(state.tracks), ctx.author.id)
         if PLAYBACK_SHUFFLE:
             random.shuffle(state.queue)
         try:
@@ -1255,7 +1258,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
             state.guild_id = ctx.guild.id
             state.ctx = ctx
             state.loop = PLAYBACK_LOOP
-            state.queue = list(state.tracks)
+            state.queue = filter_blacklisted(list(state.tracks), ctx.author.id)
             if PLAYBACK_SHUFFLE:
                 random.shuffle(state.queue)
             try:
@@ -1300,7 +1303,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
         state.loop = saved.get("loop", PLAYBACK_LOOP)
         await ctx.send("📋 Restored previous queue.")
     else:
-        state.queue = list(state.tracks)
+        state.queue = filter_blacklisted(list(state.tracks), ctx.author.id)
         if PLAYBACK_SHUFFLE:
             random.shuffle(state.queue)
         state.index = 0
@@ -1724,6 +1727,40 @@ def save_favorites(data: dict):
         log.error("Failed to save favorites: %s", e)
 
 
+# ── Blacklist System ────────────────────────────────────────────
+def load_blacklist() -> dict:
+    """Load the blacklist database from disk."""
+    if os.path.exists(BLACKLIST_FILE):
+        try:
+            with open(BLACKLIST_FILE) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_blacklist(data: dict):
+    """Save the blacklist database to disk."""
+    try:
+        with open(BLACKLIST_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        log.error("Failed to save blacklist: %s", e)
+
+
+def filter_blacklisted(tracks: list[str], user_id: int | str) -> list[str]:
+    """Remove blacklisted URLs from a track list for a given user."""
+    blk = load_blacklist()
+    user_blk = blk.get(str(user_id), {}).get("tracks", [])
+    if not user_blk:
+        return tracks
+    blacklisted_urls = {t["url"] for t in user_blk}
+    filtered = [u for u in tracks if u not in blacklisted_urls]
+    if len(filtered) < len(tracks):
+        log.info("Filtered %d blacklisted tracks for user %s", len(tracks) - len(filtered), user_id)
+    return filtered
+
+
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     """Track reactions on Now Playing embeds → add/remove favorites."""
@@ -1818,9 +1855,16 @@ async def favplay(ctx: commands.Context, *, number: str = ""):
         except ValueError:
             return await ctx.send("Usage: `!favplay <number>` or `!favplay` to play all.")
     else:
-        # Play all shuffled
+        # Play all shuffled, minus blacklisted
         tracks_to_play = list(user_favs)
+        # Filter out blacklisted tracks
+        blk = load_blacklist()
+        user_blk_urls = {t["url"] for t in blk.get(str(ctx.author.id), {}).get("tracks", [])}
+        tracks_to_play = [t for t in tracks_to_play if t["url"] not in user_blk_urls]
         random.shuffle(tracks_to_play)
+
+    if not tracks_to_play:
+        return await ctx.send("⛔ All your favorites are blacklisted. Nothing to play!")
 
     # Detect URL types and set collection mode
     state = get_state(ctx.guild.id)
@@ -1857,6 +1901,105 @@ async def favplay(ctx: commands.Context, *, number: str = ""):
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
         state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+
+
+# ── Blacklist Commands ──────────────────────────────────────────
+@bot.command(aliases=["blk"])
+async def blacklist_track(ctx: commands.Context, *, number: str = ""):
+    """Blacklist the current playing track or a queue number. Usage: !blk [number]"""
+    state = get_state(ctx.guild.id)
+
+    if number:
+        # Blacklist by queue number
+        try:
+            idx = int(number) - 1
+            if idx < 0 or idx >= len(state.queue):
+                return await ctx.send(f"Number must be between 1 and {len(state.queue)}.")
+            url = state.queue[idx]
+            # Get name from the URL
+            name = url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
+        except ValueError:
+            return await ctx.send("Usage: `!blk <number>` to blacklist a track from the queue, or `!blk` for the current track.")
+    else:
+        # Blacklist currently playing track
+        if not state.queue or state.index < 0 or state.index >= len(state.queue):
+            return await ctx.send("Nothing is playing right now.")
+        url = state.queue[state.index]
+        name = (await asyncio.get_event_loop().run_in_executor(None, audacious_song)) or url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
+
+    blk = load_blacklist()
+    uid = str(ctx.author.id)
+    user_blk = blk.setdefault(uid, {"tracks": []})
+
+    existing = [t for t in user_blk["tracks"] if t["url"] == url]
+    if existing:
+        # Already blacklisted — remove it
+        user_blk["tracks"] = [t for t in user_blk["tracks"] if t["url"] != url]
+        save_blacklist(blk)
+        await ctx.send(f"✅ **Un-blacklisted** — `{name}`")
+        log.info("⛔ Removed from blacklist by %s: %s", ctx.author, url)
+    else:
+        # Add to blacklist
+        entry = {
+            "url": url,
+            "name": name,
+            "added_at": time.time(),
+        }
+        user_blk["tracks"].append(entry)
+        save_blacklist(blk)
+        await ctx.send(f"⛔ **Blacklisted** — `{name}`\n*This track will be skipped when you use !play*")
+        log.info("⛔ Added to blacklist by %s: %s — %s", ctx.author, name, url)
+
+    # If this track is currently playing and was blacklisted, skip it
+    if existing:
+        # It was removed from blacklist, no need to skip
+        pass
+    elif url == state.queue[state.index] if state.queue and 0 <= state.index < len(state.queue) else False:
+        # Currently playing this and blacklisted now — skip
+        if ctx.voice_client and ctx.voice_client.is_connected():
+            await ctx.send("⏭️ Skipping blacklisted track...")
+            await skip_to_next(ctx)
+
+
+@bot.command(aliases=["blks", "blklist"])
+async def blacklist_list(ctx: commands.Context):
+    """Show your blacklisted tracks."""
+    blk = load_blacklist()
+    user_blk = blk.get(str(ctx.author.id), {}).get("tracks", [])
+
+    if not user_blk:
+        return await ctx.send("📭 **No blacklisted tracks.** Use `!blk` on a playing track to add it here.")
+
+    lines = [f"⛔ **Your Blacklist ({len(user_blk)} tracks)**"]
+    for i, t in enumerate(user_blk, 1):
+        name = t.get("name", "Unknown")
+        lines.append(f"`{i}.` {name}")
+
+    for chunk in [lines[i:i+15] for i in range(0, len(lines), 15)]:
+        await ctx.send("\n".join(chunk))
+
+
+@bot.command(aliases=["blkrm"])
+async def blacklist_remove(ctx: commands.Context, *, number: str):
+    """Remove a track from your blacklist by number. Usage: !blkrm <number>"""
+    blk = load_blacklist()
+    uid = str(ctx.author.id)
+    user_blk = blk.get(uid, {}).get("tracks", [])
+
+    if not user_blk:
+        return await ctx.send("📭 Your blacklist is empty.")
+
+    try:
+        idx = int(number) - 1
+        if idx < 0 or idx >= len(user_blk):
+            return await ctx.send(f"Number must be between 1 and {len(user_blk)}.")
+    except ValueError:
+        return await ctx.send("Usage: `!blkrm <number>`")
+
+    removed = user_blk.pop(idx)
+    blk[uid]["tracks"] = user_blk
+    save_blacklist(blk)
+    await ctx.send(f"✅ **Removed from blacklist** — `{removed.get('name', 'Unknown')}`")
 
 
 # ── HVSC C64 SID Collection ─────────────────────────────────────
@@ -2680,7 +2823,7 @@ async def auto_play_after_switch(ctx: commands.Context, state) -> None:
     if not ctx.author.voice or not state.tracks:
         return
     log.info("auto_play_after_switch: queue_len=%d, index=%d", len(state.queue), state.index)
-    state.queue = list(state.tracks)
+    state.queue = filter_blacklisted(list(state.tracks), ctx.author.id)
     if PLAYBACK_SHUFFLE:
         random.shuffle(state.queue)
     state.index = 0

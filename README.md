@@ -34,7 +34,8 @@ Switch between them with `!flip`, check all counts with `!status`.
 - 🔀 **Shuffle loop** — never hear the same track twice in a row
 - 🎼 **Rich metadata** — track name, composer, copyright from headers
 - ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks, play with `!favplay`
-- 🔊 **Per‑collection volume normalization** — SID at 120%, SAP/SAP/AY/Tiny at 100%
+- ⛔ **Blacklist** — ban tracks you never want to hear again with `!blk`
+- 🔊 **Per‑collection volume normalization** — SID at 120%, SAP/AY/Tiny at 100%
 - ⏭️ **Skip**, **Stop**, **Jump**, **Queue**, **History**, **Now Playing**, **Search**
 - 🔄 **Auto-advance** — moves to next track when current ends
 - 🔁 **Loop mode** — toggle with `!loop`
@@ -91,6 +92,10 @@ Switch between them with `!flip`, check all counts with `!status`.
 | `!reindex` | Re‑fetch metadata for search index |
 | `!favorites` / `!favs` / `!playlist` | Show your reaction‑based favorites |
 | `!favplay` / `!fp` | Play all (or a specific) favorited tracks |
+| `!blk` | Blacklist the current playing track (toggle) |
+| `!blk <number>` | Blacklist a track by queue number |
+| `!blks` / `!blklist` | Show your blacklisted tracks |
+| `!blkrm <number>` | Remove a track from blacklist |
 | `!export` | Dump the full playlist as a code block |
 | `!stats` | Show radio statistics |
 
@@ -99,6 +104,17 @@ Switch between them with `!flip`, check all counts with `!status`.
 React with **any emoji** to a **Now Playing embed** (both the auto‑sent one and the one from `!np`) to save the track to your favorites. React again to remove it (toggle). Use `!favplay` to play all favorited tracks shuffled, or `!favplay N` to play a specific one. Data persists in `favorites.json`.
 
 **Tip:** The auto‑play embed that appears when a track starts is already tracked — just react to it. If you missed it, type `!np` and react to that embed instead.
+
+### Blacklist System
+
+Is a track so bad it makes your ears bleed? Type **`!blk`** while it's playing to banish it to the shadow realm. It's a toggle — `!blk` again to un‑blacklist.
+
+- `!blk` — blacklist/un‑blacklist the currently playing track (toggle)
+- `!blk <number>` — blacklist a track by its position in the queue
+- `!blks` — list all your blacklisted tracks
+- `!blkrm <number>` — remove a track from the list by number
+
+Blacklisted tracks are **automatically filtered out** when you start `!play` or `!favplay` (shuffle‑all mode). If you blacklist a track that's currently playing, the bot skips it immediately. Data persists in `blacklist.json`, separate per user.
 
 ### Collection Switching
 
@@ -233,6 +249,7 @@ robbo-obibot-ulimate-chiptune-bot/
 ├── modarchive_cache.json        # ModArchive cache (~22 MB, 175k modules)
 ├── snes_cache.json              # SNESmusic.org game list (2 612 games)
 ├── favorites.json               # Reaction-based favorites
+├── blacklist.json                # Per-user blacklisted tracks
 ├── metadata_cache.json          # Search metadata index
 ├── queues/                      # Persisted queues per guild
 ├── archiwum/ay/                 # Local AY files
