@@ -174,6 +174,20 @@ def load_last_collection() -> str | None:
         pass
     return None
 
+def _atomic_json_write(path: str, data: dict) -> None:
+    """Write JSON atomically: tmp → rename prevents partial writes on crash."""
+    tmp_path = path + ".tmp"
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_path, path)  # atomic rename
+    except Exception as e:
+        log.error("Failed atomic write to %s: %s", path, e)
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
 def save_last_collection(mode: str):
     try:
         with open(LAST_COLLECTION_FILE, "w") as f:
@@ -235,6 +249,14 @@ def mod_only():
 
 active_streams: dict[int, "MonitorAudioSource"] = {}
 
+_source_counter: int = 0
+
+def _next_source_id() -> int:
+    """Monotonic counter for source identity — never reuses numbers."""
+    global _source_counter
+    _source_counter += 1
+    return _source_counter
+
 def _after_stream_end(guild_id: int | None, error: Exception | None, source_id: int = 0) -> None:
     """Cleanup callback for vc.play() — logs, kills FFmpeg, removes from active_streams.
     Uses source_id to ensure stale callbacks don't clean up a newer source."""
@@ -290,7 +312,7 @@ def get_state(guild_id: int) -> PlaylistState:
     return guilds[guild_id]
 
 def save_queue(state: PlaylistState):
-    """Persist queue to disk for this guild."""
+    """Persist queue to disk for this guild (atomic)."""
     if not state.guild_id:
         return
     os.makedirs(QUEUE_DIR, exist_ok=True)
@@ -301,11 +323,7 @@ def save_queue(state: PlaylistState):
         "loop": state.loop,
         "collection_mode": state.collection_mode,
     }
-    try:
-        with open(path, "w") as f:
-            json.dump(data, f)
-    except Exception:
-        pass
+    _atomic_json_write(path, data)
 
 def load_queue(guild_id: int) -> dict | None:
     """Load persisted queue for a guild, or None."""
@@ -935,7 +953,7 @@ async def play_current_sid_track(ctx, state, url):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -993,7 +1011,7 @@ async def play_current_modarchive_track(ctx, state, url):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1148,7 +1166,7 @@ async def play_current_ay_track(ctx, state, filepath):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1218,7 +1236,7 @@ async def play_current_ym_track(ctx, state, filepath):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1273,7 +1291,7 @@ async def play_current_tiny_track(ctx, state, filepath):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1392,7 +1410,7 @@ async def play_current_track(ctx):
             source = MonitorAudioSource(SINK_NAME)
             state.vc.play(
                 source,
-                after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid)
+                after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid)
             )
             active_streams[state.guild_id] = source
 
@@ -2034,6 +2052,7 @@ async def export(ctx: commands.Context):
 
 @bot.command()
 @mod_only()
+@commands.cooldown(1, 300, commands.BucketType.guild)
 async def refresh(ctx: commands.Context):
     """Re-crawl ASMA and rebuild the playlist."""
     await ctx.send("🔍 Re-crawling ASMA archive... this may take a minute.")
@@ -2045,6 +2064,7 @@ async def refresh(ctx: commands.Context):
 
 @bot.command()
 @mod_only()
+@commands.cooldown(1, 300, commands.BucketType.guild)
 async def reindex(ctx: commands.Context):
     """Re-fetch metadata for all tracks (search index)."""
     state = get_state(ctx.guild.id)
@@ -2134,12 +2154,8 @@ def load_favorites() -> dict:
 
 
 def save_favorites(data: dict):
-    """Save the favorites database to disk."""
-    try:
-        with open(FAVORITES_FILE, "w") as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        log.error("Failed to save favorites: %s", e)
+    """Save the favorites database to disk (atomic)."""
+    _atomic_json_write(FAVORITES_FILE, data)
 
 
 # ── Named Playlists ──────────────────────────────────────────────
@@ -2169,13 +2185,8 @@ def save_playlist(name: str, tracks: list[dict], author_id: int, author_name: st
         "created": time.time(),
         "tracks": tracks,
     }
-    try:
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
-        return safe_name
-    except Exception as e:
-        log.error("Failed to save playlist '%s': %s", name, e)
-        return ""
+    _atomic_json_write(path, data)
+    return safe_name
 
 def load_playlist(name: str) -> dict | None:
     """Load a named playlist. Returns None if not found."""
@@ -2242,19 +2253,15 @@ def load_blacklist() -> dict:
 
 
 def save_blacklist(data: dict):
-    """Save the blacklist database to disk and update cache."""
+    """Save the blacklist database to disk (atomic) and update cache."""
     global _blacklist_cache
+    _atomic_json_write(BLACKLIST_FILE, data)
+    _blacklist_cache = data
     try:
-        with open(BLACKLIST_FILE, "w") as f:
-            json.dump(data, f, indent=2)
-        _blacklist_cache = data
-        try:
-            global _blacklist_mtime
-            _blacklist_mtime = os.path.getmtime(BLACKLIST_FILE)
-        except OSError:
-            pass
-    except Exception as e:
-        log.error("Failed to save blacklist: %s", e)
+        global _blacklist_mtime
+        _blacklist_mtime = os.path.getmtime(BLACKLIST_FILE)
+    except OSError:
+        pass
 
 
 def filter_blacklisted(tracks: list[str], user_id: int | str) -> list[str]:
@@ -2907,7 +2914,7 @@ async def play_current_spc_track(ctx, state, game_entry: dict):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -3001,9 +3008,10 @@ async def download_sid_for_meta(url: str) -> dict[str, str]:
 
 
 def cleanup_orphan_players():
-    """Kill orphaned audacious/ffmpeg processes from crashed bot sessions.
-    Does NOT kill ffmpeg (MonitorAudioSource) since that's managed in-band."""
-    subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
+    """Kill orphaned audacious processes from crashed bot sessions.
+    Scoped to current user — does not touch system-wide processes."""
+    user = os.environ.get("USER", "") or os.environ.get("LOGNAME", "")
+    subprocess.run(["pkill", "-u", user, "-x", "audacious"], capture_output=True)
 
 
 def stop_all_players():
@@ -3748,11 +3756,11 @@ async def graceful_shutdown():
 _shutdown_flag = asyncio.Event()
 
 def handle_signal(signum, frame):
-    """Signal handler: close the bot gracefully. Thread-safe."""
+    """Signal handler: schedule shutdown gracefully via thread-safe API."""
     log.info("Received signal %d, shutting down...", signum)
     loop = asyncio.get_event_loop()
     if loop.is_running():
-        loop.create_task(graceful_shutdown())
+        asyncio.run_coroutine_threadsafe(graceful_shutdown(), loop)
         loop.call_soon_threadsafe(lambda: asyncio.ensure_future(bot.close()))
 
 if __name__ == "__main__":
