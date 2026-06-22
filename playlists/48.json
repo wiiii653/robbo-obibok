@@ -1,0 +1,344 @@
+{
+  "name": "48",
+  "author": "ognjen78",
+  "author_id": 693164855066099814,
+  "created": 1782165769.0655017,
+  "tracks": [
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/N/Nilsen_Ronny/Mozique.sid",
+      "name": "Mozique",
+      "author": "Ronny Nilsen (Snap)",
+      "added_at": 1781763027.5971804,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/DEMOS/0-9/10_Orbyte.sid",
+      "name": "10 Orbyte",
+      "author": "Michael Becker (Premium)",
+      "added_at": 1781770830.833622,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/A/Ace64/Tune_19.sid",
+      "name": "Tune 19",
+      "author": "Ace64",
+      "added_at": 1781777587.2451673,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Swierszcz_Piotr/Lambada.sap",
+      "name": "Piotr Swierszcz (Samurai) - asma_bot_91jwbwbc - Lambada",
+      "author": "",
+      "added_at": 1781843205.6052086,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Sychowicz_Lukasz/Yatzeck_Platzeck_v32.sap",
+      "name": "Lukasz Sychowicz (X-Ray) - asma_bot_kqiplve2 - Yatzeck Platzeck v.32",
+      "author": "",
+      "added_at": 1781911073.022386,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Skwiot_Stanislaw/Music_from_Poland_4.sap",
+      "name": "Stanislaw Skwiot (Stanley) - asma_bot_kqiplve2 - Music from Poland - 4",
+      "author": "",
+      "added_at": 1781911097.6324174,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Grabowski_Pawel/Kult.sap",
+      "name": "Pawel Grabowski - asma_bot_kqiplve2 - Kult",
+      "author": "",
+      "added_at": 1781911489.9260445,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=134896",
+      "name": "fa133d1791cb horizon99 lo0p",
+      "author": "",
+      "added_at": 1781911898.6658762,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=213461",
+      "name": "7dde8015b369 virgill - 4fx-schmoddermann-cut",
+      "author": "",
+      "added_at": 1781935537.1300771,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=162545",
+      "name": "35951b65dcd0 eha - feeling weird",
+      "author": "",
+      "added_at": 1781935927.4210691,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Sychowicz_Lukasz/Nekrofil.sap",
+      "name": "Lukasz Sychowicz (X-Ray) - asma_bot_6di8jgdt - Nekrofil",
+      "author": "",
+      "added_at": 1781936380.721691,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Pasiecznik_Michal/Demo_40.sap",
+      "name": "Michal Pasiecznik (Pasiu) - asma_bot_6di8jgdt - Demo 40",
+      "author": "",
+      "added_at": 1781936594.3833613,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=38979",
+      "name": "e6baea9d29d7 djc-hbb",
+      "author": "",
+      "added_at": 1781941039.2404633,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Sychowicz_Lukasz/Nabial.sap",
+      "name": "Lukasz Sychowicz (X-Ray) - asma_bot_u416tfva - Nabial",
+      "author": "",
+      "added_at": 1781944672.539384,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=193745",
+      "name": "b08174eb6c99 mydream2",
+      "author": "",
+      "added_at": 1781945121.3388455,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/H/Hannula_Antti/Dance_Attack.sid",
+      "name": "Dance Attack",
+      "author": "Antti & Janne Hannula",
+      "added_at": 1781946276.5264685,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=150833",
+      "name": "9e0318240334 sour field",
+      "author": "",
+      "added_at": 1781946977.2443368,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=141808",
+      "name": "2bd3f45a5832 flytime",
+      "author": "",
+      "added_at": 1781948241.030119,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=184108",
+      "name": "d10c7eaadd87 its 1990s",
+      "author": "",
+      "added_at": 1781949066.5274093,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "aygor/musicians/A/AER/MOD_ULA_tor.ay",
+      "name": "MOD-ULA-tor",
+      "author": "AER",
+      "added_at": 1781950667.851183,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "aygor/musicians/A/A_Parazit/Small_Girl.ay",
+      "name": "Small Girl",
+      "author": "A. Parazit",
+      "added_at": 1781950753.9530945,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/B/Bayliss_Richard/Follow_That_Storm.sid",
+      "name": "Follow That Storm",
+      "author": "Richard Bayliss",
+      "added_at": 1781955054.162623,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/M/Max_F3H/Future_Shock_Remake.sid",
+      "name": "Future Shock Remake",
+      "author": "Max Hall",
+      "added_at": 1781965078.206993,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/B/Bayliss_Richard/Dark_Force.sid",
+      "name": "Dark Force",
+      "author": "Richard Bayliss",
+      "added_at": 1781972794.8742535,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/S/Surgeon/UFO.sid",
+      "name": "UFO",
+      "author": "Przemek Mroczkowski (Surgeon)",
+      "added_at": 1781973364.9893386,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/K/Khugiani_Naveed/Binary_Digits_tune_24.sid",
+      "name": "Binary Digits (tune 24)",
+      "author": "Naveed Khugiani (Crack)",
+      "added_at": 1781973479.5417962,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=47731",
+      "name": "tmp - asma_bot__pdl_z44 - killer",
+      "author": "",
+      "added_at": 1781982878.448037,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=52001",
+      "name": "9ab67d332910 mission",
+      "author": "",
+      "added_at": 1781986607.4088213,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=129871",
+      "name": "7a95d84929ae red-friday",
+      "author": "",
+      "added_at": 1782035011.48228,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "solo_cpc/SoundHakker/CRYSTAL.ay",
+      "name": "solo_cpc - SoundHakker - CRYSTAL",
+      "author": "",
+      "added_at": 1782050827.7353792,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/D/Dokken/Entropy_part_1.sid",
+      "name": "Entropy (part 1)",
+      "author": "Bob Stoner (Dokken)",
+      "added_at": 1782050975.8970535,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://asma.atari.org/asma/Composers/Liebich_Tomasz/Vicky_Intro.sap",
+      "name": "Tomasz Liebich - asma_bot__zs2p9tm - Vicky - Intro",
+      "author": "",
+      "added_at": 1782052709.9450011,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://api.modarchive.org/downloads.php?moduleid=74923",
+      "name": "tmp - asma_bot__zs2p9tm - dream+reality",
+      "author": "",
+      "added_at": 1782060792.7868836,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/D/Duck_LaRock/One_Year_Camelot_3_part_6.sid",
+      "name": "One Year Camelot 3 (part 6)",
+      "author": "Anders Daugaard (Duck LaRock)",
+      "added_at": 1782061207.1369424,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://snesmusic.org/v2/download.php?spcNow=cp",
+      "name": "Super Billiard",
+      "author": "Jerry Gerber",
+      "added_at": 1782061569.0405083,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "https://www.hvsc.c64.org/download/C64Music/MUSICIANS/D/Dalezy/Verszagra_gyul_az_eji_vad.sid",
+      "name": "V\ufffdrszagra gy\ufffdl az \ufffdji vad",
+      "author": "Ronny Engmann (dalezy)",
+      "added_at": 1782062278.4513226,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/syntax errol/Syntax Errol - Peppis (Jepa Jeppis).xm",
+      "name": "artists - syntax errol - peppis (jepa jeppis)",
+      "author": "",
+      "added_at": 1782105883.7690616,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/xcopy/XCOPY - Paula.mod",
+      "name": "artists - xcopy - paula",
+      "author": "",
+      "added_at": 1782126141.9554923,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/syntax errol/Syntax Errol (feat. Mikropuhe) - Milla (Compost.ed).xm",
+      "name": "artists - syntax errol - milla (compost.ed)",
+      "author": "",
+      "added_at": 1782126920.4448712,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "modland/Jochen Hippel/seven gates of jambala 12 - level 1.ym",
+      "name": "seven gates of jambala 12 - level 1",
+      "author": "",
+      "added_at": 1782156251.0389192,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/syntax errol/Syntax Errol - Den.ethanol.xm",
+      "name": "artists - syntax errol - den.ethanol",
+      "author": "",
+      "added_at": 1782159774.2098632,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/quad/Quad - Open Your Soul.it",
+      "name": "artists - quad - open your soul",
+      "author": "",
+      "added_at": 1782160322.7719522,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/celsius/Celsius - Komplete Kontrol.mod",
+      "name": "artists - celsius - komplete||||kontrol",
+      "author": "",
+      "added_at": 1782160351.5257845,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/pouet-demozoo/Necros/ScreamTracker3/helpless automaton.s3m",
+      "name": "Necros - ScreamTracker3 - Helpless AuToMaTOn",
+      "author": "",
+      "added_at": 1782162348.7110627,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/randall/Randall - Watch Me Dance.mod",
+      "name": "artists - randall - watch me dance",
+      "author": "",
+      "added_at": 1782163670.6491985,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/dj stax/Technotronic - Get Up (Before The Night Is Over) (DJ Stax 1994 Remix).mod",
+      "name": "artists - dj stax - getup",
+      "author": "",
+      "added_at": 1782164723.5284393,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/pouet-demozoo/Skaven/Impulsetracker/deep in her eyes (remake).it",
+      "name": "Skaven - Impulsetracker - Deep in her Eyes",
+      "author": "",
+      "added_at": 1782164859.088831,
+      "emoji": "\u2764\ufe0f"
+    },
+    {
+      "url": "mods/artists/h0ffman/H0ffman - Krunk'd.mod",
+      "name": "artists - h0ffman - krunk'd",
+      "author": "",
+      "added_at": 1782165210.586093,
+      "emoji": "\u2764\ufe0f"
+    }
+  ]
+}

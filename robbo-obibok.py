@@ -2455,6 +2455,50 @@ async def favload(ctx: commands.Context, *, name: str):
     await _play_track_list(ctx, tracks, f"playlist \"{playlist['name']}\"")
 
 
+@bot.command(aliases=["plist", "list-playlists", "playlist-dir"])
+async def playlists(ctx: commands.Context):
+    """List all saved playlists in the playlists directory. Usage: !playlists"""
+    _ensure_playlist_dir()
+    files = sorted(os.listdir(PLAYLIST_DIR))
+    json_files = [f for f in files if f.endswith(".json")]
+
+    if not json_files:
+        return await ctx.send("📂 **No playlists saved yet.** Use `!favsave <name>` to create one!")
+
+    lines = ["📂 **Playlists Directory**"]
+
+    for fname in json_files:
+        path = os.path.join(PLAYLIST_DIR, fname)
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            display_name = data.get("name", fname[:-5])
+            author = data.get("author", "?")
+            tracks = len(data.get("tracks", []))
+            created = data.get("created", 0)
+            if created:
+                created_str = time.strftime("%Y-%m-%d", time.localtime(created))
+            else:
+                created_str = time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(path)))
+            author_s = f" by {author}" if author and author != "?" else ""
+            lines.append(f"`{display_name}` — {tracks} tracks{author_s} ({created_str})")
+        except Exception as e:
+            # Fallback: show raw filename with file info
+            size = os.path.getsize(path)
+            mtime = time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(path)))
+            lines.append(f"`{fname}` — {size} bytes ({mtime}) — ⚠️ parse error")
+
+    # Split into chunks if too long (Discord 2000 char limit)
+    msg = "\n".join(lines)
+    if len(msg) <= 2000:
+        await ctx.send(msg)
+    else:
+        # Send in chunks
+        for i in range(0, len(lines), 10):
+            chunk = "\n".join(lines[i:i+10])
+            await ctx.send(chunk)
+
+
 # ── Blacklist Commands ──────────────────────────────────────────
 @bot.command(aliases=["blk"])
 async def blacklist_track(ctx: commands.Context, *, number: str = ""):
