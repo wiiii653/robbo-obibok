@@ -46,6 +46,11 @@ playback:
   shuffle: true                 # shuffle on start
   crossfade: 0                  # crossfade seconds (0 = off)
 
+# YM Archive (Atari ST chiptunes)
+ym:
+  path: "archiwum/ym"
+  cache_file: "ym_cache.json"
+
 # Auto-start / Auto-stop
 auto:
   start_channel: "ASMA Radio"   # voice channel name to auto-start (empty = disabled)

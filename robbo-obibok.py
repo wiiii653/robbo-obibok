@@ -99,6 +99,10 @@ PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 AY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ay")
 AY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ay_cache.json")
 
+# ── Local YM Archive (Atari ST) ─────────────────────────────────
+YM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ym")
+YM_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ym_cache.json")
+
 # ── Local Tiny Music (Demoscene Modules) ────────────────────────
 TINY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "tiny")
 TINY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny_cache.json")
@@ -116,7 +120,7 @@ def load_last_collection() -> str | None:
     try:
         with open(LAST_COLLECTION_FILE) as f:
             mode = f.read().strip()
-            if mode in ("asma", "hvsc", "modarchive", "ay", "tiny", "spc"):
+            if mode in ("asma", "hvsc", "modarchive", "ay", "tiny", "spc", "ym"):
                 return mode
     except (FileNotFoundError, OSError):
         pass
@@ -324,6 +328,7 @@ COLLECTION_VOLUMES = {
     "asma": 100,       # SAPy normalnie
     "modarchive": 100, # MODy normalnie
     "ay": 100,         # AY normalnie
+    "ym": 100,         # YM normalnie
     "tiny": 100,       # Tiny normalnie
     "spc": 100,        # SPC normalnie
 }
@@ -431,7 +436,7 @@ def extract_searchable_text(url: str) -> str:
     path = url.replace(ASMA_BASE, "").replace(HVSC_BASE, "")
     name_part = path.split("/")[-1]
     # Strip known extensions for search
-    for ext in [".sap", ".sid", ".mod", ".xm", ".s3m", ".it"]:
+    for ext in [".sap", ".sid", ".mod", ".xm", ".s3m", ".it", ".ym"]:
         name_part = name_part.replace(ext, "")
     return name_part.replace("_", " ").lower()
 
@@ -814,6 +819,14 @@ COLLECTION_INFO = {
         "color": discord.Color.blue(),
         "load_tracks": lambda: load_ay_cache(),
     },
+    "ym": {
+        "icon": "🎹",
+        "name": "Atari ST YM (Local Archive)",
+        "station": "Atari ST YM Radio",
+        "footer": "Atari ST YM Radio — YM2149 chiptunes",
+        "color": discord.Color.from_str("#F1C40F"),
+        "load_tracks": lambda: load_ym_cache(),
+    },
     "tiny": {
         "icon": "🎵",
         "name": "Tiny Music (Demoscene Modules)",
@@ -915,6 +928,61 @@ async def play_current_ay_track(ctx, state, filepath):
         "timestamp": time.time(),
     }
     log.info("AY now playing: %s — %s", name, author)
+    return True
+
+
+async def play_current_ym_track(ctx, state, filepath):
+    """Play a local YM file (Atari ST YM2149) via Audacious."""
+    full_path = os.path.join(YM_DIR, filepath)
+
+    if not os.path.exists(full_path):
+        await ctx.send(f"❌ File not found: `{filepath}`")
+        return False
+
+    # Stop existing playback and play via Audacious (VTX plugin handles .ym)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, full_path)
+
+    state.current_sap_path = full_path
+
+    # Setup MonitorAudioSource
+    if state.vc and state.vc.is_connected():
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e: _after_stream_end(state.guild_id, e),
+        )
+        active_streams[state.guild_id] = source
+
+    total = len(state.queue)
+    pos = state.index + 1
+
+    # Get metadata from Audacious
+    track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
+    name = track or filepath.split("/")[-1].replace(".ym", "").replace(".YM", "")
+    author = ""
+
+    embed = discord.Embed(
+        title=name[:256],
+        color=discord.Color.from_str("#F1C40F"),
+    )
+    if author:
+        embed.add_field(name="Composer", value=author, inline=True)
+    embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+    embed.set_footer(text="Atari ST YM2149 — via Audacious VTX plugin")
+
+    np_msg = await ctx.send(embed=embed)
+    message_track_map[np_msg.id] = {
+        "url": filepath,
+        "name": name,
+        "author": author,
+        "timestamp": time.time(),
+    }
+    log.info("YM now playing: %s — %s", name, author)
     return True
 
 
@@ -1026,6 +1094,14 @@ async def play_current_track(ctx):
                 state.collection_mode = "ay"
                 await ensure_tracks(state)
             return await play_current_ay_track(ctx, state, url)
+
+        # ── Local YM Archive (Atari ST) ──
+        is_ym = url.endswith(".ym")
+        if is_ym:
+            if state.collection_mode != "ym":
+                state.collection_mode = "ym"
+                await ensure_tracks(state)
+            return await play_current_ym_track(ctx, state, url)
 
         # ── ASMA SAP Playback (default) ──
         if state.collection_mode != "asma":
@@ -1176,7 +1252,9 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
             return
 
         saved = load_queue(member.guild.id)
-        if saved and saved.get("queue") and saved["queue"][0] in state.tracks and saved.get("collection_mode") == state.collection_mode:
+        if (saved and saved.get("queue") and len(saved["queue"]) >= 10
+                and saved["queue"][0] in state.tracks
+                and saved.get("collection_mode") == state.collection_mode):
             state.queue = saved["queue"]
             state.index = saved.get("index", 0)
             state.loop = saved.get("loop", PLAYBACK_LOOP)
@@ -2169,6 +2247,21 @@ def load_ay_cache() -> list[str] | None:
         return None
 
 
+def load_ym_cache() -> list[str] | None:
+    """Load YM track list from local cache."""
+    try:
+        if not os.path.exists(YM_CACHE):
+            return None
+        with open(YM_CACHE) as f:
+            data = json.load(f)
+        tracks = [t["path"] for t in data.get("tracks", [])]
+        log.info("YM: loaded %d tracks from cache", len(tracks))
+        return tracks
+    except Exception as e:
+        log.warning("YM cache load error: %s", e)
+        return None
+
+
 def load_tiny_cache() -> list[str] | None:
     """Load Tiny Music track list from local cache."""
     try:
@@ -2524,6 +2617,37 @@ async def ay(ctx: commands.Context):
     await auto_play_after_switch(ctx, state)
 
 
+@bot.command(aliases=["atarist", "ym2149"])
+async def ym(ctx: commands.Context):
+    """Switch to local Atari ST YM2149 archive."""
+    state = get_state(ctx.guild.id)
+    if state.collection_mode == "ym" and state.tracks:
+        await ctx.send("🎹 **Already in Atari ST YM mode.** Use `!play` to start!")
+        return
+    await ctx.send("🎹 **Loading local YM archive (7,200+ Atari ST chiptunes)...**")
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except (asyncio.CancelledError, Exception):
+            pass
+    tracks = await asyncio.get_event_loop().run_in_executor(None, load_ym_cache)
+    if not tracks:
+        return await ctx.send("❌ YM cache not found. Run `build_ym_index.py` first!")
+    state.collection_mode = "ym"
+    save_last_collection("ym")
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "ym")
+    state.tracks = tracks
+    state.queue = []
+    state.index = -1
+    await ctx.send(f"🎹 **Atari ST YM archive ready — {len(tracks)} tracks!**\\n"
+                   "YM2149 chiptunes — Mad Max / Scavenger / Big Alec / David Whittaker / Jochen Hippel")
+    log.info("YM: collection switched, %d tracks loaded", len(tracks))
+    await auto_play_after_switch(ctx, state)
+
+
 @bot.command(aliases=["tm", "demoscene"])
 async def tiny(ctx: commands.Context):
     """Switch to local Tiny Music demoscene module archive."""
@@ -2629,12 +2753,13 @@ async def status(ctx: commands.Context):
     # ── Quick cache counts (reads JSON headers only) ──
     cache_counts = {}
     cache_map = {
-        "hvsc_cache.json":     ("🟣", "C64 SID (HVSC)"),
-        "asma_cache.json":     ("🟢", "Atari SAP (ASMA)"),
-        "modarchive_cache.json": ("🟠", "Tracker (ModArchive)"),
-        "ay_cache.json":       ("🔵", "ZX Spectrum AY"),
-        "tiny_cache.json":     ("🎵", "Tiny Music"),
-        "snes_cache.json":     ("🔴", "SNES SPC"),
+        "asma_cache.json": ("🟢", "Atari SAP (ASMA)"),
+        "hvsc_cache.json": ("🟣", "C64 SID (HVSC)"),
+        "modarchive_cache.json": ("🟠", "Tracker Modules (ModArchive)"),
+        "ay_cache.json": ("🔵", "ZX Spectrum AY"),
+        "ym_cache.json": ("🎹", "Atari ST YM"),
+        "tiny_cache.json": ("🎵", "Tiny Music (Demoscene)"),
+        "snes_cache.json": ("🔴", "SNES SPC"),
     }
     for fname, (icon, label) in cache_map.items():
         try:
@@ -2655,11 +2780,11 @@ async def status(ctx: commands.Context):
     # ── Current state ──
     mode_icons = {
         "hvsc": "🟣", "asma": "🟢", "modarchive": "🟠",
-        "ay": "🔵", "tiny": "🎵", "spc": "🔴",
+        "ay": "🔵", "ym": "🎹", "tiny": "🎵", "spc": "🔴",
     }
     mode_labels = {
         "hvsc": "HVSC", "asma": "ASMA", "modarchive": "ModArchive",
-        "ay": "AY", "tiny": "Tiny", "spc": "SNES",
+        "ay": "AY", "ym": "Atari ST YM", "tiny": "Tiny", "spc": "SNES",
     }
     current_icon = mode_icons.get(state.collection_mode, "⚪")
     current_label = mode_labels.get(state.collection_mode, "Unknown")
@@ -2688,7 +2813,7 @@ async def status(ctx: commands.Context):
 
 @bot.command(aliases=["switch", "toggle", "fl"])
 async def flip(ctx: commands.Context):
-    """Toggle between collections: HVSC → ASMA → ModArchive → AY → Tiny → SNES → HVSC ..."""
+    """Toggle between collections: HVSC → ASMA → ModArchive → AY → YM → Tiny → SNES → HVSC ..."""
     state = get_state(ctx.guild.id)
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
 
@@ -2702,7 +2827,7 @@ async def flip(ctx: commands.Context):
     state.pre_downloaded = None
 
     # Flip sequence for visual indicator
-    flip_seq = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎵Tiny", "🔴SNES"]
+    flip_seq = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎹YM", "🎵Tiny", "🔴SNES"]
 
     if state.collection_mode == "hvsc":
         # HVSC → ASMA
@@ -2756,7 +2881,25 @@ async def flip(ctx: commands.Context):
         log.info("AY: collection switched via flip")
 
     elif state.collection_mode == "ay":
-        # AY → Tiny Music
+        # AY → YM
+        old_tracks = list(state.tracks) if state.tracks else []
+        state.collection_mode = "ym"
+        save_last_collection("ym")
+        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
+        tracks = await asyncio.get_event_loop().run_in_executor(None, load_ym_cache)
+        seq = " → ".join("**" + s + "**" if s == "🎹YM" else s for s in flip_seq)
+        if tracks:
+            state.tracks = tracks
+            await ctx.send(f"🎹 **Switched to Atari ST YM — {len(tracks)} tracks!**\\n{seq}")
+        else:
+            await ctx.send(f"🎹 **YM cache not ready.** Staying on AY.\\n{seq}")
+            state.collection_mode = "ay"
+            state.tracks = old_tracks
+            save_last_collection("ay")
+        log.info("YM: collection switched via flip")
+
+    elif state.collection_mode == "ym":
+        # YM → Tiny Music
         old_tracks = list(state.tracks) if state.tracks else []
         state.collection_mode = "tiny"
         save_last_collection("tiny")
@@ -2765,12 +2908,12 @@ async def flip(ctx: commands.Context):
         seq = " → ".join("**" + s + "**" if s == "🎵Tiny" else s for s in flip_seq)
         if tracks:
             state.tracks = tracks
-            await ctx.send(f"🎵 **Switched to Tiny Music — {len(tracks)} modules!**\n{seq}")
+            await ctx.send(f"🎵 **Switched to Tiny Music — {len(tracks)} modules!**\\n{seq}")
         else:
-            await ctx.send(f"🎵 **Tiny cache not ready.** Staying on AY.\n{seq}")
-            state.collection_mode = "ay"
+            await ctx.send(f"🎵 **Tiny cache not ready.** Staying on YM.\\n{seq}")
+            state.collection_mode = "ym"
             state.tracks = old_tracks
-            save_last_collection("ay")
+            save_last_collection("ym")
         log.info("Tiny: collection switched via flip")
 
     elif state.collection_mode == "tiny":

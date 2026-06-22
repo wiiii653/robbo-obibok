@@ -21,3 +21,5 @@ archiwum/
 hvsc_cache.json
 favorites.json
 snes_cache.json
+ym_cache.json
+blacklist.json

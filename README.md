@@ -10,13 +10,13 @@ __________      ___.  ___.            ________ ___.   ._____.           __
 
 # Robbo Obibok — The Ultimate Chiptune Bot
 
-Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Six collections, one bot — **the biggest chiptune radio on Discord.**
+Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Seven collections, one bot — **the biggest chiptune radio on Discord.**
 
 **Join a voice channel, `!play`, and let the chips fall where they may.**
 
 ## Features
 
-### 🎵 Six Collections (and growing)
+### 🎵 Seven Collections (and growing)
 
 | # | Collection | Tracks | Source | Command |
 |---|-----------|--------|--------|---------|
@@ -24,6 +24,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | 🟣 | **C64 SID (HVSC)** | ~60 500 | hvsc.c64.org | `!hvsc` / `!c64` |
 | 🟠 | **Tracker Modules (ModArchive)** | ~175 000 | modarchive.org | `!mod` |
 | 🔵 | **ZX Spectrum AY** | ~4 500 | local `archiwum/ay/` | `!ay` / `!zx` |
+| 🎹 | **Atari ST YM** | ~7 200 | local `archiwum/ym/` | `!ym` / `!atarist` |
 | 🎵 | **Tiny Music** | ~418 | local `archiwum/tiny/` | `!tiny` |
 | 🔴 | **SNES SPC** | ~60 000 tracks, 2 612 games | snesmusic.org | `!snes` / `!spc` |
 
@@ -35,7 +36,7 @@ Switch between them with `!flip`, check all counts with `!status`.
 - 🎼 **Rich metadata** — track name, composer, copyright from headers
 - ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks, play with `!favplay`
 - ⛔ **Blacklist** — ban tracks you never want to hear again with `!blk`
-- 🔊 **Per‑collection volume normalization** — SID at 120%, SAP/AY/Tiny at 100%
+|- 🔊 **Per‑collection volume normalization** — SID at 120%, SAP/AY/YM/Tiny at 100%
 - ⏭️ **Skip**, **Stop**, **Jump**, **Queue**, **History**, **Now Playing**, **Search**
 - 🔄 **Auto-advance** — moves to next track when current ends
 - 🔁 **Loop mode** — toggle with `!loop`
@@ -77,16 +78,17 @@ Switch between them with `!flip`, check all counts with `!status`.
 | `!hvsc` / `!c64` / `!sid` | **Commodore 64 SID** (HVSC) |
 | `!mod` / `!modarchive` / `!tracker` | **Tracker modules** (ModArchive) |
 | `!ay` / `!zx` | **ZX Spectrum AY** |
+| `!ym` / `!atarist` | **Atari ST YM** (YM2149) |
 | `!tiny` | **Tiny Music** (curated demoscene modules) |
 | `!snes` / `!spc` / `!nintendo` | **SNES SPC** (Super Nintendo) |
 | `!snes search <term>` | Search SNES games by name or composer |
-| `!flip` / `!switch` / `!toggle` | Cycle: HVSC → ASMA → ModArchive → AY → Tiny → SNES → HVSC (shows sequence) |
+|| `!flip` / `!switch` / `!toggle` | Cycle: HVSC → ASMA → ModArchive → AY → YM → Tiny → SNES → HVSC (shows sequence) |
 
 ### Info & Management
 
 | Command | Description |
 |---------|-------------|
-| `!status` / `!mode` / `!collection` / `!all` | Show **all six collections** with track counts + current mode |
+|| `!status` / `!mode` / `!collection` / `!all` | Show **all seven collections** with track counts + current mode |
 | `!search <query>` | Search tracks by name, directory, or author |
 | `!refresh` | Re‑crawl archive and rebuild playlist |
 | `!reindex` | Re‑fetch metadata for search index |
