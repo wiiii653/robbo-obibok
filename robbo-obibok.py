@@ -156,9 +156,34 @@ CROSSFADE_SECS = CONFIG["playback"].get("crossfade", 0)
 AUTO_START_CHANNEL = CONFIG["auto"].get("start_channel", "")
 AUTO_EMPTY_TIMEOUT = CONFIG["auto"].get("empty_timeout", 60)
 
+# ── Single-server lock ──────────────────────────────────────────
+GUILD_ID = CONFIG.get("guild_id")
+
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+
+# Remove default help, we provide a custom one
+bot.remove_command("help")
+
+
+@bot.check
+def single_guild_check(ctx: commands.Context) -> bool:
+    """If GUILD_ID is set, only allow commands from that guild."""
+    if GUILD_ID and ctx.guild and ctx.guild.id != GUILD_ID:
+        return False
+    return True
+
+# ── Permission helper: only server admins / bot owner can run destructive commands
+def mod_only():
+    """Check if user has Manage Channels permission or is bot owner."""
+    async def predicate(ctx: commands.Context) -> bool:
+        if ctx.author == ctx.bot.owner:
+            return True
+        if hasattr(ctx.author, "guild_permissions") and ctx.author.guild_permissions.manage_channels:
+            return True
+        raise commands.MissingPermissions(["manage_channels"])
+    return commands.check(predicate)
 
 active_streams: dict[int, "MonitorAudioSource"] = {}
 
@@ -1394,6 +1419,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
 
 
 @bot.command(aliases=["st"])
+@mod_only()
 async def stop(ctx: commands.Context):
     """Stop playback and disconnect."""
     state = get_state(ctx.guild.id)
@@ -1639,6 +1665,7 @@ async def jump(ctx: commands.Context, *, position: str = ""):
 
 
 @bot.command()
+@mod_only()
 async def clear(ctx: commands.Context):
     """Clear the queue and stop playback. Usage: !clear"""
     state = get_state(ctx.guild.id)
@@ -1672,6 +1699,75 @@ async def ocko(ctx: commands.Context):
     await ctx.send(f"```\n{owl}\n```")
 
 
+@bot.command(name="help")
+async def help_command(ctx: commands.Context):
+    """Show all commands and collections. Usage: !help"""
+    embed = discord.Embed(
+        title="🌲 Robbo Obibok — Help",
+        description="Seven collections, one bot — **the biggest chiptune radio on Discord.**\n"
+                    "Join a voice channel and `!play`!",
+        color=discord.Color.from_str("#2ECC71"),
+    )
+
+    embed.add_field(
+        name="🎮 Playback",
+        value=(
+            "`!play` / `!radio` — start shuffled radio\n"
+            "`!stop` — stop & disconnect\n"
+            "`!skip` / `!next` — next track\n"
+            "`!jump <n>` — jump to track N\n"
+            "`!np` — now playing\n"
+            "`!queue` / `!q` — show queue\n"
+            "`!history` — last 10 tracks\n"
+            "`!loop` — toggle loop\n"
+            "`!volume <0-200>` — set volume\n"
+            "`!clear` — clear queue"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🎵 Collections",
+        value=(
+            "`!asma`  — 🟢 Atari SAP (~6 300)\n"
+            "`!hvsc`  — 🟣 C64 SID (~60 500)\n"
+            "`!mod`   — 🟠 Tracker Modules (~175 000)\n"
+            "`!ay`    — 🔵 ZX Spectrum AY (~4 500)\n"
+            "`!ym`    — 🎹 **Atari ST YM (~7 200)**\n"
+            "`!tiny`  — 🎵 Demoscene Modules (~418)\n"
+            "`!snes`  — 🔴 SNES SPC (~60 000)"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🔄 Navigation",
+        value=(
+            "`!flip` — cycle through all collections\n"
+            "`!status` — show all collections & current mode\n"
+            "`!search <query>` — search across current collection\n"
+            "`!snes search <term>` — search SNES by game/composer"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="❤️ Favorites & Blacklist",
+        value=(
+            "React to any **Now Playing** embed to save/remove favorites\n"
+            "`!favplay` / `!fp` — play favorites\n"
+            "`!favorites` / `!favs` — list favorites\n"
+            "`!blk` — blacklist current track\n"
+            "`!blks` — show blacklist"
+        ),
+        inline=False,
+    )
+
+    embed.set_footer(text="Made with 🔥 by the forest spirit")
+
+    await ctx.send(embed=embed)
+
+
 @bot.command()
 async def export(ctx: commands.Context):
     """Export the current queue to a text message. Usage: !export"""
@@ -1698,6 +1794,7 @@ async def export(ctx: commands.Context):
 
 
 @bot.command()
+@mod_only()
 async def refresh(ctx: commands.Context):
     """Re-crawl ASMA and rebuild the playlist."""
     await ctx.send("🔍 Re-crawling ASMA archive... this may take a minute.")
@@ -1708,6 +1805,7 @@ async def refresh(ctx: commands.Context):
 
 
 @bot.command()
+@mod_only()
 async def reindex(ctx: commands.Context):
     """Re-fetch metadata for all tracks (search index)."""
     state = get_state(ctx.guild.id)

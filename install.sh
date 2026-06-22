@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# Robbo Obibok — Installation Script
+# Run: bash install.sh
+# Supports: Ubuntu/Debian, Arch Linux
+
+set -euo pipefail
+
+BOLD='\033[1m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; }
+step()  { echo -e "\n${BOLD}[$1/$TOTAL]${NC} $2"; }
+
+TOTAL=7
+
+# ── Detect OS ──────────────────────────────────────────────────
+step 1 "Detecting operating system..."
+if command -v apt &>/dev/null; then
+    OS="debian"
+    info "Detected: Ubuntu/Debian"
+elif command -v pacman &>/dev/null; then
+    OS="arch"
+    info "Detected: Arch Linux"
+else
+    error "Unsupported OS. Only Ubuntu/Debian and Arch Linux are supported."
+    exit 1
+fi
+
+# ── Install system dependencies ─────────────────────────────────
+step 2 "Installing system dependencies..."
+
+if [ "$OS" = "debian" ]; then
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq \
+        python3 python3-venv python3-pip \
+        audacious audacious-plugins \
+        ffmpeg pipewire-pulse \
+        sidplayfp libopenmpt-dev \
+        unrar curl wget p7zip-full \
+        git 2>/dev/null
+elif [ "$OS" = "arch" ]; then
+    sudo pacman -S --noconfirm --needed \
+        python python-virtualenv python-pip \
+        audacious audacious-plugins \
+        ffmpeg pipewire pipewire-pulse \
+        sidplayfp libopenmpt \
+        unrar curl wget p7zip \
+        git 2>/dev/null
+fi
+info "System dependencies installed"
+
+# ── Clone / update repository ──────────────────────────────────
+step 3 "Setting up repository..."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$HOME/robbo-obibok"
+
+if [ "$SCRIPT_DIR" != "$REPO_DIR" ]; then
+    if [ -d "$REPO_DIR" ]; then
+        warn "Directory $REPO_DIR already exists, using it"
+    else
+        info "Cloning repository..."
+        git clone https://github.com/wiiii653/robbo-obibok-ulimate-chiptune-bot.git "$REPO_DIR"
+    fi
+    cd "$REPO_DIR"
+else
+    cd "$SCRIPT_DIR"
+fi
+
+# ── Create virtual environment ──────────────────────────────────
+step 4 "Creating Python virtual environment..."
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+    info "Virtual environment created"
+else
+    info "Virtual environment already exists"
+fi
+source venv/bin/activate
+pip install --quiet --upgrade pip
+pip install --quiet -r requirements.txt
+info "Python dependencies installed"
+
+# ── Configure ───────────────────────────────────────────────────
+step 5 "Configuration..."
+if [ ! -f ".env" ]; then
+    cat > .env << 'EOF'
+# Discord bot token — get from https://discord.com/developers/applications
+DISCORD_BOT_TOKEN="your-token-here"
+EOF
+    warn "Edit .env and set your DISCORD_BOT_TOKEN"
+else
+    info ".env exists"
+fi
+
+if [ ! -f "config.yaml" ]; then
+    cp config.yaml config.yaml 2>/dev/null || true
+    info "config.yaml ready"
+else
+    info "config.yaml exists"
+fi
+
+# ── Build local indexes ─────────────────────────────────────────
+step 6 "Building track indexes..."
+for script in build_ay_index.py build_ym_index.py build_tiny_index.py build_snes_index.py; do
+    if [ -f "$script" ]; then
+        python3 "$script" 2>/dev/null && info "$script: OK" || warn "$script: skipped (no archive)"
+    fi
+done
+
+# ── Setup systemd service ───────────────────────────────────────
+step 7 "Systemd service..."
+SERVICE_SRC="robbo-obibok.service"
+if [ -f "$SERVICE_SRC" ]; then
+    sudo cp "$SERVICE_SRC" /etc/systemd/system/
+    sudo systemctl daemon-reload
+    info "Service file installed. Enable with:"
+    echo "  sudo systemctl enable --now robbo-obibok.service"
+else
+    warn "robbo-obibok.service not found, skipping"
+fi
+
+echo ""
+echo -e "${GREEN}${BOLD}✅ Robbo Obibok installed successfully!${NC}"
+echo ""
+echo "Next steps:"
+echo "  1. Edit .env — set your DISCORD_BOT_TOKEN"
+echo "  2. Edit config.yaml — set guild_id for single-server mode"
+echo "  3. make run        # Start manually"
+echo "  4. sudo systemctl enable --now robbo-obibok.service  # Or as a daemon"
+echo ""
+echo "Join a voice channel and type !play to start!"

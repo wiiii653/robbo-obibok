@@ -8,6 +8,10 @@
 # Command prefix (default: !)
 command_prefix: "!"
 
+# Optional: restrict bot to a single Discord server (guild ID).
+# Uncomment and set to your server's ID for single-server mode.
+# guild_id: 123456789012345678
+
 # ASMA Archive settings
 asma:
   base_url: "https://asma.atari.org/asma/"

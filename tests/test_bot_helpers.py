@@ -1,8 +1,8 @@
-import asyncio
 import importlib.util
 import os
 import unittest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 
 def load_bot_module():
@@ -88,6 +88,74 @@ class SonglengthParsingTests(unittest.TestCase):
 
         self.assertEqual(len(tracks), 1)  # path still extracted
         self.assertNotIn(tracks[0], bot.sid_durations)
+
+
+class YmCacheTests(unittest.TestCase):
+    """Tests for YM cache loading."""
+
+    def setUp(self):
+        self.temp_cache = Path(bot.YM_CACHE + ".test")
+        self.real_cache = bot.YM_CACHE
+        bot.YM_CACHE = str(self.temp_cache)
+
+    def tearDown(self):
+        bot.YM_CACHE = self.real_cache
+        if self.temp_cache.exists():
+            self.temp_cache.unlink()
+
+    def test_load_ym_cache_returns_none_when_missing(self):
+        """load_ym_cache returns None when cache file doesn't exist."""
+        result = bot.load_ym_cache()
+        self.assertIsNone(result)
+
+    def test_load_ym_cache_returns_tracks(self):
+        """load_ym_cache returns list of paths from valid cache."""
+        import json
+        data = {
+            "version": 1,
+            "total": 3,
+            "tracks": [
+                {"path": "modland/Jochen Hippel/track1.ym", "size": 1234, "collection": "modland"},
+                {"path": "bulba_v5/test.ym", "size": 567, "collection": "bulba_v5"},
+            ]
+        }
+        with open(self.temp_cache, "w") as f:
+            json.dump(data, f)
+        result = bot.load_ym_cache()
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), 2)
+        self.assertIn("modland/Jochen Hippel/track1.ym", result)
+
+
+class SingleGuildCheckTests(unittest.TestCase):
+    """Tests for single-server lock."""
+
+    def test_rejects_wrong_guild(self):
+        """single_guild_check returns False for non-matching guild."""
+        orig = bot.GUILD_ID
+        bot.GUILD_ID = 12345
+        ctx = MagicMock()
+        ctx.guild.id = 99999
+        self.assertFalse(bot.single_guild_check(ctx))
+        bot.GUILD_ID = orig
+
+    def test_allows_correct_guild(self):
+        """single_guild_check returns True for matching guild."""
+        orig = bot.GUILD_ID
+        bot.GUILD_ID = 12345
+        ctx = MagicMock()
+        ctx.guild.id = 12345
+        self.assertTrue(bot.single_guild_check(ctx))
+        bot.GUILD_ID = orig
+
+    def test_allows_when_unset(self):
+        """single_guild_check returns True when GUILD_ID is not configured."""
+        orig = bot.GUILD_ID
+        bot.GUILD_ID = None
+        ctx = MagicMock()
+        ctx.guild.id = 99999
+        self.assertTrue(bot.single_guild_check(ctx))
+        bot.GUILD_ID = orig
 
 
 if __name__ == "__main__":
