@@ -156,6 +156,7 @@ TINY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny_cach
 
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
+PLAYLIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "playlists")
 
 # ── Blacklist System ────────────────────────────────────────────
 BLACKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blacklist.json")
@@ -1984,6 +1985,8 @@ async def help_command(ctx: commands.Context):
         value=(
             "React to any **Now Playing** embed to save/remove favorites\n"
             "`!favplay` / `!fp` — play favorites\n"
+            "`!favsave` / `!pls` — save favorites as playlist\n"
+            "`!favload` / `!fl` — load & play a playlist\n"
             "`!favorites` / `!favs` — list favorites\n"
             "`!blk` — blacklist current track\n"
             "`!blks` — show blacklist"
@@ -2129,6 +2132,82 @@ def save_favorites(data: dict):
             json.dump(data, f, indent=2)
     except Exception as e:
         log.error("Failed to save favorites: %s", e)
+
+
+# ── Named Playlists ──────────────────────────────────────────────
+
+def _ensure_playlist_dir():
+    """Create playlists directory if it doesn't exist."""
+    try:
+        os.makedirs(PLAYLIST_DIR, exist_ok=True)
+    except Exception as e:
+        log.error("Failed to create playlists dir: %s", e)
+
+def _sanitize_playlist_name(name: str) -> str:
+    """Sanitize a playlist name to a safe filename."""
+    safe = "".join(c if c.isalnum() or c in " _-." else "_" for c in name)
+    return safe.strip().strip(".") or "unnamed"
+
+def save_playlist(name: str, tracks: list[dict], author_id: int, author_name: str) -> str:
+    """Save a named playlist file. Returns the filename used."""
+    _ensure_playlist_dir()
+    safe_name = _sanitize_playlist_name(name)
+    filename = f"{safe_name}.json"
+    path = os.path.join(PLAYLIST_DIR, filename)
+    data = {
+        "name": name,
+        "author": author_name,
+        "author_id": author_id,
+        "created": time.time(),
+        "tracks": tracks,
+    }
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+        return safe_name
+    except Exception as e:
+        log.error("Failed to save playlist '%s': %s", name, e)
+        return ""
+
+def load_playlist(name: str) -> dict | None:
+    """Load a named playlist. Returns None if not found."""
+    safe_name = _sanitize_playlist_name(name)
+    for ext in ("", ".json"):
+        path = os.path.join(PLAYLIST_DIR, f"{safe_name}{ext}")
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    return json.load(f)
+            except Exception as e:
+                log.error("Failed to load playlist '%s': %s", name, e)
+                return None
+    return None
+
+def list_playlists() -> list[dict]:
+    """List all saved playlists (name + track count)."""
+    _ensure_playlist_dir()
+    playlists = []
+    for fname in sorted(os.listdir(PLAYLIST_DIR)):
+        if not fname.endswith(".json"):
+            continue
+        path = os.path.join(PLAYLIST_DIR, fname)
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            playlists.append({
+                "name": data.get("name", fname[:-5]),
+                "author": data.get("author", "?"),
+                "tracks": len(data.get("tracks", [])),
+                "created": data.get("created", 0),
+            })
+        except Exception:
+            playlists.append({
+                "name": fname[:-5],
+                "author": "?",
+                "tracks": 0,
+                "created": 0,
+            })
+    return playlists
 
 
 # ── Blacklist System ────────────────────────────────────────────
@@ -2288,9 +2367,16 @@ async def favplay(ctx: commands.Context, *, number: str = ""):
     if not tracks_to_play:
         return await ctx.send("⛔ All your favorites are blacklisted. Nothing to play!")
 
-    # Detect URL types and set collection mode
+    await _play_track_list(ctx, tracks_to_play, "favorites")
+
+
+# ── Playlist Commands ────────────────────────────────────────────
+
+async def _play_track_list(ctx, tracks: list[dict], label: str) -> bool:
+    """Shared helper: connect to voice and play a list of track dicts.
+    Used by !favplay and !favload."""
     state = get_state(ctx.guild.id)
-    first_url = tracks_to_play[0]["url"]
+    first_url = tracks[0]["url"]
 
     if "asma.atari.org" in first_url or first_url.endswith(".sap"):
         state.collection_mode = "asma"
@@ -2312,17 +2398,61 @@ async def favplay(ctx: commands.Context, *, number: str = ""):
     state.ctx = ctx
     state.loop = True
 
-    # Build queue from favorite URLs
-    state.queue = [t["url"] for t in tracks_to_play]
+    # Build queue from URLs
+    state.queue = [t["url"] for t in tracks]
     state.index = 0
 
-    await ctx.send(f"🎵 **Playing {len(tracks_to_play)} favorites!**")
+    await ctx.send(f"🎵 **Playing {len(tracks)} {label}!**")
 
     if await play_current_track(ctx):
         save_queue(state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
         state.monitor_task = bot.loop.create_task(monitor_playback(ctx, vc, ctx.guild.id))
+    return True
+
+
+@bot.command(aliases=["pls"])
+async def favsave(ctx: commands.Context, *, name: str):
+    """Save your favorites as a named playlist. Usage: !favsave <name>"""
+    favs = load_favorites()
+    user_favs = favs.get(str(ctx.author.id), {}).get("tracks", [])
+
+    if not user_favs:
+        return await ctx.send("📭 **No favorites to save.** React to a Now Playing embed with any emoji to add tracks first!")
+
+    safe_name = save_playlist(name.strip(), user_favs, ctx.author.id, str(ctx.author))
+    if not safe_name:
+        return await ctx.send("❌ Failed to save playlist.")
+
+    await ctx.send(f"💾 **Saved!** `{safe_name}` — {len(user_favs)} tracks from your favorites.")
+
+
+@bot.command(aliases=["fpl", "fl"])
+async def favload(ctx: commands.Context, *, name: str):
+    """Load and play a saved playlist. Usage: !favload <name> or !favload list"""
+    if name.strip().lower() == "list":
+        playlists = list_playlists()
+        if not playlists:
+            return await ctx.send("📂 **No playlists saved yet.** Use `!favsave <name>` to create one!")
+        lines = ["📂 **Saved Playlists**"]
+        for p in playlists:
+            author_s = f" by {p['author']}" if p['author'] != "?" else ""
+            lines.append(f"`{p['name']}` — {p['tracks']} tracks{author_s}")
+        return await ctx.send("\n".join(lines))
+
+    if not ctx.author.voice:
+        return await ctx.send("Join a voice channel first!")
+
+    playlist = load_playlist(name.strip())
+    if not playlist:
+        return await ctx.send(f"❌ Playlist `{name.strip()}` not found. Use `!favload list` to see saved playlists.")
+
+    tracks = playlist.get("tracks", [])
+    if not tracks:
+        return await ctx.send(f"📭 Playlist `{playlist['name']}` is empty!")
+
+    await _play_track_list(ctx, tracks, f"playlist \"{playlist['name']}\"")
 
 
 # ── Blacklist Commands ──────────────────────────────────────────
