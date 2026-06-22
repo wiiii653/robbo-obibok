@@ -393,11 +393,15 @@ _audacious_ready = False
 def ensure_audacious():
     global _audacious_ready
     if _audacious_ready:
-        # Fast path: just verify with pgrep (1 subprocess instead of full boot)
+        # Fast path: verify audacious is alive AND audtool can talk to it
         r = subprocess.run(["pgrep", "-x", "audacious"], capture_output=True)
         if r.returncode == 0:
-            return
-        # Audacious died — fall through to restart
+            r2 = subprocess.run(["audtool", "version"], capture_output=True, timeout=2)
+            if r2.returncode == 0:
+                return
+            # Audacious process exists but D-Bus is dead — restart it
+            log.warning("Audacious process alive but audtool unresponsive — restarting")
+            subprocess.run(["pkill", "-x", "audacious"], capture_output=True)
         _audacious_ready = False
     subprocess.Popen(
         ["audacious", "--headless"],
