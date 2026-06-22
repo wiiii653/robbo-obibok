@@ -23,14 +23,44 @@ import shutil
 import signal
 import sys
 import aiohttp
+
+# Shared HTTP session for downloads (connection pooling, keep-alive)
+_shared_session: aiohttp.ClientSession | None = None
+
+async def get_shared_session() -> aiohttp.ClientSession:
+    """Return a shared aiohttp.ClientSession with connection pooling."""
+    global _shared_session
+    if _shared_session is None or _shared_session.closed:
+        _shared_session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=60),
+            connector=aiohttp.TCPConnector(limit=10, limit_per_host=5, enable_cleanup_closed=True),
+        )
+    return _shared_session
+
+async def close_shared_session():
+    """Close the shared session during shutdown."""
+    global _shared_session
+    if _shared_session and not _shared_session.closed:
+        await _shared_session.close()
+        _shared_session = None
 import yaml
 from urllib.parse import urljoin
-from hashlib import sha1
+from hashlib import sha1, md5
 
+from logging.handlers import RotatingFileHandler
+
+_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot_output.log")
+_file_handler = RotatingFileHandler(
+    _LOG_FILE, maxBytes=5_000_000, backupCount=3, encoding="utf-8"
+)
+_file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+))
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[_file_handler, logging.StreamHandler()],
 )
 log = logging.getLogger("robbo-obibok")
 
@@ -85,6 +115,21 @@ CONFIG = load_config()
 # ── Environment / Config values ──────────────────────────────────
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", CONFIG.get("token", ""))
 SINK_NAME = CONFIG["audio"]["sink_name"]
+
+
+def _cleanup_orphaned_temp_dirs():
+    """Remove orphaned asma_bot_* temp dirs from previous crashed sessions."""
+    import glob
+    removed = 0
+    for d in glob.glob("/tmp/asma_bot_*"):
+        if os.path.isdir(d):
+            shutil.rmtree(d, ignore_errors=True)
+            removed += 1
+    if removed:
+        log.info("Startup cleanup: removed %d orphaned temp dirs", removed)
+
+
+_cleanup_orphaned_temp_dirs()
 TEMP_DIR = tempfile.mkdtemp(prefix="asma_bot_")
 ASMA_BASE = CONFIG["asma"]["base_url"]
 CRAWL_TIMEOUT = CONFIG["asma"]["crawl_timeout"]
@@ -102,6 +147,8 @@ AY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ay_cache.js
 # ── Local YM Archive (Atari ST) ─────────────────────────────────
 YM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ym")
 YM_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ym_cache.json")
+YM_TEMP_DIR = os.path.join(YM_DIR, "tmp_wav")  # decoded WAV cache
+_ym_last_wav_path: str | None = None  # track the last WAV for cleanup
 
 # ── Local Tiny Music (Demoscene Modules) ────────────────────────
 TINY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "tiny")
@@ -188,10 +235,12 @@ def mod_only():
 active_streams: dict[int, "MonitorAudioSource"] = {}
 
 def _after_stream_end(guild_id: int | None, error: Exception | None) -> None:
-    """Cleanup callback for vc.play() — logs and removes from active_streams."""
+    """Cleanup callback for vc.play() — logs, kills FFmpeg, removes from active_streams."""
     log.info("Stream ended for guild %s: %s", guild_id, error)
     if guild_id is not None:
-        active_streams.pop(guild_id, None)
+        source = active_streams.pop(guild_id, None)
+        if source:
+            source.cleanup()
 
 # ── Playlist state ──────────────────────────────────────────────
 class PlaylistState:
@@ -216,6 +265,19 @@ guilds: dict[int, PlaylistState] = {}
 
 # Track message IDs → track info for reaction-based favorites
 message_track_map: dict[int, dict] = {}
+MESSAGE_TRACK_MAP_MAX = 50  # prune old entries to prevent unbounded growth
+
+
+def _prune_message_track_map():
+    """Keep only the most recent MESSAGE_TRACK_MAP_MAX entries."""
+    if len(message_track_map) <= MESSAGE_TRACK_MAP_MAX:
+        return
+    # Sort by timestamp, keep newest
+    sorted_ids = sorted(message_track_map.items(),
+                        key=lambda x: x[1].get("timestamp", 0), reverse=True)
+    keep = dict(sorted_ids[:MESSAGE_TRACK_MAP_MAX])
+    message_track_map.clear()
+    message_track_map.update(keep)
 
 def get_state(guild_id: int) -> PlaylistState:
     if guild_id not in guilds:
@@ -321,21 +383,30 @@ def setup_virtual_sink():
             check=False,
         )
 
+_audacious_ready = False
+
 def ensure_audacious():
-    result = subprocess.run(["pgrep", "-x", "audacious"], capture_output=True)
-    if result.returncode != 0:
-        subprocess.Popen(
-            ["audacious", "--headless"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        # Wait for D-Bus to be ready (audtool can take 5-10s to connect)
-        for _ in range(20):
-            r = subprocess.run(["audtool", "version"], capture_output=True, timeout=2)
-            if r.returncode == 0:
-                return
-            time.sleep(1)
-        log.warning("Audacious D-Bus not ready after 20s, continuing anyway")
+    global _audacious_ready
+    if _audacious_ready:
+        # Fast path: just verify with pgrep (1 subprocess instead of full boot)
+        r = subprocess.run(["pgrep", "-x", "audacious"], capture_output=True)
+        if r.returncode == 0:
+            return
+        # Audacious died — fall through to restart
+        _audacious_ready = False
+    subprocess.Popen(
+        ["audacious", "--headless"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    # Wait for D-Bus to be ready (audtool can take 5-10s to connect)
+    for _ in range(20):
+        r = subprocess.run(["audtool", "version"], capture_output=True, timeout=2)
+        if r.returncode == 0:
+            _audacious_ready = True
+            return
+        time.sleep(1)
+    log.warning("Audacious D-Bus not ready after 20s, continuing anyway")
 
 
 def setup_audacious_sid_config():
@@ -377,16 +448,132 @@ def move_playback_to_sink():
                 capture_output=True,
             )
 
+
+# ── YM → WAV Converter (Atari ST YM2149) ───────────────────────
+YM_FORMATS = (".ym", ".YM")
+YM_CACHE_MAX_SIZE = 200 * 1024 * 1024  # 200MB max cache for decoded WAVs
+YM_CACHE_MAX_ENTRIES = 50  # max number of cached YM dirs
+
+
+def _ym_cache_enforce_limits():
+    """Evict oldest entries from YM WAV cache if over size/count limits."""
+    if not os.path.isdir(YM_TEMP_DIR):
+        return
+    entries = []
+    for name in os.listdir(YM_TEMP_DIR):
+        d = os.path.join(YM_TEMP_DIR, name)
+        if os.path.isdir(d):
+            try:
+                mtime = os.path.getmtime(d)
+                size = sum(os.path.getsize(os.path.join(d, f))
+                           for f in os.listdir(d) if os.path.isfile(os.path.join(d, f)))
+                entries.append((mtime, size, d))
+            except OSError:
+                pass
+    entries.sort(key=lambda x: x[0])  # oldest first
+    total_size = sum(e[1] for e in entries)
+    while entries and (total_size > YM_CACHE_MAX_SIZE or len(entries) > YM_CACHE_MAX_ENTRIES):
+        mtime, size, d = entries.pop(0)
+        shutil.rmtree(d, ignore_errors=True)
+        total_size -= size
+        log.info("YM cache LRU evict: %s (%dKB)", os.path.basename(d), size // 1024)
+
+
+def ym_to_wav(ym_path: str) -> str:
+    """Convert an LHa-compressed .ym file to .wav for Audacious playback.
+
+    Uses 7z to extract the raw YM from the LHa archive, then ym2wav (from
+    stymulator package, via ST-Sound library) to decode to 48kHz WAV.
+
+    Returns path to the generated WAV file.
+    """
+    os.makedirs(YM_TEMP_DIR, exist_ok=True)
+
+    # Create a safe unique directory from the input path hash
+    h = md5(ym_path.encode()).hexdigest()[:12]
+    work_dir = os.path.join(YM_TEMP_DIR, h)
+    os.makedirs(work_dir, exist_ok=True)
+
+    wav_path = os.path.join(work_dir, "decoded.wav")
+
+    # Return cached WAV if it already exists
+    if os.path.exists(wav_path):
+        return wav_path
+
+    # Step 1: Extract LHa archive
+    extract_ok = False
+    try:
+        r = subprocess.run(
+            ["7z", "x", "-y", ym_path, f"-o{work_dir}"],
+            capture_output=True, timeout=15
+        )
+        if r.returncode == 0:
+            extract_ok = True
+    except Exception:
+        pass
+
+    if not extract_ok:
+        # Maybe it's not an LHa archive — try raw YM directly
+        raw_ym = ym_path
+    else:
+        # Find the extracted .YM file
+        raw_candidates = [f for f in os.listdir(work_dir)
+                          if f.upper().endswith(".YM")]
+        if raw_candidates:
+            raw_ym = os.path.join(work_dir, raw_candidates[0])
+        else:
+            # No YM found — maybe it's a non-archive file, try original
+            raw_ym = ym_path
+
+    # Step 2: Convert YM to WAV
+    log.info("YM→WAV: converting %s -> %s", os.path.basename(raw_ym), wav_path)
+    r = subprocess.run(
+        ["ym2wav", raw_ym, wav_path],
+        capture_output=True, timeout=300, text=True
+    )
+    for line in r.stdout.splitlines():
+        log.info("ym2wav: %s", line)
+    for line in r.stderr.splitlines():
+        log.warning("ym2wav err: %s", line)
+
+    if r.returncode != 0 or not os.path.exists(wav_path):
+        raise RuntimeError(f"ym2wav failed (exit={r.returncode}) for {ym_path}")
+
+    wav_size = os.path.getsize(wav_path)
+    log.info("YM→WAV: done — %d bytes -> %d bytes", os.path.getsize(ym_path), wav_size)
+    _ym_cache_enforce_limits()
+    return wav_path
+
+
+def ym_cleanup():
+    """Remove all previously decoded YM WAV files to free space."""
+    global _ym_last_wav_path
+    if _ym_last_wav_path and os.path.exists(_ym_last_wav_path):
+        try:
+            parent = os.path.dirname(_ym_last_wav_path)
+            os.remove(_ym_last_wav_path)
+            # Also remove the raw extracted YM if it exists
+            for f in os.listdir(parent):
+                fp = os.path.join(parent, f)
+                if f != os.path.basename(_ym_last_wav_path):
+                    try:
+                        os.remove(fp)
+                    except Exception:
+                        pass
+            log.info("YM cleanup: removed %s", parent)
+        except Exception as e:
+            log.warning("YM cleanup error: %s", e)
+    _ym_last_wav_path = None
+
 async def download_sap(url: str, retries: int = 2) -> str:
     filepath = build_temp_path(url)
     last_err = None
+    session = await get_shared_session()
     for attempt in range(retries + 1):
         try:
-            timeout = aiohttp.ClientTimeout(total=30)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(url) as resp:
-                    resp.raise_for_status()
-                    data = await resp.read()
+            async with session.get(url) as resp:
+                resp.raise_for_status()
+                data = await resp.read()
             with open(filepath, "wb") as f:
                 f.write(data)
             return filepath
@@ -680,11 +867,10 @@ async def play_current_sid_track(ctx, state, url):
     # Download full SID to temp (they're small, ~5-15KB)
     sid_path = build_temp_path(url)
     try:
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url) as resp:
-                resp.raise_for_status()
-                data = await resp.read()
+        session = await get_shared_session()
+        async with session.get(url) as resp:
+            resp.raise_for_status()
+            data = await resp.read()
         with open(sid_path, "wb") as f:
             f.write(data)
     except Exception as e:
@@ -739,6 +925,7 @@ async def play_current_sid_track(ctx, state, url):
         "author": author,
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     log.info("SID now playing: %s — %s", name, author)
     return True
 
@@ -801,6 +988,7 @@ async def play_current_modarchive_track(ctx, state, url):
         "author": "",
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     log.info("ModArchive now playing: %s (%s)", display_name, fmt)
     return True
 
@@ -952,21 +1140,36 @@ async def play_current_ay_track(ctx, state, filepath):
         "author": author,
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     log.info("AY now playing: %s — %s", name, author)
     return True
 
 
 async def play_current_ym_track(ctx, state, filepath):
-    """Play a local YM file (Atari ST YM2149) via Audacious."""
+    """Play a local YM file (Atari ST YM2149) via YM→WAV conversion + Audacious."""
     full_path = os.path.join(YM_DIR, filepath)
 
     if not os.path.exists(full_path):
         await ctx.send(f"❌ File not found: `{filepath}`")
         return False
 
-    # Stop existing playback and play via Audacious (VTX plugin handles .ym)
+    # Clean up previous YM WAV
+    await asyncio.get_event_loop().run_in_executor(None, ym_cleanup)
+
+    # Convert YM to WAV (extracts LHa, decodes YM2149 registers to PCM)
+    try:
+        wav_path = await asyncio.get_event_loop().run_in_executor(None, ym_to_wav, full_path)
+    except Exception as e:
+        log.error("YM→WAV conversion failed: %s", e)
+        await ctx.send(f"❌ Failed to decode YM file: `{filepath}`")
+        return False
+
+    global _ym_last_wav_path
+    _ym_last_wav_path = wav_path
+
+    # Stop old Audacious and play the WAV
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
-    await asyncio.get_event_loop().run_in_executor(None, audacious_play, full_path)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, wav_path)
 
     state.current_sap_path = full_path
 
@@ -986,9 +1189,8 @@ async def play_current_ym_track(ctx, state, filepath):
     total = len(state.queue)
     pos = state.index + 1
 
-    # Get metadata from Audacious
-    track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
-    name = track or filepath.split("/")[-1].replace(".ym", "").replace(".YM", "")
+    # Extract name from filepath (ym2wav gives real title but we can't await its output here)
+    name = filepath.split("/")[-1].replace(".ym", "").replace(".YM", "")
     author = ""
 
     embed = discord.Embed(
@@ -998,7 +1200,7 @@ async def play_current_ym_track(ctx, state, filepath):
     if author:
         embed.add_field(name="Composer", value=author, inline=True)
     embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
-    embed.set_footer(text="Atari ST YM2149 — via Audacious VTX plugin")
+    embed.set_footer(text="Atari ST YM2149 — decoded via ST-Sound + Audacious")
 
     np_msg = await ctx.send(embed=embed)
     message_track_map[np_msg.id] = {
@@ -1007,6 +1209,7 @@ async def play_current_ym_track(ctx, state, filepath):
         "author": author,
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     log.info("YM now playing: %s — %s", name, author)
     return True
 
@@ -1062,6 +1265,7 @@ async def play_current_tiny_track(ctx, state, filepath):
         "author": author,
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     log.info("Tiny now playing: %s — %s", name, author)
     return True
 
@@ -1182,6 +1386,7 @@ async def play_current_track(ctx):
             "author": author,
             "timestamp": time.time(),
         }
+        _prune_message_track_map()
         return True
     
     except Exception as e:
@@ -1303,11 +1508,6 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         log.error("Auto-start failed: %s", e)
 
 # ── Commands ────────────────────────────────────────────────────
-@bot.command()
-async def radi(ctx: commands.Context):
-    """NI MA RADI"""
-    await ctx.send("https://www.youtube.com/watch?v=SbuBkGrpSl0")
-
 @bot.command(aliases=["radio", "start", "pl"])
 async def play(ctx: commands.Context, *, query: str = ""):
     """Start shuffled radio. Usage: !play, !play <number>, or !play <search query>"""
@@ -1502,6 +1702,7 @@ async def np(ctx: commands.Context):
         "author": author,
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     return
 
 
@@ -1904,22 +2105,40 @@ def save_favorites(data: dict):
 
 
 # ── Blacklist System ────────────────────────────────────────────
+_blacklist_cache: dict | None = None
+_blacklist_mtime: float = 0
+
 def load_blacklist() -> dict:
-    """Load the blacklist database from disk."""
-    if os.path.exists(BLACKLIST_FILE):
-        try:
-            with open(BLACKLIST_FILE) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
+    """Load the blacklist database from disk, with in-memory caching."""
+    global _blacklist_cache, _blacklist_mtime
+    try:
+        mtime = os.path.getmtime(BLACKLIST_FILE)
+    except OSError:
+        return {}
+    if _blacklist_cache is not None and mtime == _blacklist_mtime:
+        return _blacklist_cache
+    try:
+        with open(BLACKLIST_FILE) as f:
+            data = json.load(f)
+            _blacklist_cache = data
+            _blacklist_mtime = mtime
+            return data
+    except Exception:
+        return {}
 
 
 def save_blacklist(data: dict):
-    """Save the blacklist database to disk."""
+    """Save the blacklist database to disk and update cache."""
+    global _blacklist_cache
     try:
         with open(BLACKLIST_FILE, "w") as f:
             json.dump(data, f, indent=2)
+        _blacklist_cache = data
+        try:
+            global _blacklist_mtime
+            _blacklist_mtime = os.path.getmtime(BLACKLIST_FILE)
+        except OSError:
+            pass
     except Exception as e:
         log.error("Failed to save blacklist: %s", e)
 
@@ -2416,11 +2635,10 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str) -> str | 
     # Download RSN
     rsn_path = os.path.join(game_dir, f"{spc_now}.rsn")
     try:
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(rsn_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
-                resp.raise_for_status()
-                data = await resp.read()
+        session = await get_shared_session()
+        async with session.get(rsn_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
+            resp.raise_for_status()
+            data = await resp.read()
         with open(rsn_path, "wb") as f:
             f.write(data)
     except Exception as e:
@@ -2504,6 +2722,7 @@ async def play_current_spc_track(ctx, state, game_entry: dict):
         "author": ", ".join(composers) if composers else "Unknown",
         "timestamp": time.time(),
     }
+    _prune_message_track_map()
     log.info("SNES now playing: %s — %s", game_name, ", ".join(composers) if composers else "?")
     return True
 
@@ -2512,23 +2731,22 @@ async def download_modarchive_module(url: str, retries: int = 2) -> str:
     """Download a module from ModArchive API and return local filepath.
     Preserves the real filename from Content-Disposition header."""
     last_err = None
+    session = await get_shared_session()
     for attempt in range(retries + 1):
         try:
             filepath = build_temp_path(url)
-            timeout = aiohttp.ClientTimeout(total=60)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
-                    resp.raise_for_status()
-                    data = await resp.read()
-                    # Try to get real filename from Content-Disposition
-                    cd = resp.headers.get("Content-Disposition", "")
-                    m = re.search(r'filename=([^;]+)', cd)
-                    if m:
-                        fname = m.group(1).strip('" ')
-                        if fname:
-                            # Use real filename in temp path
-                            digest = sha1(url.encode("utf-8")).hexdigest()[:12]
-                            filepath = os.path.join(TEMP_DIR, f"{digest}_{fname}")
+            async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
+                resp.raise_for_status()
+                data = await resp.read()
+                # Try to get real filename from Content-Disposition
+                cd = resp.headers.get("Content-Disposition", "")
+                m = re.search(r'filename=([^;]+)', cd)
+                if m:
+                    fname = m.group(1).strip('" ')
+                    if fname:
+                        # Use real filename in temp path
+                        digest = sha1(url.encode("utf-8")).hexdigest()[:12]
+                        filepath = os.path.join(TEMP_DIR, f"{digest}_{fname}")
             with open(filepath, "wb") as f:
                 f.write(data)
             return filepath
@@ -3094,9 +3312,10 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
     empty_since = None
     not_playing_since = None
     GRACE_SECONDS = 3
+    poll_interval = 2  # seconds between monitor checks (was 1 — halved subprocess spam)
     while vc.is_connected() and not _shutdown_flag.is_set():
         try:
-            await asyncio.sleep(1)
+            await asyncio.sleep(poll_interval)
         except asyncio.CancelledError:
             break
         state = get_state(guild_id)
@@ -3153,6 +3372,13 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
 
         if playing:
             not_playing_since = None
+            # Pre-download next track while current one plays (gapless transitions)
+            if state.pre_downloaded is None and state.queue:
+                next_idx = state.index + 1
+                if next_idx < len(state.queue) or state.loop:
+                    url = state.queue[next_idx % len(state.queue)]
+                    if url.startswith("http"):
+                        asyncio.create_task(pre_download_next(state))
         else:
             if not_playing_since is None:
                 not_playing_since = time.time()
@@ -3299,6 +3525,7 @@ async def graceful_shutdown():
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     for vc in list(bot.voice_clients):
         await vc.disconnect()
+    await close_shared_session()
     cleanup_temp()
 
 _shutdown_flag = asyncio.Event()

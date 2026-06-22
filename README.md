@@ -67,7 +67,6 @@ Switch between them with `!flip`, check all counts with `!status`.
 | `!volume <0-200>` | Set playback volume |
 | `!loop` / `!repeat` | Toggle playlist loop mode |
 | `!sleep <minutes>` | Auto‑stop after N minutes (max 360) |
-| `!radi` | 😈 |
 | `!ocko` | Random ASCII owl |
 
 ### Collections
@@ -128,7 +127,7 @@ When you switch collections with `!flip`, `!asma`, `!hvsc` or any collection com
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse sidplayfp libopenmpt-dev unrar
+sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse sidplayfp libopenmpt-dev unrar stymulator p7zip-full
 
 git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
 cd robbo-obibot-ulimate-chiptune-bot
@@ -175,7 +174,7 @@ sudo systemctl status robbo-obibok.service
 
 # View logs
 journalctl -u robbo-obibok.service -f
-# Or tail the log file
+# Or tail the rotating log file (max 5MB × 3 backups)
 tail -f bot_output.log
 ```
 
@@ -201,6 +200,7 @@ This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between request
 - **SPC/NSF/GBS:** `console.so` input plugin (via `libgme` — Game Music Emu)
 - **ZX Spectrum AY:** `console.so` input plugin (via `libgme`)
 - **SNES SPC:** `console.so` input plugin (via `libgme`)
+- **Atari ST YM:** `ym2wav` from `stymulator` package (ST-Sound library) — Audacious has no YM decoder, so YM files are decoded to WAV via `7z` (LHa extraction) + `ym2wav`
 
 ## Troubleshooting
 
@@ -222,6 +222,8 @@ This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between request
 | SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
 | SAP plays but no "Now Playing" embed | Bot was still starting up — use `!np` to see the current track |
 | Duplicate bot responses | PID lock prevents this — if it happens, `sudo systemctl restart robbo-obibok.service` |
+| YM tracks play silence | Install `stymulator` (`sudo apt install stymulator`) and `p7zip-full` for LHa extraction |
+| YM→WAV conversion fails (exit=-11) | Some YM files crash `ym2wav` — bot skips to next track automatically |
 
 ## Invite the Bot
 
@@ -235,7 +237,7 @@ This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between request
 
 ```
 robbo-obibot-ulimate-chiptune-bot/
-├── robbo-obibok.py              # Main bot code (2850+ lines)
+├── robbo-obibok.py              # Main bot code (3500+ lines)
 ├── config.yaml                  # Configuration
 ├── requirements.txt             # Python dependencies
 ├── robbo-obibok.service         # Systemd unit (auto-start on boot)
@@ -244,6 +246,7 @@ robbo-obibot-ulimate-chiptune-bot/
 ├── build_modarchive_index.py    # ModArchive index builder
 ├── build_ay_index.py            # AY archive index builder
 ├── build_tiny_index.py          # Tiny Music index builder
+├── build_ym_index.py            # YM archive index builder
 ├── asma_cache.json              # ASMA track list cache
 ├── ay_cache.json                # AY track list cache
 ├── tiny_cache.json              # Tiny Music track list cache
