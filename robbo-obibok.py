@@ -3500,8 +3500,8 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
         # When stopped → grace 3s → skip to next track
         playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
 
-        # Also stop tracks with unknown length after max time (fallback for SID and modarchive)
-        timeout_secs = 180 if state.collection_mode == "hvsc" else 300  # 3min for SID, 5min for modules
+        # Also stop tracks with unknown length after max time (fallback)
+        timeout_secs = 300  # uniform timeout for all formats — SIDs stop via Songlengths.md5
         if playing and state.current_sap_path:
             elapsed_s = await asyncio.get_event_loop().run_in_executor(None, lambda: subprocess.run(
                 ["audtool", "current-song-output-length-seconds"], capture_output=True, text=True
