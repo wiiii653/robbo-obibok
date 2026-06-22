@@ -620,19 +620,38 @@ def is_playing() -> bool:
 
 
 # ── SAP Metadata Parser ──────────────────────────────────────────
-SAP_HEADER_RE = re.compile(rb'^;(.+)', re.MULTILINE)
+SAP_LINE_RE = re.compile(rb'^([A-Z]+)\s+(.+)')
 
 def parse_sap_header(filepath: str) -> dict[str, str]:
-    """Parse SAP file header for metadata (AUTHOR, NAME, etc.)."""
+    """Parse SAP file header for metadata (AUTHOR, NAME, etc.).
+
+    Handles both:
+      AUTHOR "Pawel Grabowski"   (standard SAP, no semicolon)
+      ; AUTHOR: Pawel Grabowski  (comment-style fallback)
+    """
     meta = {}
     try:
         with open(filepath, "rb") as f:
             header = f.read(4096)
-        for match in SAP_HEADER_RE.finditer(header):
-            line = match.group(1).decode("ascii", errors="replace").strip()
-            if ":" in line:
-                key, _, val = line.partition(":")
-                meta[key.strip().upper()] = val.strip()
+        for raw_line in header.split(b"\n"):
+            line = raw_line.strip()
+            if not line:
+                continue
+            # Skip opening SAP marker
+            if line == b"SAP":
+                continue
+            # Strip leading ; if present (comment-style fallback)
+            if line.startswith(b";"):
+                line = line[1:].strip()
+            # Match KEY VALUE pattern
+            m = SAP_LINE_RE.match(line)
+            if not m:
+                continue
+            key = m.group(1).decode("ascii", errors="replace").strip().upper()
+            val_raw = m.group(2).decode("ascii", errors="replace").strip()
+            # Strip surrounding quotes if present
+            val = val_raw.strip("\"'")
+            meta[key] = val
     except Exception:
         pass
     return meta
@@ -703,11 +722,19 @@ async def fetch_single_metadata(session: aiohttp.ClientSession, url: str) -> dic
             # Read only first 4KB for header
             data = await resp.content.read(4096)
             meta = {}
-            for match in SAP_HEADER_RE.finditer(data):
-                line = match.group(1).decode("ascii", errors="replace").strip()
-                if ":" in line:
-                    key, _, val = line.partition(":")
-                    meta[key.strip().upper()] = val.strip()
+            for raw_line in data.split(b"\n"):
+                line = raw_line.strip()
+                if not line or line == b"SAP":
+                    continue
+                if line.startswith(b";"):
+                    line = line[1:].strip()
+                m = SAP_LINE_RE.match(line)
+                if not m:
+                    continue
+                key = m.group(1).decode("ascii", errors="replace").strip().upper()
+                val_raw = m.group(2).decode("ascii", errors="replace").strip()
+                val = val_raw.strip("\"'")
+                meta[key] = val
             return meta
     except Exception:
         return {}

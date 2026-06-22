@@ -57,5 +57,5 @@ ym:
 
 # Auto-start / Auto-stop
 auto:
-  start_channel: "ASMA Radio"   # voice channel name to auto-start (empty = disabled)
+  start_channel: "Chiptune Radio"   # voice channel name to auto-start (empty = disabled)
   empty_timeout: 60             # seconds before disconnect when channel is empty (0 = disabled)
