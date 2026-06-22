@@ -235,13 +235,17 @@ def mod_only():
 
 active_streams: dict[int, "MonitorAudioSource"] = {}
 
-def _after_stream_end(guild_id: int | None, error: Exception | None) -> None:
-    """Cleanup callback for vc.play() — logs, kills FFmpeg, removes from active_streams."""
+def _after_stream_end(guild_id: int | None, error: Exception | None, source_id: int = 0) -> None:
+    """Cleanup callback for vc.play() — logs, kills FFmpeg, removes from active_streams.
+    Uses source_id to ensure stale callbacks don't clean up a newer source."""
     log.info("Stream ended for guild %s: %s", guild_id, error)
     if guild_id is not None:
-        source = active_streams.pop(guild_id, None)
-        if source:
-            source.cleanup()
+        current = active_streams.get(guild_id)
+        if current is not None and id(current) == source_id:
+            active_streams.pop(guild_id, None)
+            current.cleanup()
+        elif current is not None and source_id:
+            log.debug("Stale _after_stream_end for guild %s — current source differs, ignoring", guild_id)
 
 # ── Playlist state ──────────────────────────────────────────────
 class PlaylistState:
@@ -927,7 +931,7 @@ async def play_current_sid_track(ctx, state, url):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e: _after_stream_end(state.guild_id, e),
+            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -985,7 +989,7 @@ async def play_current_modarchive_track(ctx, state, url):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e: _after_stream_end(state.guild_id, e),
+            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1140,7 +1144,7 @@ async def play_current_ay_track(ctx, state, filepath):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e: _after_stream_end(state.guild_id, e),
+            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1210,7 +1214,7 @@ async def play_current_ym_track(ctx, state, filepath):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e: _after_stream_end(state.guild_id, e),
+            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1265,7 +1269,7 @@ async def play_current_tiny_track(ctx, state, filepath):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e: _after_stream_end(state.guild_id, e),
+            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
@@ -1384,7 +1388,7 @@ async def play_current_track(ctx):
             source = MonitorAudioSource(SINK_NAME)
             state.vc.play(
                 source,
-                after=lambda e: _after_stream_end(state.guild_id, e)
+                after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid)
             )
             active_streams[state.guild_id] = source
 
@@ -2899,7 +2903,7 @@ async def play_current_spc_track(ctx, state, game_entry: dict):
         source = MonitorAudioSource(SINK_NAME)
         state.vc.play(
             source,
-            after=lambda e: _after_stream_end(state.guild_id, e),
+            after=lambda e, sid=id(source): _after_stream_end(state.guild_id, e, sid),
         )
         active_streams[state.guild_id] = source
 
