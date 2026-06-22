@@ -1986,7 +1986,7 @@ async def help_command(ctx: commands.Context):
             "React to any **Now Playing** embed to save/remove favorites\n"
             "`!favplay` / `!fp` — play favorites\n"
             "`!favsave` / `!pls` — save favorites as playlist\n"
-            "`!favload` / `!fl` — load & play a playlist\n"
+            "`!favload` / `!fpl` — load & play a playlist\n"
             "`!favorites` / `!favs` — list favorites\n"
             "`!blk` — blacklist current track\n"
             "`!blks` — show blacklist"
@@ -2428,7 +2428,7 @@ async def favsave(ctx: commands.Context, *, name: str):
     await ctx.send(f"💾 **Saved!** `{safe_name}` — {len(user_favs)} tracks from your favorites.")
 
 
-@bot.command(aliases=["fpl", "fl"])
+@bot.command(aliases=["fpl"])
 async def favload(ctx: commands.Context, *, name: str):
     """Load and play a saved playlist. Usage: !favload <name> or !favload list"""
     if name.strip().lower() == "list":
