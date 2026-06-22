@@ -3500,14 +3500,22 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
         # When stopped → grace 3s → skip to next track
         playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
 
-        # Also stop tracks with unknown length after max time (fallback)
-        timeout_secs = 300  # uniform timeout for all formats — SIDs stop via Songlengths.md5
+        # Per-track fallback timeout: trust GME/OpenMPT/SID reported length +15s buffer
+        # For looping modules without a known end, fall back to 600s
         if playing and state.current_sap_path:
             elapsed_s = await asyncio.get_event_loop().run_in_executor(None, lambda: subprocess.run(
                 ["audtool", "current-song-output-length-seconds"], capture_output=True, text=True
             ))
+            len_s = await asyncio.get_event_loop().run_in_executor(None, lambda: subprocess.run(
+                ["audtool", "current-song-length-seconds"], capture_output=True, text=True
+            ))
             try:
                 secs = int(elapsed_s.stdout.strip())
+                try:
+                    reported = int(len_s.stdout.strip())
+                    timeout_secs = reported + 15 if 10 < reported < 36000 else 600
+                except (ValueError, OSError):
+                    timeout_secs = 600
                 if secs > timeout_secs and secs < 10000:
                     log.info("Track exceeded %ds fallback (%ds), force-stopping", timeout_secs, secs)
                     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
