@@ -24,6 +24,9 @@ import signal
 import sys
 import aiohttp
 
+# Single computation of script directory (was repeated 21× at module level)
+_ROOT = os.path.dirname(os.path.abspath(__file__))
+
 # Shared HTTP session for downloads (connection pooling, keep-alive)
 _shared_session: aiohttp.ClientSession | None = None
 
@@ -49,7 +52,7 @@ from hashlib import sha1, md5
 
 from logging.handlers import RotatingFileHandler
 
-_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot_output.log")
+_LOG_FILE = os.path.join(_ROOT, "bot_output.log")
 _file_handler = RotatingFileHandler(
     _LOG_FILE, maxBytes=5_000_000, backupCount=3, encoding="utf-8"
 )
@@ -93,7 +96,7 @@ def load_config() -> dict:
             "empty_timeout": 60,
         },
     }
-    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+    cfg_path = os.path.join(_ROOT, "config.yaml")
     if os.path.exists(cfg_path):
         try:
             with open(cfg_path) as f:
@@ -134,35 +137,35 @@ TEMP_DIR = tempfile.mkdtemp(prefix="asma_bot_")
 ASMA_BASE = CONFIG["asma"]["base_url"]
 CRAWL_TIMEOUT = CONFIG["asma"]["crawl_timeout"]
 CACHE_TTL = CONFIG["asma"]["cache_ttl"]
-CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "asma_cache.json")
-QUEUE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queues")
+CACHE_FILE = os.path.join(_ROOT, "asma_cache.json")
+QUEUE_DIR = os.path.join(_ROOT, "queues")
 COMMAND_PREFIX = CONFIG["command_prefix"]
 PLAYBACK_LOOP = CONFIG["playback"]["loop"]
 PLAYBACK_SHUFFLE = CONFIG["playback"]["shuffle"]
 
 # ── Local AY Archive (ZX Spectrum) ──────────────────────────────
-AY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ay")
-AY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ay_cache.json")
+AY_DIR = os.path.join(_ROOT, "archiwum", "ay")
+AY_CACHE = os.path.join(_ROOT, "ay_cache.json")
 
 # ── Local YM Archive (Atari ST) ─────────────────────────────────
-YM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "ym")
-YM_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ym_cache.json")
+YM_DIR = os.path.join(_ROOT, "archiwum", "ym")
+YM_CACHE = os.path.join(_ROOT, "ym_cache.json")
 YM_TEMP_DIR = os.path.join(YM_DIR, "tmp_wav")  # decoded WAV cache
 _ym_last_wav_path: str | None = None  # track the last WAV for cleanup
 
 # ── Local Tiny Music (Demoscene Modules) ────────────────────────
-TINY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "tiny")
-TINY_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny_cache.json")
+TINY_DIR = os.path.join(_ROOT, "archiwum", "tiny")
+TINY_CACHE = os.path.join(_ROOT, "tiny_cache.json")
 
 # ── Favorites System ────────────────────────────────────────────
-FAVORITES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favorites.json")
-PLAYLIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "playlists")
+FAVORITES_FILE = os.path.join(_ROOT, "favorites.json")
+PLAYLIST_DIR = os.path.join(_ROOT, "playlists")
 
 # ── Blacklist System ────────────────────────────────────────────
-BLACKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blacklist.json")
+BLACKLIST_FILE = os.path.join(_ROOT, "blacklist.json")
 
 # ── Last Collection Mode ────────────────────────────────────────
-LAST_COLLECTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "last_collection.txt")
+LAST_COLLECTION_FILE = os.path.join(_ROOT, "last_collection.txt")
 
 def load_last_collection() -> str | None:
     try:
@@ -197,19 +200,19 @@ def save_last_collection(mode: str):
 
 # ── SNES SPC Collection (SNESmusic.org) ──────────────────────────
 SNES_BASE = "https://snesmusic.org/v2/"
-SNES_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snes_cache.json")
-SNES_SPC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "spc")
+SNES_CACHE_FILE = os.path.join(_ROOT, "snes_cache.json")
+SNES_SPC_DIR = os.path.join(_ROOT, "archiwum", "spc")
 HVSC_BASE = CONFIG.get("hvsc", {}).get("base_url", "https://www.hvsc.c64.org/download/C64Music/")
 HVSC_SONGLENGTHS_URL = CONFIG.get("hvsc", {}).get("songlengths_url", "")
 HVSC_CACHE_TTL = CONFIG.get("hvsc", {}).get("cache_ttl", 168)
-HVSC_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hvsc_cache.json")
+HVSC_CACHE_FILE = os.path.join(_ROOT, "hvsc_cache.json")
 DEFAULT_COLLECTION_MODE = "hvsc" if CONFIG.get("hvsc", {}).get("enabled", False) else "asma"
 
 # ── ModArchive Collection (FastTracker / MOD / XM / S3M / IT) ──────
 MODARCHIVE_BASE = CONFIG.get("modarchive", {}).get("base_url", "https://modarchive.org/index.php")
 MODARCHIVE_DOWNLOAD = CONFIG.get("modarchive", {}).get("download_url", "https://api.modarchive.org/downloads.php")
 MODARCHIVE_CACHE_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
+    _ROOT,
     CONFIG.get("modarchive", {}).get("cache_file", "modarchive_cache.json")
 )
 modarchive_name_map: dict[str, str] = {}  # URL -> real module name
@@ -306,6 +309,19 @@ def _prune_message_track_map():
     message_track_map.clear()
     message_track_map.update(keep)
 
+
+def _register_np_message(msg_id: int, url: str, name: str, author: str) -> None:
+    """Register a Now Playing message for reaction-based favorites.
+    Replaces 8× copy-pasted blocks across all play_current_* functions."""
+    message_track_map[msg_id] = {
+        "url": url,
+        "name": name,
+        "author": author,
+        "timestamp": time.time(),
+    }
+    _prune_message_track_map()
+
+
 def get_state(guild_id: int) -> PlaylistState:
     if guild_id not in guilds:
         guilds[guild_id] = PlaylistState()
@@ -347,10 +363,16 @@ def build_temp_path(url: str) -> str:
 class MonitorAudioSource(discord.AudioSource):
     FRAME_SIZE = 3840  # 20ms @ 48kHz stereo s16le
 
+    MAX_RESTARTS = 5
+    RESTART_COOLDOWN = 1.0
+
     def __init__(self, sink_name: str):
         self.buffer = b""
         self.sink_name = sink_name
         self.process = self._start_ffmpeg()
+        self._restart_count = 0
+        self._last_restart_ts = 0.0
+        self._ever_produced = False
 
     def _start_ffmpeg(self) -> subprocess.Popen:
         return subprocess.Popen(
@@ -373,12 +395,23 @@ class MonitorAudioSource(discord.AudioSource):
     def read(self) -> bytes:
         while len(self.buffer) < self.FRAME_SIZE:
             if self.process.poll() is not None:
+                if self._restart_count >= self.MAX_RESTARTS:
+                    log.warning("MonitorAudioSource: max restarts (%d) reached, ending stream",
+                                self.MAX_RESTARTS)
+                    return b""
+                if time.time() - self._last_restart_ts < self.RESTART_COOLDOWN:
+                    time.sleep(0.05)
+                    continue
+                self._last_restart_ts = time.time()
+                self._restart_count += 1
                 time.sleep(0.1)
                 self._restart_ffmpeg()
             chunk = self.process.stdout.read(4096)
             if not chunk:
                 return b""
             self.buffer += chunk
+            self._ever_produced = True
+            self._restart_count = 0
         frame = self.buffer[: self.FRAME_SIZE]
         self.buffer = self.buffer[self.FRAME_SIZE:]
         return frame
@@ -390,6 +423,34 @@ class MonitorAudioSource(discord.AudioSource):
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 self.process.kill()
+
+
+def _setup_monitor_source(state: PlaylistState) -> None:
+    """Stop old source and create a fresh MonitorAudioSource for the current voice client.
+    Replaces 7× copy-pasted blocks across all play_current_* functions."""
+    if state.vc and state.vc.is_connected():
+        state.vc.stop()
+        old_source = active_streams.pop(state.guild_id, None)
+        if old_source:
+            old_source.cleanup()
+        source = MonitorAudioSource(SINK_NAME)
+        state.vc.play(
+            source,
+            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
+        )
+        active_streams[state.guild_id] = source
+
+
+async def _cancel_monitor(state: PlaylistState) -> None:
+    """Cancel the current monitor task and await its cleanup.
+    Replaces 8× copy-pasted blocks across all collection switch commands."""
+    if state.monitor_task and not state.monitor_task.done():
+        state.monitor_task.cancel()
+        try:
+            await state.monitor_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
 
 # ── Audio Infrastructure ──────────────────────────────────────
 def setup_virtual_sink():
@@ -464,16 +525,12 @@ def set_volume_for_collection(mode: str):
 
 
 def move_playback_to_sink():
-    result = subprocess.run(
-        ["pactl", "list", "sink-inputs", "short"], capture_output=True, text=True
+    """Move all Audacious sink inputs to the bot's PulseAudio sink in one shot."""
+    subprocess.run(
+        f"pactl list sink-inputs short | cut -d' ' -f1 | "
+        f"while read id; do pactl move-sink-input \"$id\" {SINK_NAME}; done",
+        shell=True, capture_output=True,
     )
-    for line in result.stdout.strip().splitlines():
-        parts = line.split()
-        if len(parts) >= 2:
-            subprocess.run(
-                ["pactl", "move-sink-input", parts[0], SINK_NAME],
-                capture_output=True,
-            )
 
 
 # ── YM → WAV Converter (Atari ST YM2149) ───────────────────────
@@ -700,7 +757,7 @@ def extract_searchable_text(url: str) -> str:
 
 # ── Metadata Index ──────────────────────────────────────────────
 metadata_index: dict[str, dict[str, str]] = {}  # url -> {author, name, ...}
-METADATA_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "metadata_cache.json")
+METADATA_CACHE = os.path.join(_ROOT, "metadata_cache.json")
 
 def load_metadata_cache() -> dict:
     try:
@@ -737,7 +794,9 @@ async def fetch_metadata_batch(session: aiohttp.ClientSession, urls: list[str], 
                     results[url] = result
         if results:
             metadata_index.update(results)
-            save_metadata_cache(metadata_index)
+    # Save once after all batches (was: saving inside loop = N writes)
+    if metadata_index:
+        save_metadata_cache(metadata_index)
     return results
 
 async def fetch_single_metadata(session: aiohttp.ClientSession, url: str) -> dict[str, str]:
@@ -861,7 +920,14 @@ async def crawl_directory(session: aiohttp.ClientSession, url: str, depth: int =
     return tracks
 
 async def refresh_tracklist() -> list[str]:
-    """Crawl all top-level ASMA directories and return every .sap URL."""
+    """Crawl all top-level ASMA directories and return every .sap URL.
+    Uses cached tracklist first — only re-crawls if cache is stale or missing."""
+    # Try cache first
+    cached = load_cached_tracklist()
+    if cached:
+        log.info("ASMA: loaded %d tracks from cache", len(cached))
+        return cached
+    log.info("ASMA: cache stale or missing, crawling...")
     all_tracks = []
     connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
     async with aiohttp.ClientSession(connector=connector) as session:
@@ -944,18 +1010,7 @@ async def play_current_sid_track(ctx, state, url):
 
     state.current_sap_path = sid_path
 
-    # Setup MonitorAudioSource (always stop old and create fresh)
-    if state.vc and state.vc.is_connected():
-        state.vc.stop()
-        old_source = active_streams.pop(state.guild_id, None)
-        if old_source:
-            old_source.cleanup()
-        source = MonitorAudioSource(SINK_NAME)
-        state.vc.play(
-            source,
-            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
-        )
-        active_streams[state.guild_id] = source
+    _setup_monitor_source(state)
 
     total = len(state.queue)
     pos = state.index + 1
@@ -972,14 +1027,7 @@ async def play_current_sid_track(ctx, state, url):
     embed.set_footer(text="C64 SID Radio")
     np_msg = await ctx.send(embed=embed)
 
-    # Track for reaction-based favorites
-    message_track_map[np_msg.id] = {
-        "url": url,
-        "name": name,
-        "author": author,
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, url, name, author)
     log.info("SID now playing: %s — %s", name, author)
     return True
 
@@ -1002,18 +1050,7 @@ async def play_current_modarchive_track(ctx, state, url):
 
     state.current_sap_path = filepath
 
-    # Setup MonitorAudioSource (always stop old and create fresh)
-    if state.vc and state.vc.is_connected():
-        state.vc.stop()
-        old_source = active_streams.pop(state.guild_id, None)
-        if old_source:
-            old_source.cleanup()
-        source = MonitorAudioSource(SINK_NAME)
-        state.vc.play(
-            source,
-            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
-        )
-        active_streams[state.guild_id] = source
+    _setup_monitor_source(state)
 
     total = len(state.queue)
     pos = state.index + 1
@@ -1035,14 +1072,7 @@ async def play_current_modarchive_track(ctx, state, url):
     embed.set_footer(text="ModArchive Radio — FastTracker / MOD / XM / S3M / IT")
     np_msg = await ctx.send(embed=embed)
 
-    # Track for reaction-based favorites
-    message_track_map[np_msg.id] = {
-        "url": url,
-        "name": display_name,
-        "author": "",
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, url, display_name, "")
     log.info("ModArchive now playing: %s (%s)", display_name, fmt)
     return True
 
@@ -1157,18 +1187,7 @@ async def play_current_ay_track(ctx, state, filepath):
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     await asyncio.get_event_loop().run_in_executor(None, audacious_play, full_path)
 
-    # Setup MonitorAudioSource (same sink as Audacious)
-    if state.vc and state.vc.is_connected():
-        state.vc.stop()
-        old_source = active_streams.pop(state.guild_id, None)
-        if old_source:
-            old_source.cleanup()
-        source = MonitorAudioSource(SINK_NAME)
-        state.vc.play(
-            source,
-            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
-        )
-        active_streams[state.guild_id] = source
+    _setup_monitor_source(state)
 
     total = len(state.queue)
     pos = state.index + 1
@@ -1188,13 +1207,7 @@ async def play_current_ay_track(ctx, state, filepath):
     embed.set_footer(text="ZX Spectrum AY — via libgme")
 
     np_msg = await ctx.send(embed=embed)
-    message_track_map[np_msg.id] = {
-        "url": filepath,
-        "name": name,
-        "author": author,
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, filepath, name, author)
     log.info("AY now playing: %s — %s", name, author)
     return True
 
@@ -1227,18 +1240,7 @@ async def play_current_ym_track(ctx, state, filepath):
 
     state.current_sap_path = full_path
 
-    # Setup MonitorAudioSource
-    if state.vc and state.vc.is_connected():
-        state.vc.stop()
-        old_source = active_streams.pop(state.guild_id, None)
-        if old_source:
-            old_source.cleanup()
-        source = MonitorAudioSource(SINK_NAME)
-        state.vc.play(
-            source,
-            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
-        )
-        active_streams[state.guild_id] = source
+    _setup_monitor_source(state)
 
     total = len(state.queue)
     pos = state.index + 1
@@ -1257,13 +1259,7 @@ async def play_current_ym_track(ctx, state, filepath):
     embed.set_footer(text="Atari ST YM2149 — decoded via ST-Sound + Audacious")
 
     np_msg = await ctx.send(embed=embed)
-    message_track_map[np_msg.id] = {
-        "url": filepath,
-        "name": name,
-        "author": author,
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, filepath, name, author)
     log.info("YM now playing: %s — %s", name, author)
     return True
 
@@ -1282,18 +1278,7 @@ async def play_current_tiny_track(ctx, state, filepath):
 
     state.current_sap_path = full_path
 
-    # Setup MonitorAudioSource
-    if state.vc and state.vc.is_connected():
-        state.vc.stop()
-        old_source = active_streams.pop(state.guild_id, None)
-        if old_source:
-            old_source.cleanup()
-        source = MonitorAudioSource(SINK_NAME)
-        state.vc.play(
-            source,
-            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
-        )
-        active_streams[state.guild_id] = source
+    _setup_monitor_source(state)
 
     total = len(state.queue)
     pos = state.index + 1
@@ -1313,13 +1298,7 @@ async def play_current_tiny_track(ctx, state, filepath):
     embed.set_footer(text="Tiny Music — curated demoscene modules")
 
     np_msg = await ctx.send(embed=embed)
-    message_track_map[np_msg.id] = {
-        "url": filepath,
-        "name": name,
-        "author": author,
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, filepath, name, author)
     log.info("Tiny now playing: %s — %s", name, author)
     return True
 
@@ -1401,18 +1380,7 @@ async def play_current_track(ctx):
         
         state.current_sap_path = filepath
         
-        # Setup MonitorAudioSource (always stop old and create fresh)
-        if state.vc and state.vc.is_connected():
-            state.vc.stop()
-            old_source = active_streams.pop(state.guild_id, None)
-            if old_source:
-                old_source.cleanup()
-            source = MonitorAudioSource(SINK_NAME)
-            state.vc.play(
-                source,
-                after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid)
-            )
-            active_streams[state.guild_id] = source
+        _setup_monitor_source(state)
 
         track = await asyncio.get_event_loop().run_in_executor(None, audacious_song)
         total = len(state.queue)
@@ -1433,14 +1401,7 @@ async def play_current_track(ctx):
         embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
         embed.set_footer(text="ASMA Radio")
         np_msg = await ctx.send(embed=embed)
-        # Track for reaction-based favorites
-        message_track_map[np_msg.id] = {
-            "url": url,
-            "name": name,
-            "author": author,
-            "timestamp": time.time(),
-        }
-        _prune_message_track_map()
+        _register_np_message(np_msg.id, url, name, author)
         return True
     
     except Exception as e:
@@ -1749,14 +1710,7 @@ async def np(ctx: commands.Context):
         pass
     embed.set_footer(text=info["footer"])
     np_msg = await ctx.send(embed=embed)
-    # Track for reaction-based favorites
-    message_track_map[np_msg.id] = {
-        "url": state.queue[state.index] if state.queue and 0 <= state.index < len(state.queue) else "unknown",
-        "name": name,
-        "author": author,
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, state.queue[state.index] if state.queue and 0 <= state.index < len(state.queue) else "unknown", name, author)
     return
 
 
@@ -1764,7 +1718,9 @@ async def np(ctx: commands.Context):
 async def volume(ctx: commands.Context, *, level: str = ""):
     """Set or show playback volume (0-200%). Usage: !volume <level>"""
     if not level:
-        r = subprocess.run(["pactl", "get-sink-volume", "asma_bot"], capture_output=True, text=True)
+        r = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: subprocess.run(["pactl", "get-sink-volume", "asma_bot"], capture_output=True, text=True)
+        )
         m = re.search(r"(\d+)%", r.stdout)
         if m:
             current = m.group(1)
@@ -1779,7 +1735,9 @@ async def volume(ctx: commands.Context, *, level: str = ""):
         if vol < 0 or vol > 200:
             await ctx.send("Volume must be between 0 and 200.")
             return
-        subprocess.run(["pactl", "set-sink-volume", "asma_bot", f"{vol}%"], capture_output=True)
+        await asyncio.get_event_loop().run_in_executor(
+            None, lambda: subprocess.run(["pactl", "set-sink-volume", "asma_bot", f"{vol}%"], capture_output=True)
+        )
         embed = discord.Embed(title=f"🔊 Volume set to **{vol}%**", color=discord.Color.green())
         await ctx.send(embed=embed)
     except ValueError:
@@ -1949,7 +1907,6 @@ async def ocko(ctx: commands.Context):
         "🦉 **OCKO**\n    ___  \n   (o o) \n  (  V  )\n  --m-m---",
         "🦉 **OCKO**\n  .------.\n  |O  O  |\n  |  V   |\n  `------´\n    ww ww",
     ]
-    import random
     owl = random.choice(owls)
     await ctx.send(f"```\n{owl}\n```")
 
@@ -2157,20 +2114,37 @@ async def search(ctx: commands.Context, *, query: str):
 
 
 # ── Favorites System ────────────────────────────────────────────
+_favorites_cache = None
+_favorites_mtime = None
+
 def load_favorites() -> dict:
-    """Load the favorites database from disk."""
-    if os.path.exists(FAVORITES_FILE):
-        try:
-            with open(FAVORITES_FILE) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
+    """Load the favorites database from disk, with in-memory caching (mtime invalidation)."""
+    global _favorites_cache, _favorites_mtime
+    try:
+        mtime = os.path.getmtime(FAVORITES_FILE)
+    except OSError:
+        return {}
+    if _favorites_cache is not None and mtime == _favorites_mtime:
+        return _favorites_cache
+    try:
+        with open(FAVORITES_FILE) as f:
+            data = json.load(f)
+            _favorites_cache = data
+            _favorites_mtime = mtime
+            return data
+    except Exception:
+        return {}
 
 
 def save_favorites(data: dict):
-    """Save the favorites database to disk (atomic)."""
+    """Save the favorites database to disk (atomic) and update cache."""
+    global _favorites_cache, _favorites_mtime
     _atomic_json_write(FAVORITES_FILE, data)
+    _favorites_cache = data
+    try:
+        _favorites_mtime = os.path.getmtime(FAVORITES_FILE)
+    except OSError:
+        pass
 
 
 # ── Named Playlists ──────────────────────────────────────────────
@@ -2780,49 +2754,39 @@ def load_modarchive_cache() -> list[str] | None:
         return None
 
 
-def load_ay_cache() -> list[str] | None:
-    """Load AY track list from local cache."""
+def _load_json_cache(cache_path: str) -> dict | list | None:
+    """Load a JSON cache file. Returns parsed data or None on error."""
     try:
-        if not os.path.exists(AY_CACHE):
+        if not os.path.exists(cache_path):
             return None
-        with open(AY_CACHE) as f:
-            data = json.load(f)
-        tracks = [t["path"] for t in data.get("tracks", [])]
-        log.info("AY: loaded %d tracks from cache", len(tracks))
-        return tracks
+        with open(cache_path) as f:
+            return json.load(f)
     except Exception as e:
-        log.warning("AY cache load error: %s", e)
+        log.warning("Cache load error (%s): %s", os.path.basename(cache_path), e)
         return None
+
+
+def _load_path_cache(cache_path: str, label: str) -> list[str] | None:
+    """Load a track list from cache where each entry has a 'path' field.
+    Used by AY, YM, Tiny — eliminates 3× duplicate file-I/O logic."""
+    data = _load_json_cache(cache_path)
+    if data is None:
+        return None
+    tracks = [t["path"] for t in data.get("tracks", [])]
+    log.info("%s: loaded %d tracks from cache", label, len(tracks))
+    return tracks
+
+
+def load_ay_cache() -> list[str] | None:
+    return _load_path_cache(AY_CACHE, "AY")
 
 
 def load_ym_cache() -> list[str] | None:
-    """Load YM track list from local cache."""
-    try:
-        if not os.path.exists(YM_CACHE):
-            return None
-        with open(YM_CACHE) as f:
-            data = json.load(f)
-        tracks = [t["path"] for t in data.get("tracks", [])]
-        log.info("YM: loaded %d tracks from cache", len(tracks))
-        return tracks
-    except Exception as e:
-        log.warning("YM cache load error: %s", e)
-        return None
+    return _load_path_cache(YM_CACHE, "YM")
 
 
 def load_tiny_cache() -> list[str] | None:
-    """Load Tiny Music track list from local cache."""
-    try:
-        if not os.path.exists(TINY_CACHE):
-            return None
-        with open(TINY_CACHE) as f:
-            data = json.load(f)
-        tracks = [t["path"] for t in data.get("tracks", [])]
-        log.info("Tiny: loaded %d tracks from cache", len(tracks))
-        return tracks
-    except Exception as e:
-        log.warning("Tiny cache load error: %s", e)
-        return None
+    return _load_path_cache(TINY_CACHE, "Tiny")
 
 
 # ── SNES SPC Collection ────────────────────────────────────────────
@@ -2920,18 +2884,7 @@ async def play_current_spc_track(ctx, state, game_entry: dict):
 
     state.current_sap_path = first_spc
 
-    # Setup MonitorAudioSource
-    if state.vc and state.vc.is_connected():
-        state.vc.stop()
-        old_source = active_streams.pop(state.guild_id, None)
-        if old_source:
-            old_source.cleanup()
-        source = MonitorAudioSource(SINK_NAME)
-        state.vc.play(
-            source,
-            after=lambda e, sid=_next_source_id(): _after_stream_end(state.guild_id, e, sid),
-        )
-        active_streams[state.guild_id] = source
+    _setup_monitor_source(state)
 
     total = len(state.queue)
     pos = state.index + 1
@@ -2947,13 +2900,7 @@ async def play_current_spc_track(ctx, state, game_entry: dict):
     embed.set_footer(text="SNES Radio — Super Nintendo SPC")
 
     np_msg = await ctx.send(embed=embed)
-    message_track_map[np_msg.id] = {
-        "url": game_entry["rsn_url"],
-        "name": game_name,
-        "author": ", ".join(composers) if composers else "Unknown",
-        "timestamp": time.time(),
-    }
-    _prune_message_track_map()
+    _register_np_message(np_msg.id, game_entry["rsn_url"], game_name, ", ".join(composers) if composers else "Unknown")
     log.info("SNES now playing: %s — %s", game_name, ", ".join(composers) if composers else "?")
     return True
 
@@ -3005,22 +2952,6 @@ def parse_sid_header(data: bytes) -> dict[str, str]:
     return meta
 
 
-async def download_sid_for_meta(url: str) -> dict[str, str]:
-    """Download SID header bytes for metadata parsing."""
-    meta = {}
-    try:
-        r = subprocess.run(
-            ["curl", "-sL", "--max-time", "15", "--range", "0-255", url],
-            capture_output=True, timeout=20,
-        )
-        if r.returncode == 0 and len(r.stdout) >= 0x76:
-            meta = parse_sid_header(r.stdout)
-            meta["url"] = url
-            meta["sid_name"] = url.rstrip("/").split("/")[-1]
-    except Exception as e:
-        log.warning("SID meta fetch error for %s: %s", url, e)
-    return meta
-
 
 def cleanup_orphan_players():
     """Kill orphaned audacious processes from crashed bot sessions.
@@ -3034,197 +2965,258 @@ def stop_all_players():
     audacious_stop()
 
 
-# ── Collection Commands ─────────────────────────────────────────
-@bot.command(aliases=["c64", "sid"])
-async def hvsc(ctx: commands.Context):
-    """Switch to C64 SID collection (HVSC)."""
-    state = get_state(ctx.guild.id)
-    if state.collection_mode == "hvsc" and state.tracks:
-        await ctx.send("📀 **Already in C64 SID mode.** Use `!play` to start!")
-        return
-    await ctx.send("🔄 **Loading C64 SID collection (60,000+ tracks)...**")
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
-    if not tracks:
-        tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
-    if not tracks:
-        return await ctx.send("❌ Failed to load HVSC index. Check config or try again.")
-    state.collection_mode = "hvsc"
-    save_last_collection("hvsc")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "hvsc")
-    state.tracks = tracks
-    state.queue = []
-    state.index = -1
-    await ctx.send(f"📀 **C64 SID collection ready — {len(tracks)} tracks!**")
-    log.info("HVSC: collection switched, %d tracks loaded", len(tracks))
-    await cleanup_hvsc_file(ctx, tracks)
-    await auto_play_after_switch(ctx, state)
-
-
 async def cleanup_hvsc_file(ctx, tracks):
     """Store the HVSC tracklist for search (no local copies yet)."""
     # Just let user know search won't have metadata until they use it
     pass
 
 
+# ── Collection Switch Engine ──────────────────────────────────────
+_COLLECTIONS = {
+    "hvsc": {
+        "label": "HVSC",
+        "flip_tag": "🟣HVSC",
+        "load_func": load_cached_hvsc,
+        "fallback_func": download_hvsc_index,
+        "already_msg": "📀 **Already in C64 SID mode.** Use `!play` to start!",
+        "load_msg": "🔄 **Loading C64 SID collection (60,000+ tracks)...**",
+        "flip_load_msg": "🔄 Loading C64 SID collection (60,000+ tracks)...",
+        "error_msg": "❌ Failed to load HVSC index. Check config or try again.",
+        "ready_msg": "📀 **C64 SID collection ready — {count} tracks!**",
+        "flip_ready_msg": "🟣 **Switched to C64 SID (HVSC) — {count} tracks!**",
+        "flip_fail_msg": "❌ Could not load HVSC. Try `!hvsc` manually.",
+        "log_msg": "HVSC: collection switched, %d tracks loaded",
+        "log_args": True,
+        "after_hook": cleanup_hvsc_file,
+        "allow_empty": False,
+    },
+    "asma": {
+        "label": "ASMA",
+        "flip_tag": "🟢ASMA",
+        "load_func": load_cached_tracklist,
+        "fallback_func": None,
+        "already_msg": None,
+        "load_msg": None,
+        "error_msg": None,
+        "ready_msg": "📀 **Switched to ASMA Atari SAP — {count} tracks!**",
+        "ready_empty_msg": "📀 **Switched to ASMA Atari SAP.** Use `!play` to crawl the archive.",
+        "flip_ready_msg": "🟢 **Switched to Atari SAP (ASMA)!**",
+        "flip_ready_empty_msg": "🟢 **Switched to Atari SAP (ASMA).**",
+        "log_msg": "ASMA: collection switched",
+        "log_args": False,
+        "after_hook": None,
+        "allow_empty": True,
+    },
+    "modarchive": {
+        "label": "ModArchive",
+        "flip_tag": "🟠Mod",
+        "load_func": load_modarchive_cache,
+        "fallback_func": None,
+        "already_msg": "🟠 **Already in ModArchive mode.** Use `!play` to start!",
+        "load_msg": "🟠 **Loading ModArchive collection (100,000+ modules)...**",
+        "error_msg": "❌ ModArchive cache not found. Run `build_modarchive_index.py` first!\n"
+                     "The index builder is running in the background — wait a few minutes and try again.",
+        "ready_msg": "🟠 **ModArchive collection ready — {count} modules!**\n"
+                     "FastTracker / ProTracker / ScreamTracker / Impulse Tracker — all formats!",
+        "flip_ready_msg": "🟠 **Switched to ModArchive — {count} modules!**",
+        "flip_fail_msg": "🟠 **ModArchive cache not ready.** Staying on {prev}.",
+        "log_msg": "ModArchive: collection switched, %d tracks loaded",
+        "log_args": True,
+        "after_hook": None,
+        "allow_empty": False,
+    },
+    "ay": {
+        "label": "AY",
+        "flip_tag": "🔵AY",
+        "load_func": load_ay_cache,
+        "fallback_func": None,
+        "already_msg": "🔵 **Already in ZX Spectrum AY mode.** Use `!play` to start!",
+        "load_msg": "🔵 **Loading local AY archive (4,500+ tracks)...**",
+        "error_msg": "❌ AY cache not found. Run `build_ay_index.py` first!",
+        "ready_msg": "🔵 **ZX Spectrum AY archive ready — {count} tracks!**\n"
+                     "AY-3-8910 chiptunes — AYGOR / Ironfist / Tr_Songs / SoLOCPC / Bulba",
+        "flip_ready_msg": "🔵 **Switched to ZX Spectrum AY — {count} tracks!**",
+        "flip_fail_msg": "🔵 **AY cache not ready.** Staying on {prev}.",
+        "log_msg": "AY: collection switched, %d tracks loaded",
+        "log_args": True,
+        "after_hook": None,
+        "allow_empty": False,
+    },
+    "ym": {
+        "label": "YM",
+        "flip_tag": "🎹YM",
+        "load_func": load_ym_cache,
+        "fallback_func": None,
+        "already_msg": "🎹 **Already in Atari ST YM mode.** Use `!play` to start!",
+        "load_msg": "🎹 **Loading local YM archive (7,200+ Atari ST chiptunes)...**",
+        "error_msg": "❌ YM cache not found. Run `build_ym_index.py` first!",
+        "ready_msg": "🎹 **Atari ST YM archive ready — {count} tracks!**\n"
+                     "YM2149 chiptunes — Mad Max / Scavenger / Big Alec / David Whittaker / Jochen Hippel",
+        "flip_ready_msg": "🎹 **Switched to Atari ST YM — {count} tracks!**",
+        "flip_fail_msg": "🎹 **YM cache not ready.** Staying on {prev}.",
+        "log_msg": "YM: collection switched, %d tracks loaded",
+        "log_args": True,
+        "after_hook": None,
+        "allow_empty": False,
+    },
+    "tiny": {
+        "label": "Tiny",
+        "flip_tag": "🎵Tiny",
+        "load_func": load_tiny_cache,
+        "fallback_func": None,
+        "already_msg": "🎵 **Already in Tiny Music mode.** Use `!play` to start!",
+        "load_msg": "🎵 **Loading Tiny Music archive (418 curated demoscene modules)...**",
+        "error_msg": "❌ Tiny Music cache not found. Run `build_tiny_index.py` first!",
+        "ready_msg": "🎵 **Tiny Music archive ready — {count} modules!**\n"
+                     "Curated demoscene — MOD / XM / IT / S3M / MED / DMF",
+        "flip_ready_msg": "🎵 **Switched to Tiny Music — {count} modules!**",
+        "flip_fail_msg": "🎵 **Tiny cache not ready.** Staying on {prev}.",
+        "log_msg": "Tiny: collection switched, %d tracks loaded",
+        "log_args": True,
+        "after_hook": None,
+        "allow_empty": False,
+    },
+    "spc": {
+        "label": "SNES",
+        "flip_tag": "🔴SNES",
+        "load_func": load_snes_cache,
+        "fallback_func": None,
+        "already_msg": "🔴 **Already in SNES SPC mode.** Use `!play` to start!",
+        "load_msg": "🔴 **Loading SNES SPC collection (Super Nintendo chiptunes)...**",
+        "error_msg": "❌ SNES SPC cache not found. Run `build_snes_index.py` first!",
+        "ready_msg": "🔴 **SNES SPC collection ready — {count} games!**\n"
+                     "Super Nintendo chiptunes via SNESmusic.org — download & play on demand",
+        "flip_ready_msg": "🔴 **Switched to SNES SPC — {count} games!**",
+        "flip_fail_msg": "🔴 **SNES cache not ready.** Staying on {prev}.",
+        "log_msg": "SNES: collection switched, %d game sets loaded",
+        "log_args": True,
+        "after_hook": None,
+        "allow_empty": False,
+    },
+}
+
+_FLIP_ORDER = ["hvsc", "asma", "modarchive", "ay", "ym", "tiny", "spc"]
+_FLIP_SEQ = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎹YM", "🎵Tiny", "🔴SNES"]
+
+
+async def _switch_collection(ctx, mode, *, flip_seq=None):
+    """Switch to a collection. Returns True on success, False on failure.
+
+    When flip_seq is provided, operates in flip mode: no loading/already
+    messages, shows flip-sequence visual, rolls back on failure.
+    """
+    state = get_state(ctx.guild.id)
+    cfg = _COLLECTIONS[mode]
+
+    # Already-in-mode check (skip during flip)
+    if not flip_seq and cfg.get("already_msg") and state.collection_mode == mode and state.tracks:
+        await ctx.send(cfg["already_msg"])
+        return False
+
+    # Loading message (not shown during flip)
+    if not flip_seq and cfg.get("load_msg"):
+        await ctx.send(cfg["load_msg"])
+
+    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
+    await _cancel_monitor(state)
+    if flip_seq:
+        state.pre_downloaded = None
+
+    # Load tracks
+    tracks = await asyncio.get_event_loop().run_in_executor(None, cfg["load_func"])
+    if not tracks and cfg.get("fallback_func"):
+        if flip_seq:
+            seq = " → ".join("**" + s + "**" if s == cfg["flip_tag"] else s for s in flip_seq)
+            await ctx.send(cfg.get("flip_load_msg", "") + f"\n{seq}")
+        tracks = await asyncio.get_event_loop().run_in_executor(None, cfg["fallback_func"])
+
+    if not tracks:
+        if cfg.get("allow_empty"):
+            # ASMA: empty cache is OK — user can !play to crawl
+            state.collection_mode = mode
+            save_last_collection(mode)
+            await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, mode)
+            state.tracks = []
+            state.queue = []
+            state.index = -1
+            if flip_seq:
+                seq = " → ".join("**" + s + "**" if s == cfg["flip_tag"] else s for s in flip_seq)
+                await ctx.send(cfg.get("flip_ready_empty_msg", "") + f"\n{seq}")
+            else:
+                await ctx.send(cfg.get("ready_empty_msg", ""))
+            log.info(cfg["log_msg"])
+            await auto_play_after_switch(ctx, state)
+            return True
+        else:
+            if flip_seq:
+                seq = " → ".join("**" + s + "**" if s == cfg["flip_tag"] else s for s in flip_seq)
+                prev_label = _COLLECTIONS.get(state.collection_mode, {}).get("label", "?")
+                await ctx.send(cfg["flip_fail_msg"].format(prev=prev_label) + f"\n{seq}")
+            else:
+                await ctx.send(cfg["error_msg"])
+            return False
+
+    # Success
+    state.collection_mode = mode
+    save_last_collection(mode)
+    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, mode)
+    state.tracks = tracks
+    state.queue = []
+    state.index = -1
+
+    if flip_seq:
+        seq = " → ".join("**" + s + "**" if s == cfg["flip_tag"] else s for s in flip_seq)
+        await ctx.send(cfg["flip_ready_msg"].format(count=len(tracks)) + f"\n{seq}")
+    else:
+        await ctx.send(cfg["ready_msg"].format(count=len(tracks)))
+
+    if cfg.get("log_args", True):
+        log.info(cfg["log_msg"], len(tracks))
+    else:
+        log.info(cfg["log_msg"])
+
+    if cfg.get("after_hook"):
+        await cfg["after_hook"](ctx, tracks)
+
+    await auto_play_after_switch(ctx, state)
+    return True
+
+
+# ── Collection Commands ─────────────────────────────────────────
+@bot.command(aliases=["c64", "sid"])
+async def hvsc(ctx: commands.Context):
+    """Switch to C64 SID collection (HVSC)."""
+    await _switch_collection(ctx, "hvsc")
+
+
 @bot.command()
 async def asma(ctx: commands.Context):
     """Switch back to Atari SAP collection (ASMA)."""
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    state = get_state(ctx.guild.id)
-    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    state.collection_mode = "asma"
-    save_last_collection("asma")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "asma")
-    cached = load_cached_tracklist()
-    if cached:
-        state.tracks = cached
-        await ctx.send(f"📀 **Switched to ASMA Atari SAP — {len(cached)} tracks!**")
-    else:
-        state.tracks = []
-        await ctx.send("📀 **Switched to ASMA Atari SAP.** Use `!play` to crawl the archive.")
-    state.queue = []
-    state.index = -1
-    log.info("ASMA: collection switched")
-    await auto_play_after_switch(ctx, state)
+    await _switch_collection(ctx, "asma")
 
 
 @bot.command(aliases=["modarchive", "tracker", "modules"])
 async def mod(ctx: commands.Context):
     """Switch to ModArchive collection (MOD/XM/S3M/IT modules)."""
-    state = get_state(ctx.guild.id)
-    if state.collection_mode == "modarchive" and state.tracks:
-        await ctx.send("🟠 **Already in ModArchive mode.** Use `!play` to start!")
-        return
-    await ctx.send("🟠 **Loading ModArchive collection (100,000+ modules)...**")
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
-    if not tracks:
-        return await ctx.send("❌ ModArchive cache not found. Run `build_modarchive_index.py` first!\n"
-                              "The index builder is running in the background — wait a few minutes and try again.")
-    state.collection_mode = "modarchive"
-    save_last_collection("modarchive")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "modarchive")
-    state.tracks = tracks
-    state.queue = []
-    state.index = -1
-    await ctx.send(f"🟠 **ModArchive collection ready — {len(tracks)} modules!**\n"
-                   "FastTracker / ProTracker / ScreamTracker / Impulse Tracker — all formats!")
-    log.info("ModArchive: collection switched, %d tracks loaded", len(tracks))
-    await auto_play_after_switch(ctx, state)
+    await _switch_collection(ctx, "modarchive")
 
 
 @bot.command(aliases=["zx", "zxspectrum", "spectrum"])
 async def ay(ctx: commands.Context):
     """Switch to local ZX Spectrum AY archive."""
-    state = get_state(ctx.guild.id)
-    if state.collection_mode == "ay" and state.tracks:
-        await ctx.send("🔵 **Already in ZX Spectrum AY mode.** Use `!play` to start!")
-        return
-    await ctx.send("🔵 **Loading local AY archive (4,500+ tracks)...**")
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
-    if not tracks:
-        return await ctx.send("❌ AY cache not found. Run `build_ay_index.py` first!")
-    state.collection_mode = "ay"
-    save_last_collection("ay")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "ay")
-    state.tracks = tracks
-    state.queue = []
-    state.index = -1
-    await ctx.send(f"🔵 **ZX Spectrum AY archive ready — {len(tracks)} tracks!**\\n"
-                   "AY-3-8910 chiptunes — AYGOR / Ironfist / Tr_Songs / SoLOCPC / Bulba")
-    log.info("AY: collection switched, %d tracks loaded", len(tracks))
-    await auto_play_after_switch(ctx, state)
+    await _switch_collection(ctx, "ay")
 
 
 @bot.command(aliases=["atarist", "ym2149"])
 async def ym(ctx: commands.Context):
     """Switch to local Atari ST YM2149 archive."""
-    state = get_state(ctx.guild.id)
-    if state.collection_mode == "ym" and state.tracks:
-        await ctx.send("🎹 **Already in Atari ST YM mode.** Use `!play` to start!")
-        return
-    await ctx.send("🎹 **Loading local YM archive (7,200+ Atari ST chiptunes)...**")
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    # ── Cancel old monitor IMMEDIATELY to prevent race with 3s grace timer ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    tracks = await asyncio.get_event_loop().run_in_executor(None, load_ym_cache)
-    if not tracks:
-        return await ctx.send("❌ YM cache not found. Run `build_ym_index.py` first!")
-    state.collection_mode = "ym"
-    save_last_collection("ym")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "ym")
-    state.tracks = tracks
-    state.queue = []
-    state.index = -1
-    await ctx.send(f"🎹 **Atari ST YM archive ready — {len(tracks)} tracks!**\\n"
-                   "YM2149 chiptunes — Mad Max / Scavenger / Big Alec / David Whittaker / Jochen Hippel")
-    log.info("YM: collection switched, %d tracks loaded", len(tracks))
-    await auto_play_after_switch(ctx, state)
+    await _switch_collection(ctx, "ym")
 
 
 @bot.command(aliases=["tm", "demoscene"])
 async def tiny(ctx: commands.Context):
     """Switch to local Tiny Music demoscene module archive."""
-    state = get_state(ctx.guild.id)
-    if state.collection_mode == "tiny" and state.tracks:
-        await ctx.send("🎵 **Already in Tiny Music mode.** Use `!play` to start!")
-        return
-    await ctx.send("🎵 **Loading Tiny Music archive (418 curated demoscene modules)...**")
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    # ── Cancel old monitor IMMEDIATELY to prevent race ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    tracks = await asyncio.get_event_loop().run_in_executor(None, load_tiny_cache)
-    if not tracks:
-        return await ctx.send("❌ Tiny Music cache not found. Run `build_tiny_index.py` first!")
-    state.collection_mode = "tiny"
-    save_last_collection("tiny")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "tiny")
-    state.tracks = tracks
-    state.queue = []
-    state.index = -1
-    await ctx.send(f"🎵 **Tiny Music archive ready — {len(tracks)} modules!**\n"
-                   "Curated demoscene — MOD / XM / IT / S3M / MED / DMF")
-    log.info("Tiny: collection switched, %d tracks loaded", len(tracks))
-    await auto_play_after_switch(ctx, state)
+    await _switch_collection(ctx, "tiny")
 
 
 @bot.command(aliases=["snes", "spc", "supernintendo", "nintendo"])
@@ -3265,32 +3257,44 @@ async def snes_cmd(ctx: commands.Context, *, query: str = None):
         state.search_results = [g["rsn_url"] for g in results]
         return await ctx.send("\n".join(lines))
 
-    # ── Switch mode (original behaviour) ──
-    if state.collection_mode == "spc" and state.tracks:
-        await ctx.send("🔴 **Already in SNES SPC mode.** Use `!play` to start!")
-        return
-    await ctx.send("🔴 **Loading SNES SPC collection (Super Nintendo chiptunes)...**")
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-    # ── Cancel old monitor IMMEDIATELY to prevent race ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    tracks = await asyncio.get_event_loop().run_in_executor(None, load_snes_cache)
-    if not tracks:
-        return await ctx.send("❌ SNES SPC cache not found. Run `build_snes_index.py` first!")
-    state.collection_mode = "spc"
-    save_last_collection("spc")
-    await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, "spc")
-    state.tracks = tracks
-    state.queue = []
-    state.index = -1
-    await ctx.send(f"🔴 **SNES SPC collection ready — {len(tracks)} games!**\n"
-                   "Super Nintendo chiptunes via SNESmusic.org — download & play on demand")
-    log.info("SNES: collection switched, %d game sets loaded", len(tracks))
-    await auto_play_after_switch(ctx, state)
+    # ── Switch mode ──
+    await _switch_collection(ctx, "spc")
+
+
+_status_count_cache: dict[str, tuple[float, int | str]] = {}
+
+
+def _get_cache_count(fname: str) -> int | str:
+    """Get track count from a cache file, with mtime-based caching."""
+    fpath = os.path.join(_ROOT, fname)
+    try:
+        mtime = os.path.getmtime(fpath)
+    except OSError:
+        return "⚠️"
+    cached = _status_count_cache.get(fname)
+    if cached and cached[0] == mtime:
+        return cached[1]
+    try:
+        with open(fpath) as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            count: int | str = len(data)
+        elif isinstance(data, dict):
+            count = data.get("total_sets") or len(data.get("tracks", data.get("count", [])))
+        else:
+            count = "?"
+    except Exception:
+        count = "⚠️"
+    _status_count_cache[fname] = (mtime, count)
+    return count
+
+
+def _get_all_cache_counts(cache_map: dict) -> dict:
+    """Read all cache counts in one batch (call via executor)."""
+    result = {}
+    for fname, (icon, label) in cache_map.items():
+        result[label] = (icon, _get_cache_count(fname))
+    return result
 
 
 @bot.command(aliases=["mode", "collection", "all"])
@@ -3298,8 +3302,7 @@ async def status(ctx: commands.Context):
     """Show all collections overview and current playlist stats."""
     state = get_state(ctx.guild.id)
 
-    # ── Quick cache counts (reads JSON headers only) ──
-    cache_counts = {}
+    # ── Cache counts (mtime-cached, offloaded to executor) ──
     cache_map = {
         "asma_cache.json": ("🟢", "Atari SAP (ASMA)"),
         "hvsc_cache.json": ("🟣", "C64 SID (HVSC)"),
@@ -3309,21 +3312,9 @@ async def status(ctx: commands.Context):
         "tiny_cache.json": ("🎵", "Tiny Music (Demoscene)"),
         "snes_cache.json": ("🔴", "SNES SPC"),
     }
-    for fname, (icon, label) in cache_map.items():
-        try:
-            import json
-            fpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
-            with open(fpath) as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                count = len(data)
-            elif isinstance(data, dict):
-                count = data.get("total_sets") or len(data.get("tracks", data.get("count", [])))
-            else:
-                count = "?"
-        except Exception:
-            count = "⚠️"
-        cache_counts[label] = (icon, count)
+    cache_counts = await asyncio.get_event_loop().run_in_executor(
+        None, _get_all_cache_counts, cache_map
+    )
 
     # ── Current state ──
     mode_icons = {
@@ -3363,150 +3354,12 @@ async def status(ctx: commands.Context):
 async def flip(ctx: commands.Context):
     """Toggle between collections: HVSC → ASMA → ModArchive → AY → YM → Tiny → SNES → HVSC ..."""
     state = get_state(ctx.guild.id)
-    await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
-
-    # ── Cancel old monitor IMMEDIATELY — prevent race with 3s grace timer ──
-    if state.monitor_task and not state.monitor_task.done():
-        state.monitor_task.cancel()
-        try:
-            await state.monitor_task
-        except (asyncio.CancelledError, Exception):
-            pass
-    state.pre_downloaded = None
-
-    # Flip sequence for visual indicator
-    flip_seq = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎹YM", "🎵Tiny", "🔴SNES"]
-
-    if state.collection_mode == "hvsc":
-        # HVSC → ASMA
-        state.collection_mode = "asma"
-        save_last_collection("asma")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        cached = await asyncio.get_event_loop().run_in_executor(None, load_cached_tracklist)
-        seq = " → ".join("**" + s + "**" if s == "🟢ASMA" else s for s in flip_seq)
-        if cached:
-            state.tracks = cached
-            await ctx.send(f"🟢 **Switched to Atari SAP (ASMA)!**\n{seq}")
-        else:
-            state.tracks = []
-            await ctx.send(f"🟢 **Switched to Atari SAP (ASMA).**\n{seq}")
-        log.info("ASMA: collection switched via flip")
-
-    elif state.collection_mode == "asma":
-        # ASMA → ModArchive
-        old_tracks = list(state.tracks) if state.tracks else []
-        state.collection_mode = "modarchive"
-        save_last_collection("modarchive")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = await asyncio.get_event_loop().run_in_executor(None, load_modarchive_cache)
-        seq = " → ".join("**" + s + "**" if s == "🟠Mod" else s for s in flip_seq)
-        if tracks:
-            state.tracks = tracks
-            await ctx.send(f"🟠 **Switched to ModArchive — {len(tracks)} modules!**\n{seq}")
-        else:
-            await ctx.send(f"🟠 **ModArchive cache not ready.** Staying on ASMA.\n{seq}")
-            state.collection_mode = "asma"
-            state.tracks = old_tracks
-            save_last_collection("asma")
-        log.info("ModArchive: collection switched via flip")
-
-    elif state.collection_mode == "modarchive":
-        # ModArchive → AY
-        old_tracks = list(state.tracks) if state.tracks else []
-        state.collection_mode = "ay"
-        save_last_collection("ay")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = await asyncio.get_event_loop().run_in_executor(None, load_ay_cache)
-        seq = " → ".join("**" + s + "**" if s == "🔵AY" else s for s in flip_seq)
-        if tracks:
-            state.tracks = tracks
-            await ctx.send(f"🔵 **Switched to ZX Spectrum AY — {len(tracks)} tracks!**\n{seq}")
-        else:
-            await ctx.send(f"🔵 **AY cache not ready.** Staying on ModArchive.\n{seq}")
-            state.collection_mode = "modarchive"
-            state.tracks = old_tracks
-            save_last_collection("modarchive")
-        log.info("AY: collection switched via flip")
-
-    elif state.collection_mode == "ay":
-        # AY → YM
-        old_tracks = list(state.tracks) if state.tracks else []
-        state.collection_mode = "ym"
-        save_last_collection("ym")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = await asyncio.get_event_loop().run_in_executor(None, load_ym_cache)
-        seq = " → ".join("**" + s + "**" if s == "🎹YM" else s for s in flip_seq)
-        if tracks:
-            state.tracks = tracks
-            await ctx.send(f"🎹 **Switched to Atari ST YM — {len(tracks)} tracks!**\\n{seq}")
-        else:
-            await ctx.send(f"🎹 **YM cache not ready.** Staying on AY.\\n{seq}")
-            state.collection_mode = "ay"
-            state.tracks = old_tracks
-            save_last_collection("ay")
-        log.info("YM: collection switched via flip")
-
-    elif state.collection_mode == "ym":
-        # YM → Tiny Music
-        old_tracks = list(state.tracks) if state.tracks else []
-        state.collection_mode = "tiny"
-        save_last_collection("tiny")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = await asyncio.get_event_loop().run_in_executor(None, load_tiny_cache)
-        seq = " → ".join("**" + s + "**" if s == "🎵Tiny" else s for s in flip_seq)
-        if tracks:
-            state.tracks = tracks
-            await ctx.send(f"🎵 **Switched to Tiny Music — {len(tracks)} modules!**\\n{seq}")
-        else:
-            await ctx.send(f"🎵 **Tiny cache not ready.** Staying on YM.\\n{seq}")
-            state.collection_mode = "ym"
-            state.tracks = old_tracks
-            save_last_collection("ym")
-        log.info("Tiny: collection switched via flip")
-
-    elif state.collection_mode == "tiny":
-        # Tiny → SNES SPC
-        old_tracks = list(state.tracks) if state.tracks else []
-        state.collection_mode = "spc"
-        save_last_collection("spc")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = await asyncio.get_event_loop().run_in_executor(None, load_snes_cache)
-        seq = " → ".join("**" + s + "**" if s == "🔴SNES" else s for s in flip_seq)
-        if tracks:
-            state.tracks = tracks
-            await ctx.send(f"🔴 **Switched to SNES SPC — {len(tracks)} games!**\n{seq}")
-        else:
-            await ctx.send(f"🔴 **SNES cache not ready.** Staying on Tiny.\n{seq}")
-            state.collection_mode = "tiny"
-            state.tracks = old_tracks
-            save_last_collection("tiny")
-        log.info("SNES: collection switched via flip")
-
-    else:
-        # SPC → HVSC
-        old_mode = state.collection_mode
-        old_tracks = list(state.tracks) if state.tracks else []
-        state.collection_mode = "hvsc"
-        save_last_collection("hvsc")
-        await asyncio.get_event_loop().run_in_executor(None, set_volume_for_collection, state.collection_mode)
-        tracks = await asyncio.get_event_loop().run_in_executor(None, load_cached_hvsc)
-        seq = " → ".join("**" + s + "**" if s == "🟣HVSC" else s for s in flip_seq)
-        if not tracks:
-            await ctx.send(f"🔄 Loading C64 SID collection (60,000+ tracks)...\n{seq}")
-            tracks = await asyncio.get_event_loop().run_in_executor(None, download_hvsc_index)
-        if tracks:
-            state = get_state(ctx.guild.id)
-            state.tracks = tracks
-            await ctx.send(f"🟣 **Switched to C64 SID (HVSC) — {len(tracks)} tracks!**\n{seq}")
-        else:
-            await ctx.send(f"❌ Could not load HVSC. Try `!hvsc` manually.\n{seq}")
-            state.collection_mode = old_mode
-            state.tracks = old_tracks
-            save_last_collection(old_mode)
-        log.info("HVSC: collection switched via flip")
-
-    # ── Auto-play after switching if user is in voice ──
-    await auto_play_after_switch(ctx, state)
+    try:
+        idx = _FLIP_ORDER.index(state.collection_mode)
+    except ValueError:
+        idx = -1
+    next_mode = _FLIP_ORDER[(idx + 1) % len(_FLIP_ORDER)]
+    await _switch_collection(ctx, next_mode, flip_seq=_FLIP_SEQ)
 
 
 async def auto_play_after_switch(ctx: commands.Context, state) -> None:
@@ -3538,13 +3391,47 @@ async def auto_play_after_switch(ctx: commands.Context, state) -> None:
 
 
 # ── Playback Monitor ────────────────────────────────────────────
+def _audtool_output_length() -> int:
+    """Get current-song-output-length-seconds from audtool."""
+    r = subprocess.run(
+        ["audtool", "current-song-output-length-seconds"],
+        capture_output=True, text=True
+    )
+    try:
+        return int(r.stdout.strip())
+    except (ValueError, OSError):
+        return -1
+
+
+def _audtool_song_length() -> int:
+    """Get current-song-length-seconds from audtool."""
+    r = subprocess.run(
+        ["audtool", "current-song-length-seconds"],
+        capture_output=True, text=True
+    )
+    try:
+        return int(r.stdout.strip())
+    except (ValueError, OSError):
+        return -1
+
+
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
     """Monitor playback, auto-advance tracks, and disconnect on empty channel.
-    Uses Audacious is_playing() for ALL formats (SAP, SID, MOD, AY via console/GME)."""
+    Uses Audacious is_playing() for ALL formats (SAP, SID, MOD, AY via console/GME).
+
+    Subprocess budget per poll cycle (2s):
+      - is_playing() → 1 subprocess (always)
+      - output-length → 1 subprocess (only when SAP is playing)
+      - song-length  → 0 subprocesses after first read (cached per-track)
+    """
     empty_since = None
     not_playing_since = None
+    drop_confirmed_since = None
     GRACE_SECONDS = 3
-    poll_interval = 2  # seconds between monitor checks (was 1 — halved subprocess spam)
+    poll_interval = 2  # seconds between monitor checks
+    last_output_len = -1  # track drops in output-length
+    cached_song_length = -1  # per-track cache for song-length (<0 = not yet read)
+    cached_sap_path: str | None = "__init__"  # track change detector
     while vc.is_connected() and not _shutdown_flag.is_set():
         try:
             await asyncio.sleep(poll_interval)
@@ -3570,27 +3457,53 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
             empty_since = None
 
         # Check if Audacious is still playing
-        # For SID: Songlengths.md5 tells Audacious when to stop, so it auto-advances
-        # For SAP/MOD: natural end triggers stop
-        # When stopped → grace 3s → skip to next track
         playing = await asyncio.get_event_loop().run_in_executor(None, is_playing)
 
-        # Per-track fallback timeout: trust GME/OpenMPT/SID reported length +15s buffer
-        # For looping modules without a known end, fall back to 600s
+        # SAP-specific monitoring: drop detection + per-track timeout
         if playing and state.current_sap_path:
-            elapsed_s = await asyncio.get_event_loop().run_in_executor(None, lambda: subprocess.run(
-                ["audtool", "current-song-output-length-seconds"], capture_output=True, text=True
-            ))
-            len_s = await asyncio.get_event_loop().run_in_executor(None, lambda: subprocess.run(
-                ["audtool", "current-song-length-seconds"], capture_output=True, text=True
-            ))
+            # Detect track change → invalidate song-length cache
+            if state.current_sap_path != cached_sap_path:
+                cached_sap_path = state.current_sap_path
+                cached_song_length = -1
+                last_output_len = -1
+                drop_confirmed_since = None
+
+            # Output length — needed every cycle for drop detection
+            secs = await asyncio.get_event_loop().run_in_executor(None, _audtool_output_length)
+
+            # Song length — cached per-track (doesn't change during playback)
+            if cached_song_length < 0:
+                cached_song_length = await asyncio.get_event_loop().run_in_executor(None, _audtool_song_length)
+
             try:
-                secs = int(elapsed_s.stdout.strip())
-                try:
-                    reported = int(len_s.stdout.strip())
-                    timeout_secs = reported + 15 if 10 < reported < 36000 else 600
-                except (ValueError, OSError):
-                    timeout_secs = 600
+                # Output length dropped below last seen value — track likely ended
+                if last_output_len > 10 and secs < 5:
+                    if drop_confirmed_since is None:
+                        drop_confirmed_since = time.time()
+                    elif (time.time() - drop_confirmed_since) >= GRACE_SECONDS:
+                        log.info("Output length drop confirmed (%ds): %d→%d — forcing skip",
+                                 GRACE_SECONDS, last_output_len, secs)
+                        drop_confirmed_since = None
+                        not_playing_since = None
+                        await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+                        if state.loop or state.index < len(state.queue) - 1:
+                            await skip_to_next(ctx)
+                            continue
+                        else:
+                            stream = active_streams.pop(guild_id, None)
+                            if stream:
+                                stream.cleanup()
+                            if vc.is_connected():
+                                await vc.disconnect()
+                            await ctx.send("Playlist ended. Use !play to restart.")
+                            break
+                else:
+                    drop_confirmed_since = None
+                last_output_len = secs
+
+                # Per-track fallback timeout using cached song length
+                reported = cached_song_length
+                timeout_secs = reported + 15 if 10 < reported < 36000 else 600
                 if secs > timeout_secs and secs < 10000:
                     log.info("Track exceeded %ds fallback (%ds), force-stopping", timeout_secs, secs)
                     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
@@ -3694,7 +3607,7 @@ async def health_watchdog():
             log.error("Watchdog error: %s", e)
 
 # ── PID Lock (zapobiega duplikatom) ─────────────────────────────
-LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "obibok.pid")
+LOCK_FILE = os.path.join(_ROOT, "obibok.pid")
 
 def acquire_lock() -> int:
     """Sprawdź czy inna instancja bota już żyje. Jeśli tak — wyjdź.
