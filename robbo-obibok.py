@@ -287,6 +287,7 @@ class PlaylistState:
         self.current_sap_path: str | None = None
         self.crawling: bool = False
         self.pre_downloaded: str | None = None  # next track pre-downloaded
+        self.pre_downloaded_url: str | None = None  # URL the pre-download was for
         self.search_results: list[str] = []     # last search results
         self.monitor_task: asyncio.Task | None = None
 
@@ -978,8 +979,10 @@ async def pre_download_next(state: PlaylistState):
     try:
         filepath = await download_sap(url, retries=1)
         state.pre_downloaded = filepath
+        state.pre_downloaded_url = url
     except Exception:
         state.pre_downloaded = None
+        state.pre_downloaded_url = None
 
 
 async def play_current_sid_track(ctx, state, url):
@@ -1370,10 +1373,13 @@ async def play_current_track(ctx):
             state.collection_mode = "asma"
             await ensure_tracks(state)
         # Use pre-downloaded track if available, otherwise download now
-        if state.pre_downloaded and os.path.exists(state.pre_downloaded):
+        if state.pre_downloaded and state.pre_downloaded_url == url and os.path.exists(state.pre_downloaded):
             filepath = state.pre_downloaded
             state.pre_downloaded = None
+            state.pre_downloaded_url = None
         else:
+            state.pre_downloaded = None
+            state.pre_downloaded_url = None
             filepath = await download_sap(url)
         await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
         await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
@@ -1546,6 +1552,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
         state.guild_id = ctx.guild.id
         state.ctx = ctx
         state.loop = PLAYBACK_LOOP
+        state.pre_downloaded = None  # clear stale
         state.queue = filter_blacklisted(list(state.tracks), ctx.author.id)
         if PLAYBACK_SHUFFLE:
             random.shuffle(state.queue)
@@ -1576,6 +1583,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
             state.guild_id = ctx.guild.id
             state.ctx = ctx
             state.loop = PLAYBACK_LOOP
+            state.pre_downloaded = None  # clear stale
             state.queue = filter_blacklisted(list(state.tracks), ctx.author.id)
             if PLAYBACK_SHUFFLE:
                 random.shuffle(state.queue)
@@ -1602,6 +1610,7 @@ async def play(ctx: commands.Context, *, query: str = ""):
     state.guild_id = ctx.guild.id
     state.ctx = ctx
     state.loop = PLAYBACK_LOOP
+    state.pre_downloaded = None  # clear stale
     
     info = get_collection_info(state.collection_mode)
     await ctx.send(f"🎛️ **{info['station']} starting...**")
@@ -2401,6 +2410,7 @@ async def _play_track_list(ctx, tracks: list[dict], label: str) -> bool:
     state.guild_id = ctx.guild.id
     state.ctx = ctx
     state.loop = True
+    state.pre_downloaded = None  # clear stale pre-download from previous session
 
     # Build queue from URLs
     state.queue = [t["url"] for t in tracks]
@@ -3119,8 +3129,8 @@ async def _switch_collection(ctx, mode, *, flip_seq=None):
 
     await asyncio.get_event_loop().run_in_executor(None, stop_all_players)
     await _cancel_monitor(state)
-    if flip_seq:
-        state.pre_downloaded = None
+    state.pre_downloaded = None
+    state.pre_downloaded_url = None
 
     # Load tracks
     tracks = await asyncio.get_event_loop().run_in_executor(None, cfg["load_func"])
