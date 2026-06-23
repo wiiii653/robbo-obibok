@@ -1967,14 +1967,15 @@ async def help_command(ctx: commands.Context):
     embed.add_field(
         name="🎮 Playback",
         value=(
-            "`!play` / `!radio` — start shuffled radio\n"
-            "`!stop` — stop & disconnect\n"
-            "`!skip` / `!next` — next track\n"
+            "`!play` / `!radio` / `!start` / `!pl` — start shuffled radio\n"
+            "`!stop` / `!st` — stop & disconnect\n"
+            "`!skip` / `!next` / `!nt` — next track\n"
             "`!jump <n>` — jump to track N\n"
             "`!np` — now playing\n"
             "`!queue` / `!q` — show queue\n"
             "`!history` — last 10 tracks\n"
-            "`!loop` — toggle loop\n"
+            "`!sleep <min>` — stop after N minutes\n"
+            "`!loop` / `!repeat` — toggle loop\n"
             "`!volume <0-200>` — set volume\n"
             "`!clear` — clear queue"
         ),
@@ -1985,12 +1986,12 @@ async def help_command(ctx: commands.Context):
         name="🎵 Collections",
         value=(
             "`!asma`  — 🟢 Atari SAP (~6 300)\n"
-            "`!hvsc`  — 🟣 C64 SID (~60 500)\n"
-            "`!mod`   — 🟠 Tracker Modules (~175 000)\n"
-            "`!ay`    — 🔵 ZX Spectrum AY (~4 500)\n"
-            "`!ym`    — 🎹 **Atari ST YM (~7 200)**\n"
-            "`!tiny`  — 🎵 Demoscene Modules (~418)\n"
-            "`!snes`  — 🔴 SNES SPC (~60 000)"
+            "`!hvsc` / `!c64` / `!sid` — 🟣 C64 SID (~60 500)\n"
+            "`!mod` / `!modarchive` / `!tracker` / `!modules` — 🟠 Tracker Modules (~175 000)\n"
+            "`!ay` / `!zx` / `!zxspectrum` / `!spectrum` — 🔵 ZX Spectrum AY (~4 500)\n"
+            "`!ym` / `!atarist` / `!ym2149` — 🎹 **Atari ST YM (~7 200)**\n"
+            "`!tiny` / `!tm` / `!demoscene` — 🎵 Demoscene Modules (~418)\n"
+            "`!snes` / `!spc` / `!supernintendo` / `!nintendo` — 🔴 SNES SPC (~60 000)"
         ),
         inline=False,
     )
@@ -1998,8 +1999,8 @@ async def help_command(ctx: commands.Context):
     embed.add_field(
         name="🔄 Navigation",
         value=(
-            "`!flip` — cycle through all collections\n"
-            "`!status` — show all collections & current mode\n"
+            "`!flip` / `!switch` / `!toggle` / `!fl` — cycle through all collections\n"
+            "`!status` / `!mode` / `!collection` / `!all` — show all collections & current mode\n"
             "`!search <query>` — search across current collection\n"
             "`!snes search <term>` — search SNES by game/composer"
         ),
@@ -2014,8 +2015,22 @@ async def help_command(ctx: commands.Context):
             "`!favsave` / `!pls` — save favorites as playlist\n"
             "`!favload` / `!fpl` — load & play a playlist\n"
             "`!favorites` / `!favs` — list favorites\n"
+            "`!playlists` / `!plist` / `!list-playlists` / `!playlist-dir` — list saved playlists\n"
             "`!blk` — blacklist current track\n"
-            "`!blks` — show blacklist"
+            "`!blks` / `!blklist` — show blacklist\n"
+            "`!blkrm <n>` — remove track from blacklist"
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🔧 Tools & Info",
+        value=(
+            "`!stats` — radio stats (tracks, queue, playing)\n"
+            "`!export` — export queue as text\n"
+            "`!ocko` — 🦉 random ASCII owl\n"
+            "`!refresh` — re-crawl ASMA archive *(mod only)*\n"
+            "`!reindex` — re-fetch metadata *(mod only)*"
         ),
         inline=False,
     )
