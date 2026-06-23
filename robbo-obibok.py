@@ -1958,7 +1958,7 @@ async def ocko(ctx: commands.Context):
 async def help_command(ctx: commands.Context):
     """Show all commands and collections. Usage: !help"""
     embed = discord.Embed(
-        title="🌲 Robbo Obibok — Help",
+        title="🤖 Robbo Obibok — Help",
         description="Seven collections, one bot — **the biggest chiptune radio on Discord.**\n"
                     "Join a voice channel and `!play`!",
         color=discord.Color.from_str("#2ECC71"),
