@@ -156,6 +156,8 @@ _ym_last_wav_path: str | None = None  # track the last WAV for cleanup
 # ── Local Tiny Music (Demoscene Modules) ────────────────────────
 TINY_DIR = os.path.join(_ROOT, "archiwum", "tiny")
 TINY_CACHE = os.path.join(_ROOT, "tiny_cache.json")
+ASMA_DIR = os.path.join(_ROOT, "archiwum", "asma")
+HVSC_DIR = os.path.join(_ROOT, "archiwum", "hvsc", "C64Music")
 
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(_ROOT, "favorites.json")
@@ -656,6 +658,25 @@ def ym_cleanup():
             log.warning("YM cleanup error: %s", e)
     _ym_last_wav_path = None
 
+def resolve_local_path(url: str) -> str | None:
+    """Map remote URL to local file path if available. Returns None if not found."""
+    # ASMA: https://asma.atari.org/asma/Composers/... → archiwum/asma/Composers/...
+    if url.startswith(ASMA_BASE):
+        rel = url[len(ASMA_BASE):]
+        local = os.path.join(ASMA_DIR, rel)
+        if os.path.exists(local):
+            log.info("Local ASMA path: %s", local)
+            return local
+    # HVSC: https://www.hvsc.c64.org/download/C64Music/... → archiwum/hvsc/C64Music/...
+    if url.startswith(HVSC_BASE):
+        rel = url[len(HVSC_BASE):]
+        local = os.path.join(HVSC_DIR, rel)
+        if os.path.exists(local):
+            log.info("Local HVSC path: %s", local)
+            return local
+    return None
+
+
 async def download_sap(url: str, retries: int = 2) -> str:
     filepath = build_temp_path(url)
     last_err = None
@@ -993,19 +1014,26 @@ async def pre_download_next(state: PlaylistState):
 
 async def play_current_sid_track(ctx, state, url):
     """Download and play a SID track via Audacious."""
-    # Download full SID to temp (they're small, ~5-15KB)
-    sid_path = build_temp_path(url)
-    try:
-        session = await get_shared_session()
-        async with session.get(url) as resp:
-            resp.raise_for_status()
-            data = await resp.read()
-        with open(sid_path, "wb") as f:
-            f.write(data)
-    except Exception as e:
-        log.error("SID download failed: %s", e)
-        await ctx.send(f"❌ Download failed: {e}")
-        return False
+    # Try local path first
+    local_path = resolve_local_path(url)
+    if local_path:
+        sid_path = local_path
+        with open(sid_path, "rb") as f:
+            data = f.read()
+    else:
+        # Download full SID to temp (they're small, ~5-15KB)
+        sid_path = build_temp_path(url)
+        try:
+            session = await get_shared_session()
+            async with session.get(url) as resp:
+                resp.raise_for_status()
+                data = await resp.read()
+            with open(sid_path, "wb") as f:
+                f.write(data)
+        except Exception as e:
+            log.error("SID download failed: %s", e)
+            await ctx.send(f"❌ Download failed: {e}")
+            return False
 
     # Parse SID header for metadata
     meta = parse_sid_header(data)
@@ -1396,8 +1424,13 @@ async def play_current_track(ctx):
         if state.collection_mode != "asma":
             state.collection_mode = "asma"
             await ensure_tracks(state)
-        # Use pre-downloaded track if available, otherwise download now
-        if state.pre_downloaded and state.pre_downloaded_url == url and os.path.exists(state.pre_downloaded):
+        # Try local path first, then pre-downloaded, then download now
+        local_path = resolve_local_path(url)
+        if local_path:
+            filepath = local_path
+            state.pre_downloaded = None
+            state.pre_downloaded_url = None
+        elif state.pre_downloaded and state.pre_downloaded_url == url and os.path.exists(state.pre_downloaded):
             filepath = state.pre_downloaded
             state.pre_downloaded = None
             state.pre_downloaded_url = None
