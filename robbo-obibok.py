@@ -291,6 +291,12 @@ class PlaylistState:
         self.search_results: list[str] = []     # last search results
         self.monitor_task: asyncio.Task | None = None
 
+        # Subsong support — module files (S3M/XM/IT/MOD) with multiple sub-songs
+        self.subsong_current: int = -1   # -1 = not in subsong mode, 0+ = current subsong index
+        self.subsong_total: int = 0       # total subsongs including main (0 = none/unknown)
+        self.subsong_path: str | None = None  # path to original module file
+        self.subsong_wavs: list[str] = [] # temp WAV paths for all subsongs ("" = not yet converted)
+
 
 guilds: dict[int, PlaylistState] = {}
 
@@ -1275,7 +1281,22 @@ async def play_current_tiny_track(ctx, state, filepath):
         await ctx.send(f"❌ File not found: `{filepath}`")
         return False
 
-    # Stop existing playback and play via Audacious
+    # Clean up any previous subsong temp files
+    _cleanup_subsong_temp_wavs(state)
+
+    # ── Subsong detection ──
+    subsongs = _get_subsongs(full_path)
+    has_multi = len(subsongs) > 1
+    if has_multi:
+        state.subsong_total = len(subsongs)
+        state.subsong_current = 0
+        state.subsong_path = full_path
+        log.info("Subsong: %s has %d sub-songs (main=%.1fs, extra=%d)",
+                 os.path.basename(full_path), len(subsongs), subsongs[0], len(subsongs) - 1)
+    else:
+        _cleanup_subsong_temp_wavs(state)
+
+    # Stop existing playback and play via Audacious (subsong 0 plays natively)
     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
     await asyncio.get_event_loop().run_in_executor(None, audacious_play, full_path)
 
@@ -1298,7 +1319,10 @@ async def play_current_tiny_track(ctx, state, filepath):
     if author:
         embed.add_field(name="Composer", value=author, inline=True)
     embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
-    embed.set_footer(text="Tiny Music — curated demoscene modules")
+    if has_multi:
+        embed.set_footer(text=f"Tiny Music — curated demoscene modules · {len(subsongs)} parts")
+    else:
+        embed.set_footer(text="Tiny Music — curated demoscene modules")
 
     np_msg = await ctx.send(embed=embed)
     _register_np_message(np_msg.id, filepath, name, author)
@@ -1420,7 +1444,37 @@ async def skip_to_next(ctx):
     if not state.queue:
         await ctx.send("No tracks in queue. Use !play.")
         return
-    
+
+    # ── Subsong: more parts of current module? ──
+    if state.subsong_total > 0 and state.subsong_path:
+        next_sub = state.subsong_current + 1
+        if next_sub < state.subsong_total:
+            log.info("Subsong: advancing to part %d/%d of %s",
+                     next_sub + 1, state.subsong_total,
+                     os.path.basename(state.subsong_path))
+            ok = await play_subsong(ctx, state, next_sub)
+            if ok:
+                # Send updated embed for this part
+                name = os.path.basename(state.subsong_path).rsplit('.', 1)[0]
+                total = len(state.queue)
+                pos = state.index + 1
+                embed = discord.Embed(
+                    title=f"{name} (part {next_sub + 1}/{state.subsong_total})",
+                    color=discord.Color.purple(),
+                )
+                embed.add_field(name="Position", value=f"{pos}/{total}", inline=True)
+                embed.set_footer(text=f"Tiny Music — curated demoscene modules · {state.subsong_total} parts")
+                np_msg = await ctx.send(embed=embed)
+                _register_np_message(np_msg.id, state.subsong_path, name, "")
+                return
+            else:
+                # Conversion failed — fall through to next queue item
+                log.error("Subsong %d conversion failed, skipping to next queue item", next_sub)
+                _cleanup_subsong_temp_wavs(state)
+        else:
+            # All subsongs done
+            _cleanup_subsong_temp_wavs(state)
+
     state.index += 1
     
     if state.index >= len(state.queue):
@@ -2973,6 +3027,9 @@ def cleanup_orphan_players():
 def stop_all_players():
     """Stop Audacious playback and clear playlist for collection switch."""
     audacious_stop()
+    # Cleanup any lingering subsong temp WAVs across all guilds
+    for g_state in guilds.values():
+        _cleanup_subsong_temp_wavs(g_state)
 
 
 async def cleanup_hvsc_file(ctx, tracks):
@@ -3423,6 +3480,108 @@ def _audtool_song_length() -> int:
         return int(r.stdout.strip())
     except (ValueError, OSError):
         return -1
+
+
+# ── Subsong Detection & Conversion ───────────────────────────────
+_subsong_cache: dict[str, list[float]] = {}
+
+def _get_subsongs(filepath: str) -> list[float]:
+    """Return list of subsong durations for a module file. Empty list = no subsongs."""
+    if filepath in _subsong_cache:
+        return _subsong_cache[filepath]
+
+    durations: list[float] = []
+    for sub in range(0, 20):  # Max 20 subsongs (more than any module should have)
+        try:
+            res = subprocess.run(
+                ['ffprobe', '-subsong', str(sub), '-v', 'quiet', '-print_format', 'json',
+                 '-show_entries', 'format=duration', filepath],
+                capture_output=True, text=True, timeout=10
+            )
+            if not res.stdout.strip():
+                break
+            data = json.loads(res.stdout)
+            dur = data.get("format", {}).get("duration")
+            if dur is not None:
+                durations.append(float(dur))
+            else:
+                break
+        except Exception:
+            break
+
+    _subsong_cache[filepath] = durations
+    return durations
+
+
+def _has_subsongs(filepath: str) -> bool:
+    """Quick check: does this file have multiple sub-songs?"""
+    subs = _get_subsongs(filepath)
+    return len(subs) > 1
+
+
+def _convert_subsong(filepath: str, subsong: int, output_path: str) -> bool:
+    """Convert a specific subsong from a module file to WAV via ffmpeg."""
+    try:
+        subprocess.run(
+            ['ffmpeg', '-y', '-subsong', str(subsong), '-i', filepath,
+             '-ac', '1', '-ar', '48000', '-f', 'wav', output_path],
+            capture_output=True, timeout=60
+        )
+        return os.path.exists(output_path) and os.path.getsize(output_path) > 100
+    except Exception:
+        return False
+
+
+def _subsong_temp_path(filepath: str, subsong: int) -> str:
+    """Generate a temp path for a converted subsong WAV."""
+    basename = os.path.basename(filepath).rsplit('.', 1)[0]
+    safe = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in basename)
+    return os.path.join(tempfile.gettempdir(), f"subsong_{safe}_{subsong}.wav")
+
+
+async def play_subsong(ctx, state: PlaylistState, subsong: int) -> bool:
+    """Convert and play a specific subsong via ffmpeg → WAV → Audacious."""
+    if not state.subsong_path:
+        return False
+
+    orig_path = state.subsong_path
+    wav_path = _subsong_temp_path(orig_path, subsong)
+
+    # Convert in executor
+    ok = await asyncio.get_event_loop().run_in_executor(
+        None, _convert_subsong, orig_path, subsong, wav_path
+    )
+    if not ok:
+        log.error("Subsong %d conversion failed for %s", subsong, orig_path)
+        return False
+
+    # Ensure WAV is tracked for cleanup
+    while len(state.subsong_wavs) <= subsong:
+        state.subsong_wavs.append("")
+    state.subsong_wavs[subsong] = wav_path
+    state.subsong_current = subsong
+
+    # Stop old Audacious and play the WAV
+    await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+    await asyncio.get_event_loop().run_in_executor(None, audacious_play, wav_path)
+    state.current_sap_path = wav_path
+
+    _setup_monitor_source(state)
+    return True
+
+
+def _cleanup_subsong_temp_wavs(state: PlaylistState) -> None:
+    """Remove all temp WAVs for the current subsong group."""
+    for wav in state.subsong_wavs:
+        if wav and os.path.exists(wav):
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
+    state.subsong_wavs.clear()
+    state.subsong_total = 0
+    state.subsong_current = -1
+    state.subsong_path = None
 
 
 async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild_id: int):
