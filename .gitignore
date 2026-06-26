@@ -19,8 +19,10 @@ ay_cache.json
 tiny_cache.json
 archiwum/
 hvsc_cache.json
-favorites.json
 snes_cache.json
 ym_cache.json
 blacklist.json
 .hermes/plans/
+tmp/
+*_cache_local.json
+*_cache_old_urls.json

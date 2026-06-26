@@ -14,6 +14,7 @@ import subprocess
 import os
 import tempfile
 import asyncio
+import aiohttp
 import random
 import json
 import re
@@ -22,7 +23,6 @@ import logging
 import shutil
 import signal
 import sys
-import aiohttp
 
 # Single computation of script directory (was repeated 21× at module level)
 _ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -120,20 +120,18 @@ BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", CONFIG.get("token", ""))
 SINK_NAME = CONFIG["audio"]["sink_name"]
 
 
+TEMP_DIR = os.path.join(_ROOT, "tmp")  # stable temp dir under bot root
+
+
 def _cleanup_orphaned_temp_dirs():
-    """Remove orphaned asma_bot_* temp dirs from previous crashed sessions."""
-    import glob
-    removed = 0
-    for d in glob.glob("/tmp/asma_bot_*"):
-        if os.path.isdir(d):
-            shutil.rmtree(d, ignore_errors=True)
-            removed += 1
-    if removed:
-        log.info("Startup cleanup: removed %d orphaned temp dirs", removed)
+    """Remove temp dir from previous crashed sessions."""
+    if os.path.isdir(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR, ignore_errors=True)
+        log.info("Startup cleanup: removed temp dir")
 
 
 _cleanup_orphaned_temp_dirs()
-TEMP_DIR = tempfile.mkdtemp(prefix="asma_bot_")
+os.makedirs(TEMP_DIR, exist_ok=True)
 ASMA_BASE = CONFIG["asma"]["base_url"]
 CRAWL_TIMEOUT = CONFIG["asma"]["crawl_timeout"]
 CACHE_TTL = CONFIG["asma"]["cache_ttl"]
@@ -158,6 +156,8 @@ TINY_DIR = os.path.join(_ROOT, "archiwum", "tiny")
 TINY_CACHE = os.path.join(_ROOT, "tiny_cache.json")
 ASMA_DIR = os.path.join(_ROOT, "archiwum", "asma")
 HVSC_DIR = os.path.join(_ROOT, "archiwum", "hvsc", "C64Music")
+ASMA_LOCAL_CACHE = os.path.join(_ROOT, "asma_cache_local.json")
+HVSC_LOCAL_CACHE = os.path.join(_ROOT, "hvsc_cache_local.json")
 
 # ── Favorites System ────────────────────────────────────────────
 FAVORITES_FILE = os.path.join(_ROOT, "favorites.json")
@@ -769,14 +769,18 @@ def parse_sap_header(filepath: str) -> dict[str, str]:
     return meta
 
 def extract_searchable_text(url: str) -> str:
-    """Extract searchable text from a SAP URL (directories + filename)."""
-    # https://asma.atari.org/asma/Composers/Krzysztof_Bryla/Track_Name.sap
-    # -> "krzysztof bryla track name"
-    # For ModArchive URLs, use the module name from cache
+    """Extract searchable text from a track path (directories + filename)."""
+    # ModArchive URLs: use module name from cache
     if url.startswith("https://api.modarchive.org/") or "modarchive" in url:
         name = modarchive_name_map.get(url, "")
         return name.lower().replace("_", " ")
-    path = url.replace(ASMA_BASE, "").replace(HVSC_BASE, "")
+
+    # Local relative paths (no ://): use the full path for search
+    if "://" not in url:
+        path = url
+    else:
+        # Remote URLs: strip the base URL to get relative path
+        path = url.replace(ASMA_BASE, "").replace(HVSC_BASE, "")
     name_part = path.split("/")[-1]
     # Strip known extensions for search
     for ext in [".sap", ".sid", ".mod", ".xm", ".s3m", ".it", ".ym"]:
@@ -995,7 +999,8 @@ metadata_index.update(load_metadata_cache())
 
 # ── Playback control ────────────────────────────────────────────
 async def pre_download_next(state: PlaylistState):
-    """Pre-download the next track in the queue for gapless transitions."""
+    """Pre-download the next track in the queue for gapless transitions.
+    Only needed for remote URLs — local files are already on disk."""
     next_idx = state.index + 1
     if next_idx >= len(state.queue):
         if state.loop:
@@ -1003,6 +1008,9 @@ async def pre_download_next(state: PlaylistState):
         else:
             return
     url = state.queue[next_idx]
+    # Skip pre-download for local paths (already on disk)
+    if "://" not in url:
+        return
     try:
         filepath = await download_sap(url, retries=1)
         state.pre_downloaded = filepath
@@ -1014,26 +1022,35 @@ async def pre_download_next(state: PlaylistState):
 
 async def play_current_sid_track(ctx, state, url):
     """Download and play a SID track via Audacious."""
-    # Try local path first
-    local_path = resolve_local_path(url)
-    if local_path:
-        sid_path = local_path
+    # Local path (from local cache — relative path under HVSC_DIR)
+    if "://" not in url:
+        sid_path = os.path.join(HVSC_DIR, url)
+        if not os.path.exists(sid_path):
+            await ctx.send(f"❌ File not found: `{url}`")
+            return False
         with open(sid_path, "rb") as f:
             data = f.read()
     else:
-        # Download full SID to temp (they're small, ~5-15KB)
-        sid_path = build_temp_path(url)
-        try:
-            session = await get_shared_session()
-            async with session.get(url) as resp:
-                resp.raise_for_status()
-                data = await resp.read()
-            with open(sid_path, "wb") as f:
-                f.write(data)
-        except Exception as e:
-            log.error("SID download failed: %s", e)
-            await ctx.send(f"❌ Download failed: {e}")
-            return False
+        # Try local path first (legacy remote URL)
+        local_path = resolve_local_path(url)
+        if local_path:
+            sid_path = local_path
+            with open(sid_path, "rb") as f:
+                data = f.read()
+        else:
+            # Download full SID to temp (they're small, ~5-15KB)
+            sid_path = build_temp_path(url)
+            try:
+                session = await get_shared_session()
+                async with session.get(url) as resp:
+                    resp.raise_for_status()
+                    data = await resp.read()
+                with open(sid_path, "wb") as f:
+                    f.write(data)
+            except Exception as e:
+                log.error("SID download failed: %s", e)
+                await ctx.send(f"❌ Download failed: {e}")
+                return False
 
     # Parse SID header for metadata
     meta = parse_sid_header(data)
@@ -1123,8 +1140,7 @@ COLLECTION_INFO = {
         "station": "ASMA Radio",
         "footer": "ASMA Radio",
         "color": discord.Color.green(),
-        "load_tracks": lambda: refresh_tracklist(),
-        "download": lambda url: download_sap(url),
+        "load_tracks": lambda: load_asma_local_cache(),
     },
     "hvsc": {
         "icon": "🟣",
@@ -1132,9 +1148,7 @@ COLLECTION_INFO = {
         "station": "C64 SID Radio",
         "footer": "C64 SID Radio",
         "color": discord.Color.purple(),
-        "load_tracks": lambda: load_cached_hvsc(),
-        "fallback_load": lambda: download_hvsc_index(),
-        "download": lambda url: None,  # SID has its own download in play_current_sid_track
+        "load_tracks": lambda: load_hvsc_local_cache(),
     },
     "modarchive": {
         "icon": "🟠",
@@ -1424,20 +1438,29 @@ async def play_current_track(ctx):
         if state.collection_mode != "asma":
             state.collection_mode = "asma"
             await ensure_tracks(state)
-        # Try local path first, then pre-downloaded, then download now
-        local_path = resolve_local_path(url)
-        if local_path:
-            filepath = local_path
-            state.pre_downloaded = None
-            state.pre_downloaded_url = None
-        elif state.pre_downloaded and state.pre_downloaded_url == url and os.path.exists(state.pre_downloaded):
-            filepath = state.pre_downloaded
+        # Local ASMA path (from local cache — relative path under ASMA_DIR)
+        if "://" not in url:
+            filepath = os.path.join(ASMA_DIR, url)
+            if not os.path.exists(filepath):
+                await ctx.send(f"❌ File not found: `{url}`")
+                return False
             state.pre_downloaded = None
             state.pre_downloaded_url = None
         else:
-            state.pre_downloaded = None
-            state.pre_downloaded_url = None
-            filepath = await download_sap(url)
+            # Try local path first, then pre-downloaded, then download now (legacy remote URL)
+            local_path = resolve_local_path(url)
+            if local_path:
+                filepath = local_path
+                state.pre_downloaded = None
+                state.pre_downloaded_url = None
+            elif state.pre_downloaded and state.pre_downloaded_url == url and os.path.exists(state.pre_downloaded):
+                filepath = state.pre_downloaded
+                state.pre_downloaded = None
+                state.pre_downloaded_url = None
+            else:
+                state.pre_downloaded = None
+                state.pre_downloaded_url = None
+                filepath = await download_sap(url)
         await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
         await asyncio.get_event_loop().run_in_executor(None, audacious_play, filepath)
         
@@ -1547,10 +1570,13 @@ async def on_ready():
     except Exception as e:
         log.error("setup_audacious_sid_config failed: %s", e)
     
-    # Preload cached tracklist for all guilds
-    cached = load_cached_tracklist()
+    # Preload local cached tracklist for all guilds
+    cached = load_asma_local_cache()
     if cached:
-        log.info("Loaded %d tracks from cache", len(cached))
+        log.info("ASMA local: %d tracks preloaded", len(cached))
+    cached_hvsc = load_hvsc_local_cache()
+    if cached_hvsc:
+        log.info("HVSC local: %d tracks preloaded", len(cached_hvsc))
 
     # Start health watchdog
     bot.loop.create_task(health_watchdog())
@@ -2122,12 +2148,15 @@ async def export(ctx: commands.Context):
 @mod_only()
 @commands.cooldown(1, 300, commands.BucketType.guild)
 async def refresh(ctx: commands.Context):
-    """Re-crawl ASMA and rebuild the playlist."""
-    await ctx.send("🔍 Re-crawling ASMA archive... this may take a minute.")
-    tracks = await refresh_tracklist()
+    """Reload ASMA track list from local cache."""
     state = get_state(ctx.guild.id)
-    state.tracks = tracks
-    await ctx.send(f"✅ Refreshed! Found **{len(tracks)}** tracks.")
+    state.loaded_collection = ""  # force reload
+    tracks = await load_tracks_for_mode("asma")
+    if tracks:
+        state.tracks = tracks
+        await ctx.send(f"✅ Reloaded! Found **{len(tracks)}** local ASMA tracks.")
+    else:
+        await ctx.send("❌ ASMA local cache not found. Run `python build_asma_index.py` first.")
 
 
 @bot.command()
@@ -2886,6 +2915,14 @@ def load_tiny_cache() -> list[str] | None:
     return _load_path_cache(TINY_CACHE, "Tiny")
 
 
+def load_asma_local_cache() -> list[str] | None:
+    return _load_path_cache(ASMA_LOCAL_CACHE, "ASMA")
+
+
+def load_hvsc_local_cache() -> list[str] | None:
+    return _load_path_cache(HVSC_LOCAL_CACHE, "HVSC")
+
+
 # ── SNES SPC Collection ────────────────────────────────────────────
 # RSN URL → game metadata
 snes_metadata: dict[str, dict] = {}
@@ -3076,12 +3113,12 @@ _COLLECTIONS = {
     "hvsc": {
         "label": "HVSC",
         "flip_tag": "🟣HVSC",
-        "load_func": load_cached_hvsc,
-        "fallback_func": download_hvsc_index,
+        "load_func": load_hvsc_local_cache,
+        "fallback_func": None,
         "already_msg": "📀 **Already in C64 SID mode.** Use `!play` to start!",
         "load_msg": "🔄 **Loading C64 SID collection (60,000+ tracks)...**",
         "flip_load_msg": "🔄 Loading C64 SID collection (60,000+ tracks)...",
-        "error_msg": "❌ Failed to load HVSC index. Check config or try again.",
+        "error_msg": "❌ Failed to load HVSC local cache. Run `python build_hvsc_index.py` first.",
         "ready_msg": "📀 **C64 SID collection ready — {count} tracks!**",
         "flip_ready_msg": "🟣 **Switched to C64 SID (HVSC) — {count} tracks!**",
         "flip_fail_msg": "❌ Could not load HVSC. Try `!hvsc` manually.",
@@ -3093,13 +3130,13 @@ _COLLECTIONS = {
     "asma": {
         "label": "ASMA",
         "flip_tag": "🟢ASMA",
-        "load_func": load_cached_tracklist,
+        "load_func": load_asma_local_cache,
         "fallback_func": None,
         "already_msg": None,
         "load_msg": None,
         "error_msg": None,
-        "ready_msg": "📀 **Switched to ASMA Atari SAP — {count} tracks!**",
-        "ready_empty_msg": "📀 **Switched to ASMA Atari SAP.** Use `!play` to crawl the archive.",
+        "ready_msg": "🟢 **Switched to ASMA Atari SAP — {count} tracks!**",
+        "ready_empty_msg": "🟢 **Switched to ASMA Atari SAP.** Use `!play` to start.",
         "flip_ready_msg": "🟢 **Switched to Atari SAP (ASMA)!**",
         "flip_ready_empty_msg": "🟢 **Switched to Atari SAP (ASMA).**",
         "log_msg": "ASMA: collection switched",
@@ -3404,8 +3441,8 @@ async def status(ctx: commands.Context):
 
     # ── Cache counts (mtime-cached, offloaded to executor) ──
     cache_map = {
-        "asma_cache.json": ("🟢", "Atari SAP (ASMA)"),
-        "hvsc_cache.json": ("🟣", "C64 SID (HVSC)"),
+        "asma_cache_local.json": ("🟢", "Atari SAP (ASMA)"),
+        "hvsc_cache_local.json": ("🟣", "C64 SID (HVSC)"),
         "modarchive_cache.json": ("🟠", "Tracker Modules (ModArchive)"),
         "ay_cache.json": ("🔵", "ZX Spectrum AY"),
         "ym_cache.json": ("🎹", "Atari ST YM"),
@@ -3569,7 +3606,7 @@ def _subsong_temp_path(filepath: str, subsong: int) -> str:
     """Generate a temp path for a converted subsong WAV."""
     basename = os.path.basename(filepath).rsplit('.', 1)[0]
     safe = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in basename)
-    return os.path.join(tempfile.gettempdir(), f"subsong_{safe}_{subsong}.wav")
+    return os.path.join(TEMP_DIR, f"subsong_{safe}_{subsong}.wav")
 
 
 async def play_subsong(ctx, state: PlaylistState, subsong: int) -> bool:
@@ -3678,34 +3715,43 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
                 cached_song_length = await asyncio.get_event_loop().run_in_executor(None, _audtool_song_length)
 
             try:
-                # Output length dropped below last seen value — track likely ended
-                if last_output_len > 10 and secs < 5:
-                    if drop_confirmed_since is None:
-                        drop_confirmed_since = time.time()
-                    elif (time.time() - drop_confirmed_since) >= GRACE_SECONDS:
-                        log.info("Output length drop confirmed (%ds): %d→%d — forcing skip",
-                                 GRACE_SECONDS, last_output_len, secs)
+                # Output length drop detection — SAP files only (GME formats
+                # like AY/YM/SID can have unreliable output-length readings)
+                is_gme_format = state.current_sap_path.endswith((".ay", ".ym", ".spc", ".sid"))
+                if not is_gme_format:
+                    # Output length dropped below last seen value — track likely ended
+                    if last_output_len > 10 and secs < 5:
+                        if drop_confirmed_since is None:
+                            drop_confirmed_since = time.time()
+                        elif (time.time() - drop_confirmed_since) >= GRACE_SECONDS:
+                            log.info("Output length drop confirmed (%ds): %d→%d — forcing skip",
+                                     GRACE_SECONDS, last_output_len, secs)
+                            drop_confirmed_since = None
+                            not_playing_since = None
+                            await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
+                            if state.loop or state.index < len(state.queue) - 1:
+                                await skip_to_next(ctx)
+                                continue
+                            else:
+                                stream = active_streams.pop(guild_id, None)
+                                if stream:
+                                    stream.cleanup()
+                                if vc.is_connected():
+                                    await vc.disconnect()
+                                await ctx.send("Playlist ended. Use !play to restart.")
+                                break
+                    else:
                         drop_confirmed_since = None
-                        not_playing_since = None
-                        await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
-                        if state.loop or state.index < len(state.queue) - 1:
-                            await skip_to_next(ctx)
-                            continue
-                        else:
-                            stream = active_streams.pop(guild_id, None)
-                            if stream:
-                                stream.cleanup()
-                            if vc.is_connected():
-                                await vc.disconnect()
-                            await ctx.send("Playlist ended. Use !play to restart.")
-                            break
-                else:
-                    drop_confirmed_since = None
                 last_output_len = secs
 
-                # Per-track fallback timeout using cached song length
-                reported = cached_song_length
-                timeout_secs = reported + 15 if 10 < reported < 36000 else 600
+                # Per-track fallback timeout
+                # GME formats (AY, YM, SPC, SID) report unreliable song lengths
+                # via audtool — use generous 600s fallback for them.
+                if is_gme_format:
+                    timeout_secs = 600
+                else:
+                    reported = cached_song_length
+                    timeout_secs = reported + 15 if 10 < reported < 36000 else 600
                 if secs > timeout_secs and secs < 10000:
                     log.info("Track exceeded %ds fallback (%ds), force-stopping", timeout_secs, secs)
                     await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
@@ -3737,7 +3783,15 @@ async def monitor_playback(ctx: commands.Context, vc: discord.VoiceClient, guild
         else:
             if not_playing_since is None:
                 not_playing_since = time.time()
-            elif (time.time() - not_playing_since) >= GRACE_SECONDS:
+            # Check if Audacious still has a song loaded before skipping.
+            # GME-based formats (AY, YM, SPC, SID played natively) can report
+            # 'not playing' briefly between subsong sections even though the
+            # track is still active.  If a song is still loaded, it's a pause
+            # — not the end.
+            still_loaded = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: bool(audacious_song())
+            )
+            if (time.time() - not_playing_since) >= GRACE_SECONDS and not still_loaded:
                 state = get_state(guild_id)
                 if state.loop or state.index < len(state.queue) - 1:
                     not_playing_since = None
@@ -3762,23 +3816,38 @@ async def fetch_metadata_background():
     """Fetch metadata for tracks in the background during idle time."""
     await bot.wait_until_ready()
     await asyncio.sleep(30)  # Wait for startup to complete
-    
-    cached = load_cached_tracklist()
+
+    # Use local cache for metadata (SAP headers from local files)
+    cached = load_asma_local_cache()
     if not cached:
         return
-    
+
     # Find tracks without metadata
-    missing = [url for url in cached if url not in metadata_index]
+    missing = [path for path in cached if path not in metadata_index]
     if not missing:
         log.info("Metadata index complete: %d tracks", len(metadata_index))
         return
-    
-    log.info("Fetching metadata for %d tracks...", len(missing))
-    connector = aiohttp.TCPConnector(limit=5, limit_per_host=3)
-    async with aiohttp.ClientSession(connector=connector) as session:
-        await fetch_metadata_batch(session, missing)
-    
-    log.info("Metadata index updated: %d tracks indexed", len(metadata_index))
+
+    log.info("Fetching metadata for %d local ASMA tracks...", len(missing))
+
+    # Read SAP headers from local files instead of HTTP
+    fetched = 0
+    for path in missing:
+        if path in metadata_index:
+            continue
+        full = os.path.join(ASMA_DIR, path)
+        if not os.path.exists(full):
+            continue
+        meta = parse_sap_header(full)
+        if meta:
+            metadata_index[path] = meta
+            fetched += 1
+        if fetched > 0 and fetched % 100 == 0:
+            log.info("Metadata: %d/%d", fetched, len(missing))
+            save_metadata_cache(metadata_index)
+
+    save_metadata_cache(metadata_index)
+    log.info("Metadata index: %d tracks total", len(metadata_index))
 
 
 # ── Health Watchdog ─────────────────────────────────────────────
