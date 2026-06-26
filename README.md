@@ -1,125 +1,74 @@
 ```
-__________      ___.  ___.            ________ ___.   ._____.           __    
-\______   \ ____\_ |__\_ |__   ____   \_____  \\_ |__ |__\_ |__   ____ |  | __
- |       _//  _ \| __ \| __ \ /  _ \   /   |   \| __ \|  || __ \ /  _ \|  |/ /
- |    |   (  <_> ) \_\ \ \_\ (  <_> ) /    |    \ \_\ \  || \_\ (  <_> )    < 
- |____|_  /\____/|___  /___  /\____/  \_______  /___  /__||___  /\____/|__|_ \
-        \/           \/    \/                 \/    \/        \/            \/
-                                                                              
+__________      ___.  ___.            ________ ___.   ._____.           __   
+\______   \ ____\_ |__\_ |__   ____   \_____  \\_ |__ |__\_ |__   _____/  |_ 
+ |       _//  _ \| __ \| __ \ /  _ \   /   |   \| __ \|  || __ \ /  _ \   __\
+ |    |   (  <_> ) \_\ \ \_\ (  <_> ) /    |    \ \_\ \  || \_\ (  <_> )  |  
+ |____|_  /\____/|___  /___  /\____/  \_______  /___  /__||___  /\____/|__|  
+        \/           \/    \/                 \/    \/        \/              
 ```
 
-# Robbo Obibok — The Ultimate Chiptune Bot
+# Robbo Obibot — The Ultimate Chiptune Bot
 
-Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Seven collections, one bot — **the biggest chiptune radio on Discord.**
+Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Blending intricate technical grooves with retro charm, Robbo plays from **seven collections** spanning Atari, C64, ZX Spectrum, Amiga, SNES, and beyond.
 
-**Join a voice channel, `!play`, and let the chips fall where they may.**
+**Join a voice channel, type `!play`, and let the chips play.**
 
 ## Features
 
-### 🎵 Seven Collections (and growing)
-
-| # | Collection | Tracks | Source | Command |
-|---|-----------|--------|--------|---------|
-| 🟢 | **Atari SAP (ASMA)** | ~6 300 | asma.atari.org | `!asma` |
-| 🟣 | **C64 SID (HVSC)** | ~60 500 | hvsc.c64.org | `!hvsc` / `!c64` |
-| 🟠 | **Tracker Modules (ModArchive)** | ~175 000 | modarchive.org | `!mod` |
-| 🔵 | **ZX Spectrum AY** | ~4 500 | local `archiwum/ay/` | `!ay` / `!zx` |
-| 🎹 | **Atari ST YM** | ~7 200 | local `archiwum/ym/` | `!ym` / `!atarist` |
-| 🎵 | **Tiny Music** | ~418 | local `archiwum/tiny/` | `!tiny` |
-| 🔴 | **SNES SPC** | ~60 000 tracks, 2 612 games | snesmusic.org | `!snes` / `!spc` |
-
-Switch between them with `!flip`, check all counts with `!status`.
-
-### 🎮 Playback & Control
-
+- 🎵 **Seven collections** — switch between ASMA (Atari SAP, 6400+), HVSC (C64 SID, 60 000+), AY (ZX Spectrum, 43 000+), YM (Atari ST, 23 000+), ModArchive (Amiga/PC tracker modules, 120 000+), SNES SPC (RSN), and Tiny Music modules
 - 🔀 **Shuffle loop** — never hear the same track twice in a row
 - 🎼 **Rich metadata** — track name, composer, copyright from headers
-- ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks, play with `!favplay`
-- ⛔ **Blacklist** — ban tracks you never want to hear again with `!blk`
-|- 🔊 **Per‑collection volume normalization** — SID at 120%, SAP/AY/YM/Tiny at 100%
-- ⏭️ **Skip**, **Stop**, **Jump**, **Queue**, **History**, **Now Playing**, **Search**
-- 🔄 **Auto-advance** — moves to next track when current ends
-- 🔁 **Loop mode** — toggle with `!loop`
-- 💾 **Queue persistence** — survives restarts
-- 🔍 **SNES search** — `!snes search <game name or composer>` finds games by title or artist
+- ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks
+- ⏭️ **Skip**, **Stop**, **Now Playing**, **Stats**, **Search**
+- 🔄 **Auto-advance** — moves to next track when current ends, with GME-aware monitoring
+- 💾 **Queue persistence** — saves/restores queue across restarts
 - 📻 **Auto-start** — starts playing when someone joins a configured voice channel
 - 🌙 **Auto-stop** — disconnects after channel is empty for a timeout
 - 🏥 **Watchdog** — auto-restarts players and PulseAudio sink if they crash
 - ⚙️ **Configurable** via `config.yaml`
+- 📀 **Local archives** — all collections served from disk, no remote crawling at runtime
 
 ## Commands
 
-### Playback
-
 | Command | Description |
 |---------|-------------|
-| `!play` / `!radio` / `!start` | Start shuffled radio from current collection |
+| `!play` / `!radio` | Start shuffled radio from current collection |
 | `!play <query>` | Search and play first matching track |
 | `!play <number>` | Play a track from last search results |
 | `!stop` | Stop playback and disconnect |
 | `!skip` / `!next` | Skip to next track |
-| `!jump <n>` | Jump to the n‑th track in the queue |
-| `!np` | Show current track info (with elapsed / total duration) |
-| `!queue` / `!q` | Show the next 10 tracks in the queue |
-| `!history` | Show the last 10 played tracks |
-| `!clear` | Clear the queue and disconnect |
-| `!volume` | Show current volume |
-| `!volume <0-200>` | Set playback volume |
-| `!loop` / `!repeat` | Toggle playlist loop mode |
-| `!sleep <minutes>` | Auto‑stop after N minutes (max 360) |
-| `!ocko` | Random ASCII owl |
-
-### Collections
-
-| Command | Switches to |
-|---------|-------------|
-| `!asma` | **Atari SAP** (ASMA) |
-| `!hvsc` / `!c64` / `!sid` | **Commodore 64 SID** (HVSC) |
-| `!mod` / `!modarchive` / `!tracker` | **Tracker modules** (ModArchive) |
-| `!ay` / `!zx` | **ZX Spectrum AY** |
-| `!ym` / `!atarist` | **Atari ST YM** (YM2149) |
-| `!tiny` | **Tiny Music** (curated demoscene modules) |
-| `!snes` / `!spc` / `!nintendo` | **SNES SPC** (Super Nintendo) |
-| `!snes search <term>` | Search SNES games by name or composer |
-|| `!flip` / `!switch` / `!toggle` | Cycle: HVSC → ASMA → ModArchive → AY → YM → Tiny → SNES → HVSC (shows sequence) |
-
-### Info & Management
-
-| Command | Description |
-|---------|-------------|
-|| `!status` / `!mode` / `!collection` / `!all` | Show **all seven collections** with track counts + current mode |
+| `!np` | Show current track info |
+| `!stats` | Show radio stats |
 | `!search <query>` | Search tracks by name, directory, or author |
-| `!refresh` | Re‑crawl archive and rebuild playlist |
-| `!reindex` | Re‑fetch metadata for search index |
-| `!favorites` / `!favs` / `!playlist` | Show your reaction‑based favorites |
-| `!favplay` / `!fp` | Play all (or a specific) favorited tracks |
-| `!blk` | Blacklist the current playing track (toggle) |
-| `!blk <number>` | Blacklist a track by queue number |
-| `!blks` / `!blklist` | Show your blacklisted tracks |
-| `!blkrm <number>` | Remove a track from blacklist |
-| `!export` | Dump the full playlist as a code block |
-| `!stats` | Show radio statistics |
+| `!flip` / `!switch` / `!toggle` / `!przelacz` | Rotate through all available collections |
+| `!status` / `!mode` / `!collection` | Show current collection and queue info |
+| `!hvsc` / `!c64` / `!sid` | Switch to **Commodore 64 SID** collection |
+| `!asma` | Switch to **Atari SAP** collection |
+| `!ay` / `!spectrum` | Switch to **ZX Spectrum AY** collection |
+| `!ym` / `!st` | Switch to **Atari ST YM** collection |
+| `!mod` / `!modarchive` | Switch to **ModArchive tracker modules** collection |
+| `!snes` / `!spc` | Switch to **SNES SPC** collection |
+| `!tiny` | Switch to **Tiny Music modules** collection |
+| `!favorites` / `!favs` / `!playlista` | Show your reaction-based favorites playlist |
+| `!play subsong <number>` | Play a specific subsong from the current track (SID/SAP only) |
 
 ### Favorites System
 
-React with **any emoji** to a **Now Playing embed** (both the auto‑sent one and the one from `!np`) to save the track to your favorites. React again to remove it (toggle). Use `!favplay` to play all favorited tracks shuffled, or `!favplay N` to play a specific one. Data persists in `favorites.json`.
+React with **any emoji** to a Now Playing embed to save the track to your favorites. React again to remove it (toggle). Data persists in `favorites.json`.
 
-**Tip:** The auto‑play embed that appears when a track starts is already tracked — just react to it. If you missed it, type `!np` and react to that embed instead.
+## Collections
 
-### Blacklist System
+| Collection | Format | Tracks | Source | 
+|------------|--------|--------|--------|
+| **ASMA** | `.sap` | 6 335 | Local `archiwum/asma/` |
+| **HVSC** | `.sid` | 60 811 | Local `archiwum/hvsc/C64Music/` |
+| **AY** | `.ay` | 43 480 | Local `archiwum/ay/` |
+| **YM** | `.ym` | 23 000+ | Local `archiwum/ym/` |
+| **ModArchive** | `.mod`, `.xm`, `.s3m`, `.it` | 120 000+ | Local `archiwum/modarchive_textfiles/` |
+| **SNES SPC** | `.spc` | 40 000+ | Local `archiwum/snes_spc/` (RSN mirror) |
+| **Tiny Music** | `.mod`, `.xm`, `.s3m`, `.it` | varies | Local `archiwum/tiny/` |
 
-Is a track so bad it makes your ears bleed? Type **`!blk`** while it's playing to banish it to the shadow realm. It's a toggle — `!blk` again to un‑blacklist.
-
-- `!blk` — blacklist/un‑blacklist the currently playing track (toggle)
-- `!blk <number>` — blacklist a track by its position in the queue
-- `!blks` — list all your blacklisted tracks
-- `!blkrm <number>` — remove a track from the list by number
-
-Blacklisted tracks are **automatically filtered out** when you start `!play` or `!favplay` (shuffle‑all mode). If you blacklist a track that's currently playing, the bot skips it immediately. Data persists in `blacklist.json`, separate per user.
-
-### Collection Switching
-
-When you switch collections with `!flip`, `!asma`, `!hvsc` or any collection command **while in a voice channel**, playback restarts automatically with the new collection. No manual `!play` needed.
+All archives are served from local disk — no external HTTP calls during playback.
 
 ## Quick Start
 
@@ -127,103 +76,73 @@ When you switch collections with `!flip`, `!asma`, `!hvsc` or any collection com
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse sidplayfp libopenmpt-dev unrar stymulator p7zip-full
+sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse gstreamer1.0-plugins-good gstreamer1.0-plugins-bad sidplayfp
 
 git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
 cd robbo-obibot-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp config.yaml config.yaml  # edit to taste
-cp .env.example .env        # add DISCORD_BOT_TOKEN
+```
+
+### Fedora
+
+```bash
+sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpeg pipewire-utils gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld sidplayfp
+
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ### Arch Linux
 
 ```bash
-sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp libopenmpt unrar
-# Same clone + venv steps as above
+sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp
+
+git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
+cd robbo-obibot-ulimate-chiptune-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Windows (WSL 2)
+
+1. Install [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu
+2. Inside WSL, follow the Ubuntu guide above
+3. **PulseAudio bridge** (optional, for sound):
+   ```bash
+   # Inside WSL
+   sudo apt install pipewire-pulse
+   # Windows may need additional audio bridge — see WSL audio docs
+   ```
+
+### macOS
+
+Not natively supported (Audacious and PipeWire are Linux-only). Run in a Linux VM or Docker:
+
+```bash
+docker run -it --rm ubuntu:22.04 bash
+# then follow Ubuntu guide
 ```
 
 ## Running
 
-### Manual
-
 ```bash
 cd robbo-obibot-ulimate-chiptune-bot
 source venv/bin/activate
+
+# Set your bot token
 export DISCORD_BOT_TOKEN="your-token-here"
+
+# Run the bot
 ./venv/bin/python3 robbo-obibok.py
 ```
 
-### Systemd (recommended)
-
-```bash
-# Copy service file
-sudo cp robbo-obibok.service /etc/systemd/system/
-
-# Make sure .env exists with DISCORD_BOT_TOKEN
-echo 'DISCORD_BOT_TOKEN=your-token-here' > .env
-
-# Enable and start
-sudo systemctl daemon-reload
-sudo systemctl enable --now robbo-obibok.service
-
-# Check status
-sudo systemctl status robbo-obibok.service
-
-# View logs
-journalctl -u robbo-obibok.service -f
-# Or tail the rotating log file (max 5MB × 3 backups)
-tail -f bot_output.log
-```
-
-The bot restarts automatically on failure (`Restart=on-failure`) and on server reboot (`WantedBy=multi-user.target`).
-
-### Building the SNES index
-
-The SNES SPC collection (2 612 games, ~60 000 tracks) requires a one-time index build:
-
-```bash
-./venv/bin/python3 build_snes_index.py
-```
-
-This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between requests). The resulting `snes_cache.json` is ~650 KB.
-
-## Audio Requirements
-
-- **PipeWire** or **PulseAudio** running under the same user
-- Audacious **must** be installed with all plugin bundles (`audacious-plugins`)
-- The bot creates a virtual sink called `asma_bot` to route audio to Discord
-- **C64 SID:** `sid.so` input plugin (via `libsidplayfp`)
-- **Tracker modules:** `openmpt.so` input plugin (via `libopenmpt`)
-- **SPC/NSF/GBS:** `console.so` input plugin (via `libgme` — Game Music Emu)
-- **ZX Spectrum AY:** `console.so` input plugin (via `libgme`)
-- **SNES SPC:** `console.so` input plugin (via `libgme`)
-- **Atari ST YM:** `ym2wav` from `stymulator` package (ST-Sound library) — Audacious has no YM decoder, so YM files are decoded to WAV via `7z` (LHa extraction) + `ym2wav`
-
-## Troubleshooting
-
-| Symptom | Likely Fix |
-|---------|-----------|
-| `RuntimeError: PyNaCl library needed` | `pip install pynacl` |
-| Bot doesn't respond to commands | Enable **Message Content Intent** in Discord Developer Portal |
-| Bot joins VC but no sound (titles show) | `XDG_RUNTIME_DIR` missing under systemd — add `Environment=XDG_RUNTIME_DIR=/run/user/1000` to service file |
-| Audacious fails to play (pa_context_connect) | Check `XDG_RUNTIME_DIR` is set; restart the service |
-| SNES download fails | `unrar` must be installed (`sudo apt install unrar`) |
-| SID doesn't play / no SID plugin | `ls /usr/lib/*/audacious/Input/sid.so` — install `audacious-plugins` with sidplayfp |
-| MOD doesn't play / no openmpt plugin | `ls /usr/lib/*/audacious/Input/openmpt.so` — install `libopenmpt` |
-| SPC doesn't play / no console plugin | `ls /usr/lib/*/audacious/Input/console.so` — install `libgme` (Game Music Emu) |
-| Both Atari and C64 play at once | Update to latest code — `stop_all_players()` fix prevents audio bleed |
-| Crawl seems stuck | Check `config.yaml` → `crawl_timeout` and `cache_ttl` |
-| `!play` says "Join a voice channel" | You must be on a voice channel when issuing the command |
-| Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
-| HVSC index download fails | Check `hvsc.songlengths_url` in config — HVSC may be temporarily down |
-| SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
-| SAP plays but no "Now Playing" embed | Bot was still starting up — use `!np` to see the current track |
-| Duplicate bot responses | PID lock prevents this — if it happens, `sudo systemctl restart robbo-obibok.service` |
-| YM tracks play silence | Install `stymulator` (`sudo apt install stymulator`) and `p7zip-full` for LHa extraction |
-| YM→WAV conversion fails (exit=-11) | Some YM files crash `ym2wav` — bot skips to next track automatically |
+> **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`
 
 ## Invite the Bot
 
@@ -233,54 +152,126 @@ This scrapes snesmusic.org (takes ~15 minutes, polite 0.3s delay between request
 4. Permissions: `Send Messages`, `Connect`, `Speak`, `Use Voice Activity`
 5. Use the generated URL to invite the bot to your server
 
-## File Structure
+## Systemd Service (Linux)
 
+Run as a background service:
+
+```bash
+# Copy service file
+cp robbo-obibot.service ~/.config/systemd/user/
+mkdir -p ~/.config/systemd/user
+
+# Store token securely
+echo "YOUR_TOKEN_HERE" > ~/.robbo-token
+chmod 600 ~/.robbo-token
+
+# Enable and start
+systemctl --user daemon-reload
+systemctl --user enable robbo-obibot
+systemctl --user start robbo-obibot
+
+# Check logs
+journalctl --user -u robbo-obibot -f
 ```
-robbo-obibot-ulimate-chiptune-bot/
-├── robbo-obibok.py              # Main bot code (3500+ lines)
-├── config.yaml                  # Configuration
-├── requirements.txt             # Python dependencies
-├── robbo-obibok.service         # Systemd unit (auto-start on boot)
-├── run_bot.sh                   # Quick-start wrapper (loads .env)
-├── build_snes_index.py          # SNESmusic.org cache builder
-├── build_modarchive_index.py    # ModArchive index builder
-├── build_ay_index.py            # AY archive index builder
-├── build_tiny_index.py          # Tiny Music index builder
-├── build_ym_index.py            # YM archive index builder
-├── asma_cache.json              # ASMA track list cache
-├── ay_cache.json                # AY track list cache
-├── tiny_cache.json              # Tiny Music track list cache
-├── hvsc_cache.json              # HVSC (C64 SID) track list cache
-├── modarchive_cache.json        # ModArchive cache (~22 MB, 175k modules)
-├── snes_cache.json              # SNESmusic.org game list (2 612 games)
-├── favorites.json               # Reaction-based favorites
-├── blacklist.json                # Per-user blacklisted tracks
-├── metadata_cache.json          # Search metadata index
-├── queues/                      # Persisted queues per guild
-├── archiwum/ay/                 # Local AY files
-├── archiwum/tiny/               # Local tiny music modules
-├── archiwum/spc/                # Downloaded SNES SPC files (on-demand)
-├── extras/                      # Extra utilities
-├── tests/                       # Test scripts
-└── README.md                    # This file
+
+## Building Local Indexes
+
+After cloning, build the local track indexes for ASMA and HVSC:
+
+```bash
+python build_asma_index.py   # indexes all .sap files in archiwum/asma/
+python build_hvsc_index.py   # indexes all .sid files in archiwum/hvsc/C64Music/
 ```
+
+These generate `*_cache_local.json` files for instant startup — no crawling at runtime.
+
+## Troubleshooting
+
+| Symptom | Likely Fix |
+|---------|-----------|
+| `RuntimeError: PyNaCl library needed` | `pip install pynacl` |
+| Bot doesn't respond to commands | Enable **Message Content Intent** in Discord Developer Portal |
+| Bot joins VC but no sound (SAP) | Audacious not running — restart bot, or run `audacious --headless` manually |
+| Bot joins VC but no sound (SID/AY/YM) | `gst-inspect-1.0 siddec` — if missing, install `gstreamer1.0-plugins-bad` |
+| Two collections play at once | Update to latest code — `stop_all_players()` fix prevents audio bleed |
+| Crawl seems stuck | All collections are local now — run build scripts if cache is missing |
+| `!play` says "Join a voice channel" | You must be on a voice channel when issuing the command |
+| Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
+| SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
+| GME formats skip too early | Updated in latest code — GME formats use 600s timeout with song-loaded check |
+| Temp dir cleanup errors | Temp dir moved under `tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
 
 ## Configuration
 
-See `config.yaml`. Key sections:
+Edit `config.yaml`:
 
 ```yaml
-hvsc:
-  enabled: true           # C64 as default collection
+command_prefix: "!"
 asma:
   base_url: "https://asma.atari.org/asma/"
+  top_dirs:
+    - "Composers/"
+    - "Games/"
+    - "Groups/"
+    - "Misc/"
+    - "Unknown/"
+  crawl_timeout: 15
+  cache_ttl: 24
+hvsc:
+  base_url: "https://www.hvsc.c64.org/download/C64Music/"
+  songlengths_url: "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.txt"
+  cache_ttl: 168
+  enabled: false
+ay:
+  base_url: "https://web.archive.org/web/2023/ayarchive/..."
+  cache_ttl: 168
+ym:
+  base_url: "https://...ym archive..."
+  cache_ttl: 168
 modarchive:
-  download_url: "https://api.modarchive.org/downloads.php"
+  base_url: "https://api.modarchive.org/"
+  cache_ttl: 168
+snes:
+  base_url: "https://...rsn mirror..."
+  cache_ttl: 168
 audio:
-  sink_name: "asma_bot"   # PipeWire/PulseAudio null-sink
+  sink_name: "robbo_bot"
+  sample_rate: 48000
+  channels: 2
+  format: "s16le"
+playback:
+  loop: true
+  shuffle: true
+  crossfade: 0
 auto:
-  start_channel: "ASMA Radio"  # Voice channel that triggers auto-start
-  empty_timeout: 60            # Seconds before auto-disconnect
+  start_channel: ""
+  empty_timeout: 60
 ```
 
-Full example in the repository.
+## File Structure
+
+```
+robbo-obibot/
+├── robbo-obibok.py            # Main bot code
+├── config.yaml                # Configuration file
+├── requirements.txt           # Python dependencies
+├── README.md                  # This file
+├── .gitignore                 # Git ignore rules
+├── build_asma_index.py        # ASMA local index builder
+├── build_hvsc_index.py        # HVSC local index builder
+├── download_modarchive_bulk.py # ModArchive bulk downloader
+├── tmp/                       # Temp directory for subsong WAVs (generated)
+├── archiwum/                  # Local archives (see Collections table)
+│   ├── asma/                  # Atari SAP files
+│   ├── hvsc/                  # C64 SID files
+│   ├── ay/                    # ZX Spectrum AY files
+│   ├── ym/                    # Atari ST YM files
+│   ├── tiny/                  # Tiny Music modules
+│   ├── snes_spc/              # SNES SPC files
+│   └── modarchive_textfiles/  # ModArchive tracker modules
+├── queues/                    # Persisted queues per guild (generated)
+├── favorites.json             # Reaction-based favorites (generated)
+├── asma_cache_local.json      # ASMA local track index (generated)
+├── hvsc_cache_local.json      # HVSC local track index (generated)
+└── *.cache.json               # Other collection cache files (generated)
+```
