@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Wrapper to load .env and start the bot
+# Wrapper to start the shared Python launcher
+set -euo pipefail
+
 cd "$(dirname "$0")"
-set -a
-source .env
-set +a
-exec ./venv/bin/python3 -u robbo-obibok.py
+
+exec ./venv/bin/python3 -u robbo_obibok_launcher.py

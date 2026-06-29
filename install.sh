@@ -97,15 +97,20 @@ else
 fi
 
 if [ ! -f "config.yaml" ]; then
-    cp config.yaml config.yaml 2>/dev/null || true
-    info "config.yaml ready"
+    warn "config.yaml missing from repository checkout"
 else
     info "config.yaml exists"
 fi
 
 # ── Build local indexes ─────────────────────────────────────────
-step 6 "Building track indexes..."
-for script in build_ay_index.py build_ym_index.py build_tiny_index.py build_snes_index.py; do
+step 6 "Building local track indexes..."
+for script in \
+    build_asma_index.py \
+    build_hvsc_index.py \
+    build_ay_index.py \
+    build_ym_index.py \
+    build_tiny_index.py \
+    build_snes_index.py; do
     if [ -f "$script" ]; then
         python3 "$script" 2>/dev/null && info "$script: OK" || warn "$script: skipped (no archive)"
     fi
@@ -113,14 +118,23 @@ done
 
 # ── Setup systemd service ───────────────────────────────────────
 step 7 "Systemd service..."
-SERVICE_SRC="robbo-obibok.service"
-if [ -f "$SERVICE_SRC" ]; then
-    sudo cp "$SERVICE_SRC" /etc/systemd/system/
+SERVICE_FILES=("robbo-obibok.service" "robbo-obibok-strict.service")
+INSTALLED_SERVICE_NAMES=()
+for SERVICE_SRC in "${SERVICE_FILES[@]}"; do
+    if [ -f "$SERVICE_SRC" ]; then
+        sudo cp "$SERVICE_SRC" /etc/systemd/system/
+        INSTALLED_SERVICE_NAMES+=("$SERVICE_SRC")
+    fi
+done
+
+if [ "${#INSTALLED_SERVICE_NAMES[@]}" -gt 0 ]; then
     sudo systemctl daemon-reload
-    info "Service file installed. Enable with:"
+    info "Service files installed: ${INSTALLED_SERVICE_NAMES[*]}"
+    info "Enable one of them with:"
     echo "  sudo systemctl enable --now robbo-obibok.service"
+    echo "  sudo systemctl enable --now robbo-obibok-strict.service"
 else
-    warn "robbo-obibok.service not found, skipping"
+    warn "No service files found, skipping"
 fi
 
 echo ""
@@ -129,7 +143,9 @@ echo ""
 echo "Next steps:"
 echo "  1. Edit .env — set your DISCORD_BOT_TOKEN"
 echo "  2. Edit config.yaml — set guild_id for single-server mode"
-echo "  3. make run        # Start manually"
-echo "  4. sudo systemctl enable --now robbo-obibok.service  # Or as a daemon"
+echo "  3. make run        # Start via the shared launcher"
+echo "     make run-strict # Start via the shared launcher in strict compatibility mode"
+echo "  4. sudo systemctl enable --now robbo-obibok.service"
+echo "     sudo systemctl enable --now robbo-obibok-strict.service"
 echo ""
 echo "Join a voice channel and type !play to start!"

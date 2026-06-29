@@ -1,7 +1,7 @@
 # Robbo Obibok — Makefile
-# Targets: install | run | test | clean | build-indexes | help
+# Targets: install | run | test | test-launchers | clean | build-indexes | help
 
-.PHONY: install run test clean build-indexes help
+.PHONY: install run run-strict test test-launchers clean build-indexes help
 
 SHELL := /bin/bash
 VENV  := venv
@@ -11,14 +11,16 @@ help:
 	@echo "Robbo Obibok — Makefile"
 	@echo ""
 	@echo "  make install         # Full installation (system deps + venv + indexes)"
-	@echo "  make run             # Start the bot (requires DISCORD_BOT_TOKEN)"
+	@echo "  make run             # Start the bot (reads .env when present)"
+	@echo "  make run-strict      # Start the bot in strict compatibility mode"
 	@echo "  make test            # Run unit tests"
+	@echo "  make test-launchers  # Run launcher smoke tests"
 	@echo "  make build-indexes   # Build all local track indexes"
 	@echo "  make clean           # Remove venv, caches, temp files"
 	@echo "  make help            # This message"
 
 install: $(VENV)/bin/activate build-indexes
-	@echo "✅ Robbo Obibok ready. Edit config.yaml, set DISCORD_BOT_TOKEN, then: make run"
+	@echo "✅ Robbo Obibok ready. Set DISCORD_BOT_TOKEN in .env or the shell, then: make run"
 
 $(VENV)/bin/activate: requirements.txt
 	@echo "📦 Creating Python virtual environment..."
@@ -30,6 +32,8 @@ $(VENV)/bin/activate: requirements.txt
 
 build-indexes: $(VENV)/bin/activate
 	@echo "🏗️  Building local track indexes..."
+	@-$(PYTHON) build_asma_index.py 2>/dev/null || echo "  ⚠️  ASMA index skipped (no archive)"
+	@-$(PYTHON) build_hvsc_index.py 2>/dev/null || echo "  ⚠️  HVSC index skipped (no archive)"
 	@-$(PYTHON) build_ay_index.py 2>/dev/null || echo "  ⚠️  AY index skipped (no archive)"
 	@-$(PYTHON) build_ym_index.py 2>/dev/null || echo "  ⚠️  YM index skipped (no archive)"
 	@-$(PYTHON) build_tiny_index.py 2>/dev/null || echo "  ⚠️  Tiny index skipped (no archive)"
@@ -38,12 +42,19 @@ build-indexes: $(VENV)/bin/activate
 
 run: $(VENV)/bin/activate
 	@echo "🎵 Starting Robbo Obibok..."
-	@test -n "$(DISCORD_BOT_TOKEN)" || (echo "❌ DISCORD_BOT_TOKEN not set"; exit 1)
-	@cd $(CURDIR) && $(PYTHON) -u robbo-obibok.py
+	@cd $(CURDIR) && ./run_bot.sh
+
+run-strict: $(VENV)/bin/activate
+	@echo "🎵 Starting Robbo Obibok in strict compatibility mode..."
+	@cd $(CURDIR) && ROBBO_STRICT_COMPAT=1 ./run_bot.sh
+
+test-launchers: $(VENV)/bin/activate
+	@echo "🧪 Running launcher smoke tests..."
+	@cd $(CURDIR) && ./test_launchers.sh
 
 test: $(VENV)/bin/activate
 	@echo "🧪 Running tests..."
-	@cd $(CURDIR) && $(PYTHON) -m pytest tests/ -v --tb=short 2>/dev/null \
+	@cd $(CURDIR) && if [ -f .env ]; then set -a; source .env; set +a; fi; $(PYTHON) -m pytest tests/ -v --tb=short 2>/dev/null \
 		|| $(PYTHON) -m unittest discover -s tests/ -v
 
 clean:

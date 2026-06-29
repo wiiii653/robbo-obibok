@@ -1,0 +1,58 @@
+name: test-entrypoint-runtime
+
+on:
+  push:
+    paths:
+      - ".github/workflows/test-entrypoint-runtime.yml"
+      - "entrypoint_*.py"
+      - "robbo_obibok_runtime.py"
+      - "robbo-obibok.py"
+      - "robbo-obibok-strict.py"
+      - "robbo_obibok_cli.py"
+      - "robbo_obibok_main.py"
+      - "robbo_obibok_main_strict.py"
+      - "tests/test_entrypoint_*.py"
+      - "tests/test_robbo_obibok_runtime.py"
+      - "tests/test_runtime_context*.py"
+      - "tests/test_install_assets.py"
+  pull_request:
+    paths:
+      - ".github/workflows/test-entrypoint-runtime.yml"
+      - "entrypoint_*.py"
+      - "robbo_obibok_runtime.py"
+      - "robbo-obibok.py"
+      - "robbo-obibok-strict.py"
+      - "robbo_obibok_cli.py"
+      - "robbo_obibok_main.py"
+      - "robbo_obibok_main_strict.py"
+      - "tests/test_entrypoint_*.py"
+      - "tests/test_robbo_obibok_runtime.py"
+      - "tests/test_runtime_context*.py"
+      - "tests/test_install_assets.py"
+
+jobs:
+  entrypoint-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Create virtualenv
+        run: python -m venv venv
+      - name: Install requirements
+        run: ./venv/bin/python -m pip install -r requirements.txt
+      - name: Run entrypoint/runtime regression suite
+        run: ./venv/bin/python -m unittest -v \
+          tests.test_entrypoint_executable_assembly \
+          tests.test_entrypoint_launcher \
+          tests.test_entrypoint_module_bindings \
+          tests.test_robbo_obibok_runtime \
+          tests.test_entrypoint_launcher_loader \
+          tests.test_entrypoint_launcher_surface \
+          tests.test_entrypoint_runtime_surface \
+          tests.test_entrypoint_launcher_config \
+          tests.test_entrypoint_launcher_state \
+          tests.test_runtime_context \
+          tests.test_runtime_context_helpers \
+          tests.test_install_assets

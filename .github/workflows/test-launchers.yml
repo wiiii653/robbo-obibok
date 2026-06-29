@@ -1,0 +1,50 @@
+name: test-launchers
+
+on:
+  push:
+    paths:
+      - ".github/workflows/test-launchers.yml"
+      - "AGENTS.md"
+      - "Makefile"
+      - "README.md"
+      - "robbo_obibok_launch.py"
+      - "robbo_obibok_launcher.py"
+      - "robbo_obibok_logged_launcher.py"
+      - "run_bot.sh"
+      - "run_bot_logged.py"
+      - "test_launchers.sh"
+      - "tests/test_install_assets.py"
+      - "tests/test_robbo_obibok_launch.py"
+      - "tests/test_run_bot_logged.py"
+      - "tests/test_runner_smoke.py"
+  pull_request:
+    paths:
+      - ".github/workflows/test-launchers.yml"
+      - "AGENTS.md"
+      - "Makefile"
+      - "README.md"
+      - "robbo_obibok_launch.py"
+      - "robbo_obibok_launcher.py"
+      - "robbo_obibok_logged_launcher.py"
+      - "run_bot.sh"
+      - "run_bot_logged.py"
+      - "test_launchers.sh"
+      - "tests/test_install_assets.py"
+      - "tests/test_robbo_obibok_launch.py"
+      - "tests/test_run_bot_logged.py"
+      - "tests/test_runner_smoke.py"
+
+jobs:
+  launchers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Create virtualenv
+        run: python -m venv venv
+      - name: Install requirements
+        run: ./venv/bin/python -m pip install -r requirements.txt
+      - name: Run launcher smoke suite
+        run: ./test_launchers.sh

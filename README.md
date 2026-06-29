@@ -78,8 +78,8 @@ All archives are served from local disk — no external HTTP calls during playba
 sudo apt update
 sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse gstreamer1.0-plugins-good gstreamer1.0-plugins-bad sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
-cd robbo-obibot-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/robbo-obibok-ulimate-chiptune-bot.git
+cd robbo-obibok-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -90,8 +90,8 @@ pip install -r requirements.txt
 ```bash
 sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpeg pipewire-utils gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
-cd robbo-obibot-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/robbo-obibok-ulimate-chiptune-bot.git
+cd robbo-obibok-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -102,44 +102,47 @@ pip install -r requirements.txt
 ```bash
 sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibot-ulimate-chiptune-bot.git
-cd robbo-obibot-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/robbo-obibok-ulimate-chiptune-bot.git
+cd robbo-obibok-ulimate-chiptune-bot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Windows (WSL 2)
-
-1. Install [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu
-2. Inside WSL, follow the Ubuntu guide above
-3. **PulseAudio bridge** (optional, for sound):
-   ```bash
-   # Inside WSL
-   sudo apt install pipewire-pulse
-   # Windows may need additional audio bridge — see WSL audio docs
-   ```
-
-### macOS
-
-Not natively supported (Audacious and PipeWire are Linux-only). Run in a Linux VM or Docker:
-
-```bash
-docker run -it --rm ubuntu:22.04 bash
-# then follow Ubuntu guide
-```
-
 ## Running
 
 ```bash
-cd robbo-obibot-ulimate-chiptune-bot
+cd robbo-obibok-ulimate-chiptune-bot
 source venv/bin/activate
 
 # Set your bot token
 export DISCORD_BOT_TOKEN="your-token-here"
 
-# Run the bot
-./venv/bin/python3 robbo-obibok.py
+# Run via the shared launcher
+./run_bot.sh
+
+# Run with strict compatibility mode
+ROBBO_STRICT_COMPAT=1 ./run_bot.sh
+```
+
+Launcher test commands:
+
+```bash
+# Focused launcher smoke suite
+./test_launchers.sh
+
+# Equivalent Make target
+make test-launchers
+```
+
+Logged launcher path:
+
+```bash
+# Canonical logged launcher module
+./venv/bin/python3 robbo_obibok_logged_launcher.py
+
+# Compatibility entrypoint kept for existing scripts
+./venv/bin/python3 run_bot_logged.py
 ```
 
 > **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`
@@ -157,9 +160,11 @@ export DISCORD_BOT_TOKEN="your-token-here"
 Run as a background service:
 
 ```bash
-# Copy service file
-cp robbo-obibot.service ~/.config/systemd/user/
+# Copy a service file
 mkdir -p ~/.config/systemd/user
+cp robbo-obibok.service ~/.config/systemd/user/
+# or
+cp robbo-obibok-strict.service ~/.config/systemd/user/
 
 # Store token securely
 echo "YOUR_TOKEN_HERE" > ~/.robbo-token
@@ -167,20 +172,31 @@ chmod 600 ~/.robbo-token
 
 # Enable and start
 systemctl --user daemon-reload
-systemctl --user enable robbo-obibot
-systemctl --user start robbo-obibot
+systemctl --user enable robbo-obibok
+systemctl --user start robbo-obibok
+
+# Or use the strict service explicitly
+systemctl --user enable robbo-obibok-strict
+systemctl --user start robbo-obibok-strict
 
 # Check logs
-journalctl --user -u robbo-obibot -f
+journalctl --user -u robbo-obibok -f
 ```
 
 ## Building Local Indexes
 
-After cloning, build the local track indexes for ASMA and HVSC:
+After cloning, build the local track indexes for the local archive collections:
 
 ```bash
+make build-indexes
+
+# or run the builders directly
 python build_asma_index.py   # indexes all .sap files in archiwum/asma/
 python build_hvsc_index.py   # indexes all .sid files in archiwum/hvsc/C64Music/
+python build_ay_index.py     # indexes all .ay files in archiwum/ay/
+python build_ym_index.py     # indexes all .ym files in archiwum/ym/
+python build_tiny_index.py   # indexes all tiny-module files in archiwum/tiny/
+python build_snes_index.py   # indexes all .spc files in archiwum/snes_spc/
 ```
 
 These generate `*_cache_local.json` files for instant startup — no crawling at runtime.
@@ -251,14 +267,22 @@ auto:
 ## File Structure
 
 ```
-robbo-obibot/
-├── robbo-obibok.py            # Main bot code
+robbo-obibok/
+├── robbo-obibok.py            # Default launcher facade
+├── robbo-obibok-strict.py     # Strict launcher facade
+├── robbo_obibok_runtime.py    # Importable runtime facade
+├── robbo_obibok_launcher.py   # Shared process launcher
+├── robbo_obibok_logged_launcher.py # Logging-oriented launcher
 ├── config.yaml                # Configuration file
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # This file
 ├── .gitignore                 # Git ignore rules
 ├── build_asma_index.py        # ASMA local index builder
 ├── build_hvsc_index.py        # HVSC local index builder
+├── build_ay_index.py          # AY local index builder
+├── build_ym_index.py          # YM local index builder
+├── build_tiny_index.py        # Tiny local index builder
+├── build_snes_index.py        # SNES local index builder
 ├── download_modarchive_bulk.py # ModArchive bulk downloader
 ├── tmp/                       # Temp directory for subsong WAVs (generated)
 ├── archiwum/                  # Local archives (see Collections table)
