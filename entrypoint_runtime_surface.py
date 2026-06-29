@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
     from bot_runtime import BotRuntime
     from entrypoint_runtime import AppAssembly
-    from entrypoint_state import EntrypointState
     from runtime_registration import RuntimeRegistration
     from runtime_composition import ComposedRuntime
 

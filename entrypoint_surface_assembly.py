@@ -17,8 +17,8 @@ from entrypoint_runtime_surface import build_stable_runtime_surface_bindings
 from entrypoint_surface_runtime import EntrypointModuleSurface
 
 if TYPE_CHECKING:
+    from entrypoint_bridge import EntrypointCompatStateProtocol
     from entrypoint_launcher_runtime import LazyEntrypointLauncher
-    from entrypoint_state import EntrypointState
 
 
 class LazyCallableExport:
@@ -42,7 +42,7 @@ class EntrypointSurfaceLoaderProtocol(Protocol):
 
 def build_entrypoint_compat_registry_attrs(
     *,
-    state: EntrypointState,
+    state: EntrypointCompatStateProtocol,
     guild_id_getter: Callable[[], int | None],
 ) -> dict[str, Callable[[], object]]:
     registry_attrs = {}

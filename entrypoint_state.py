@@ -76,6 +76,19 @@ class EntrypointArchiveMetadataState:
 
 @dataclass(slots=True)
 class EntrypointState:
+    """Central mutable state hub for the entrypoint module.
+
+    All consumers access this state through Protocol-based interfaces
+    (EntrypointComponentStateProtocol, EntrypointCompatStateProtocol,
+    EntrypointRuntimeInitializerStateProtocol, etc.) — never through
+    the concrete class. Writes flow through three bulk mutation methods:
+    apply_bootstrap_registry(), apply_runtime_components(), and
+    cache_initialized_app(). Individual @property setters exist for
+    test convenience only.
+
+    Dedicated domain methods (runtime_metadata_index(), component_bundle(),
+    etc.) replace direct field reads, reducing coupling to internal layout.
+    """
     audio_runtime: AudioProcessRuntime | None = None
     subsongs_runtime: SubsongRuntime | None = None
     _bootstrap_registry_state: EntrypointBootstrapRegistryState = field(default_factory=EntrypointBootstrapRegistryState)
@@ -331,37 +344,11 @@ class EntrypointState:
     def shutdown_flag(self, value: asyncio.Event | None) -> None:
         self._initialized_runtime_state.shutdown_flag = value
 
-    @property
-    def _fallback_metadata_index(self) -> dict[str, dict[str, str]]:
-        return self._archive_metadata_state.fallback_metadata_index
-
-    @_fallback_metadata_index.setter
-    def _fallback_metadata_index(self, value: dict[str, dict[str, str]]) -> None:
-        self._archive_metadata_state.fallback_metadata_index = value
-
-    @property
-    def _fallback_modarchive_name_map(self) -> dict[str, str]:
-        return self._archive_metadata_state.fallback_modarchive_name_map
-
-    @_fallback_modarchive_name_map.setter
-    def _fallback_modarchive_name_map(self, value: dict[str, str]) -> None:
-        self._archive_metadata_state.fallback_modarchive_name_map = value
-
-    @property
-    def _fallback_sid_durations(self) -> dict[str, int]:
-        return self._archive_metadata_state.fallback_sid_durations
-
-    @_fallback_sid_durations.setter
-    def _fallback_sid_durations(self, value: dict[str, int]) -> None:
-        self._archive_metadata_state.fallback_sid_durations = value
-
-    @property
-    def _fallback_snes_metadata(self) -> dict[str, dict[str, object]]:
-        return self._archive_metadata_state.fallback_snes_metadata
-
-    @_fallback_snes_metadata.setter
-    def _fallback_snes_metadata(self, value: dict[str, dict[str, object]]) -> None:
-        self._archive_metadata_state.fallback_snes_metadata = value
+    # ── Bulk mutation methods ────────────────────────────────────
+    # All production writes flow through these methods. Individual
+    # property setters exist for test convenience but are unused in
+    # production — component wiring goes through apply_* methods
+    # and consumers use Protocol-based interfaces exclusively.
 
     def apply_bootstrap_registry(
         self,
@@ -432,7 +419,7 @@ class EntrypointState:
     def runtime_metadata_index(self) -> dict[str, dict[str, str]]:
         if self.archives is not None:
             return self.archives.metadata_index
-        return self._fallback_metadata_index
+        return self._archive_metadata_state.fallback_metadata_index
 
     def metadata_entry(self, url: str) -> dict[str, str] | None:
         return self.runtime_metadata_index().get(url)
@@ -442,7 +429,7 @@ class EntrypointState:
             return self.archives.modarchive_name_map_view
         if self.archive_views is not None:
             return self.archive_views.modarchive_name_map
-        return self._fallback_modarchive_name_map
+        return self._archive_metadata_state.fallback_modarchive_name_map
 
     def modarchive_track_name(self, url: str) -> str | None:
         return self.runtime_modarchive_name_map().get(url)
@@ -452,14 +439,14 @@ class EntrypointState:
             return self.archives.snes_metadata_view
         if self.archive_views is not None:
             return self.archive_views.snes_metadata
-        return self._fallback_snes_metadata
+        return self._archive_metadata_state.fallback_snes_metadata
 
     def runtime_sid_durations(self) -> Mapping[str, int]:
         if self.archives is not None:
             return self.archives.sid_durations_view
         if self.archive_views is not None:
             return self.archive_views.sid_durations
-        return self._fallback_sid_durations
+        return self._archive_metadata_state.fallback_sid_durations
 
     def has_snes_metadata(self) -> bool:
         return bool(self.runtime_snes_metadata())

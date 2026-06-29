@@ -32,6 +32,46 @@ class EntrypointComponentStateProtocol(Protocol):
     def component_bundle(self) -> "EntrypointComponents": ...
 
 
+class EntrypointGlueStateProtocol(Protocol):
+    """Minimal state interface for EntrypointGlue.
+
+    EntrypointGlue stores the state reference but never reads from it
+    directly — all access goes through EntrypointResources and
+    EntrypointComponentAccess.
+    """
+    pass
+
+
+class EntrypointSupportStateProtocol(Protocol):
+    """State interface for EntrypointSupport storage.
+
+    Covers fields accessed directly from support.state across
+    all callers: EntrypointResources reads audio_runtime and
+    subsongs_runtime; app wiring reads archive_runtime and
+    service_facade. All other consumers receive support.state
+    through their own protocol-based constructors.
+    """
+    audio_runtime: object | None
+    subsongs_runtime: object | None
+    archive_runtime: object | None
+    service_facade: object | None
+
+
+class EntrypointCompatStateProtocol(Protocol):
+    """State interface for legacy compat access patterns.
+
+    Attributes accessed dynamically via getattr in
+    build_entrypoint_compat_registry_attrs.
+    """
+    stream_runtime: object | None
+    now_playing_deps: object | None
+    legacy: object | None
+    app: object | None
+    runtime_registration: object | None
+    lock_file: str | None
+    shutdown_flag: object | None
+
+
 @dataclass(slots=True)
 class EntrypointComponents:
     app_services: AppServicesProtocol

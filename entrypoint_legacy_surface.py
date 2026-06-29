@@ -11,7 +11,7 @@ from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 if TYPE_CHECKING:
     from app_state import PlaylistState
     from entrypoint_app import EntrypointApp
-    from entrypoint_state import EntrypointState
+    from entrypoint_bridge import EntrypointCompatStateProtocol
 
 
 @dataclass(slots=True)
@@ -93,7 +93,7 @@ class EntrypointExportBindings:
 
 @dataclass(slots=True)
 class EntrypointCompatEagerBindings:
-    state: EntrypointState
+    state: EntrypointCompatStateProtocol
     guild_id_getter: Callable[[], int | None]
 
     def as_registry_attrs(self) -> dict[str, Callable[[], object]]:
@@ -124,7 +124,7 @@ def build_entrypoint_exports(app: EntrypointApp) -> EntrypointExportRegistry:
 
 @dataclass(slots=True)
 class EntrypointCompat:
-    state: EntrypointState
+    state: EntrypointCompatStateProtocol
     ensure_components: Callable[[], None]
     guild_id_getter: Callable[[], int | None]
 

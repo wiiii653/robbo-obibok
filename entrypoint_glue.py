@@ -12,13 +12,13 @@ from playback_helpers import play_via_audacious, queue_position, send_now_playin
 
 if TYPE_CHECKING:
     from discord import Colour
+    from entrypoint_bridge import EntrypointGlueStateProtocol
     from entrypoint_resources import EntrypointResources
-    from entrypoint_state import EntrypointState
 
 
 @dataclass(slots=True)
 class EntrypointGlue:
-    state: EntrypointState
+    state: EntrypointGlueStateProtocol
     resources: EntrypointResources
     components: EntrypointComponentAccess
 
