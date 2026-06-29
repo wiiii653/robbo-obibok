@@ -66,8 +66,8 @@ async def handle_playing_state(
     last_output_len: int,
     drop_confirmed_since: float | None,
 ) -> tuple[bool, str | None, int, int, float | None]:
-    if state.current_sap_path != cached_sap_path:
-        cached_sap_path = state.current_sap_path
+    if state.current_track_path != cached_sap_path:
+        cached_sap_path = state.current_track_path
         cached_song_length = -1
         last_output_len = -1
         drop_confirmed_since = None
@@ -75,7 +75,7 @@ async def handle_playing_state(
     if cached_song_length < 0:
         cached_song_length = await deps.run_sync(deps.get_song_length)
     try:
-        is_gme_format = deps.is_gme_format_path(state.current_sap_path)
+        is_gme_format = deps.is_gme_format_path(state.current_track_path)
         output_drop_confirmed, drop_confirmed_since = deps.should_confirm_output_drop(
             last_output_len, secs, drop_confirmed_since, now, grace_seconds, is_gme_format=is_gme_format
         )

@@ -102,7 +102,7 @@ async def monitor_playback(ctx: object, vc: object, guild_id: int, deps: Monitor
             empty_since = None
 
         playing = await deps.run_sync(deps.is_playing)
-        if playing and state.current_sap_path:
+        if playing and state.current_track_path:
             not_playing_since = None
             handled, cached_sap_path, cached_song_length, last_output_len, drop_confirmed_since = (
                 await handle_playing_state(

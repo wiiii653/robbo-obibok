@@ -113,15 +113,15 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         track = await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)
         position = state.current_queue_position()
         meta = {}
-        if state.current_sap_path:
-            if state.current_sap_path.lower().endswith(".sid"):
+        if state.current_track_path:
+            if state.current_track_path.lower().endswith(".sid"):
                 try:
-                    with open(state.current_sap_path, "rb") as handle:
+                    with open(state.current_track_path, "rb") as handle:
                         meta = deps.parse_sid_header(handle.read(0x76))
                 except Exception:
                     meta = {}
             else:
-                meta = deps.parse_sap_header(state.current_sap_path)
+                meta = deps.parse_sap_header(state.current_track_path)
         name = meta.get("name", meta.get("NAME", track))
         author = meta.get("author", "") or meta.get("AUTHOR", "")
         copyright_info = meta.get("copyright", "")

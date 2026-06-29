@@ -29,7 +29,7 @@ class PlaylistState:
         self.guild_id: int | None = None
         self.ctx = None
         self.vc = None
-        self.current_sap_path: str | None = None
+        self.current_track_path: str | None = None
         self.crawling: bool = False
         self.pre_downloaded: str | None = None
         self.pre_downloaded_url: str | None = None
@@ -93,7 +93,7 @@ class PlaylistState:
         self.ctx = ctx
 
     def set_current_path(self, path: str | None) -> None:
-        self.current_sap_path = path
+        self.current_track_path = path
 
     def set_monitor_task(self, task) -> None:
         self.monitor_task = task
