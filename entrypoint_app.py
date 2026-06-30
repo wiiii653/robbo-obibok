@@ -24,7 +24,7 @@ from entrypoint_callback_groups import (
 )
 from entrypoint_components import EntrypointComponentDeps, apply_entrypoint_components, build_entrypoint_components
 from entrypoint_glue import EntrypointGlue
-from entrypoint_runtime_init import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
+from entrypoint_runtime import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
 from entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
 from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 from discord.ext import commands
