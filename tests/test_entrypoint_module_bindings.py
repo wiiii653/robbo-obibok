@@ -173,9 +173,9 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
             ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES,
             ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
         )
-        self.assertTrue(
+        self.assertFalse(
             ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES
-            <= ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES
+            & ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES
         )
         self.assertTrue(
             ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES
@@ -491,9 +491,6 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
             {
                 "GUILD_ID",
                 "LOCK_FILE",
-                "_FLIP_ORDER",
-                "_FLIP_SEQ",
-                "_STATE",
                 "_APP",
                 "_LEGACY",
                 "_LAUNCHER",
@@ -503,9 +500,7 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
                 "_RUNTIME_REGISTRATION",
                 "_STREAM_RUNTIME",
                 "_SURFACE",
-                "_app_cfg",
                 "_after_stream_end",
-                "_archive_runtime_config",
                 "_auto_play_after_switch",
                 "_cleanup_orphan_players",
                 "_cleanup_subsong_temp_wavs",
@@ -523,8 +518,7 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
     def test_compat_contract_audit_is_partitioned_and_total(self):
         self.assertEqual(
             ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES,
-            ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES
-            | ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES
+            ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES
             | ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES,
         )
         self.assertEqual(
@@ -534,8 +528,7 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
         )
         self.assertEqual(
             ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES - ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
-            ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES
-            | ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES,
+            ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES,
         )
         self.assertFalse(
             ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES

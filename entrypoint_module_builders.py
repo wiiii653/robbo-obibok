@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from app_state import PlaylistState
+from bot_dependencies import CommandDecoratorFactory
 from entrypoint_callback_groups import (
     BootstrapStaticCallbacks,
     CollectionStaticCallbacks,
@@ -24,8 +25,13 @@ def build_module_component_deps(
     *,
     support: EntrypointSupport,
     clear_predownload_state: Callable[..., None],
-    filter_blacklisted_track_urls: Callable[[list[str], int | str], list[str]],
+    filter_blacklisted_track_urls: Callable[[list[str], dict[object, object], int | str], list[str]],
 ) -> Callable[[], EntrypointComponentDeps]:
+    def cleanup_subsong_temp_wavs(state: PlaylistState) -> None:
+        service_facade = support.state.service_facade
+        assert service_facade is not None
+        service_facade.cleanup_subsong_temp_wavs(state)
+
     def component_deps() -> EntrypointComponentDeps:
         return EntrypointComponentDeps(
             boot_builder=support.boot,
@@ -44,7 +50,7 @@ def build_module_component_deps(
             stop_all_players_impl=runtime_stop_all_players,
             audacious_play=support.resources.audacious_play,
             audacious_stop=support.resources.audacious_stop,
-            cleanup_subsong_temp_wavs_impl=lambda state: support.state.service_facade.cleanup_subsong_temp_wavs(state),
+            cleanup_subsong_temp_wavs_impl=cleanup_subsong_temp_wavs,
             build_legacy_bindings=build_legacy_bindings,
         )
 
@@ -61,11 +67,17 @@ def build_module_raw_callbacks(
     prepare_playback_queue: Callable[..., dict[str, object]],
     save_last_collection: Callable[[str, str], None],
     set_volume_for_collection: Callable[[str], None],
-    filter_blacklisted_track_entries: Callable[[list[dict], dict, int], list[dict]],
-    load_user_tracks: Callable[[dict, int | str], list[dict]],
-    remove_user_track: Callable[[dict, int | str, str], tuple[dict, bool]],
-    toggle_user_track_entry: Callable[[dict, int | str, dict], tuple[dict, bool]],
-    mod_only: Callable[[], object],
+    filter_blacklisted_track_entries: Callable[
+        [list[dict[str, object]], dict[str, object], int],
+        list[dict[str, object]],
+    ],
+    load_user_tracks: Callable[[dict[str, object], int | str], list[dict[str, object]]],
+    remove_user_track: Callable[[dict[str, object], int | str, str], tuple[dict[str, object], bool]],
+    toggle_user_track_entry: Callable[
+        [dict[str, object], int | str, dict[str, object]],
+        tuple[dict[str, object], bool],
+    ],
+    mod_only: CommandDecoratorFactory,
 ) -> EntrypointRawCallbacks:
     return EntrypointRawCallbacks(
         playback=PlaybackStaticCallbacks(

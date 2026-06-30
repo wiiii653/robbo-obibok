@@ -79,6 +79,7 @@ class MonitorAudioSource(discord.AudioSource):
                 self._restart_count += 1
                 time.sleep(0.1)
                 self._restart_ffmpeg()
+            assert self.process.stdout is not None
             chunk = self.process.stdout.read(4096)
             if not chunk:
                 return b""

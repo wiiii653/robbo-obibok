@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
+
+import discord
 
 from archive_catalog import CollectionInfo
 from app_services import AppServicesProtocol
@@ -21,10 +23,13 @@ from bot_runtime import (
     RuntimeConfig,
     RuntimeState,
 )
-from collection_service import CollectionService
+from collection_service import CollectionArchiveProtocol, CollectionService
 from playback_service import PlaybackService
 from runtime_protocols import CollectionRuntimeProtocol, ServiceFacadeProtocol, StreamRuntimeProtocol
-from bot_dependencies import CommandDecoratorFactory
+from bot_dependencies import CommandDecoratorFactory, SearchTracksProtocol
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
 
 
 @dataclass(slots=True)
@@ -44,7 +49,7 @@ class PlaybackSessionCompositionCallbacks:
     filter_blacklisted: Callable[[list[str], int | str], list[str]]
     get_collection_info: Callable[[str], CollectionInfo]
     load_asma_local_cache: Callable[[], list[str] | None]
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     parse_sap_header: Callable[[str], dict[str, str]]
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]]
     prepare_playback_queue: Callable[..., dict[str, object]]
@@ -64,13 +69,13 @@ class PlaybackCommandCompositionCallbacks:
     is_playing: Callable[[], bool]
     load_snes_cache: Callable[[], list[str] | None]
     load_tracks_for_mode: Callable[[str], Awaitable[list[str] | None]]
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     parse_sap_header: Callable[[str], dict[str, str]]
     parse_sid_header: Callable[[bytes], dict[str, str]]
     play_current_track: Callable[[object], Awaitable[bool]]
     prepare_playback_queue: Callable[..., dict[str, object]]
     register_np_message: Callable[[int, str, str, str], None]
-    search_tracks: Callable[[str, list[str], int], list[str]]
+    search_tracks: SearchTracksProtocol
     skip_to_next: Callable[[object], Awaitable[None]]
 
 
@@ -85,7 +90,7 @@ class PlaybackHandlerCompositionCallbacks:
     download_modarchive_module: Callable[..., Awaitable[str]]
     download_sap: Callable[..., Awaitable[str]]
     download_spc_rsn: Callable[..., Awaitable[str | None]]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[ClientSession]]
     get_subsongs: Callable[[str], list[float]]
     parse_sap_header: Callable[[str], dict[str, str]]
     parse_sid_header: Callable[[bytes], dict[str, str]]
@@ -126,7 +131,7 @@ class LibraryCompositionCallbacks:
 
 @dataclass(slots=True)
 class CollectionCompositionCallbacks:
-    archives: CollectionRuntimeProtocol
+    archives: CollectionArchiveProtocol
     auto_play_after_switch: Callable[[object, PlaylistState], Awaitable[None]]
     build_collection_state_update: Callable[[str, list[str]], dict[str, object]]
     flip_sequence_formatter: Callable[[list[str], str], str]
@@ -160,9 +165,7 @@ class AppCompositionCallbacks:
     bootstrap: BootstrapCompositionCallbacks
 
 
-def _build_playback_embed(**kwargs):
-    import discord
-
+def _build_playback_embed(**kwargs: Any) -> discord.Embed:
     return discord.Embed(color=discord.Color.purple(), **kwargs)
 
 

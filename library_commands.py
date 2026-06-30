@@ -7,7 +7,9 @@ import json
 import os
 import random
 import time
+from typing import cast
 
+import discord
 from discord.ext import commands
 
 from bot_dependencies import LibraryCommandDependencies
@@ -21,6 +23,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             return
         favs = deps.load_favorites()
         url = track["url"]
+        if not isinstance(url, str):
+            return
         entry = {
             "url": url,
             "name": track.get("name", url.split("/")[-1].replace(".sap", "")),
@@ -40,14 +44,21 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
         track = deps.get_message_track(payload.message_id)
         if track is None:
             return
+        url = track["url"]
+        if not isinstance(url, str):
+            return
         favs = deps.load_favorites()
-        favs, removed = deps.remove_user_track(favs, payload.user_id, track["url"])
+        favs, removed = deps.remove_user_track(favs, payload.user_id, url)
         if not removed:
             return
         deps.save_favorites(favs)
-        deps.log.info("❤️ Removed from favorites via reaction removal: %s", track["url"])
+        deps.log.info("❤️ Removed from favorites via reaction removal: %s", url)
 
     async def _play_track_list(ctx, tracks: list[dict], label: str) -> bool:
+        assert ctx.guild is not None
+        author = cast(discord.Member, ctx.author)
+        assert author.voice is not None
+        assert author.voice.channel is not None
         state = deps.get_state(ctx.guild.id)
         first_url = tracks[0]["url"]
         if "asma.atari.org" in first_url or first_url.endswith(".sap"):
@@ -60,7 +71,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             await deps.ensure_tracks(state)
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
-        vc = await ctx.author.voice.channel.connect()
+        vc: discord.VoiceClient = cast(discord.VoiceClient, await author.voice.channel.connect())
         state.bind_voice_context(guild_id=ctx.guild.id, ctx=ctx, vc=vc)
         state.set_loop_enabled(True)
         deps.clear_predownload_state(state)
@@ -90,7 +101,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
         user_favs = deps.load_user_tracks(deps.load_favorites(), ctx.author.id)
         if not user_favs:
             return await ctx.send("📭 **No favorites yet.** React to any Now Playing embed with an emoji to save tracks!")
-        if not ctx.author.voice:
+        author = cast(discord.Member, ctx.author)
+        if not author.voice:
             return await ctx.send("Join a voice channel first!")
         if number:
             try:
@@ -126,15 +138,16 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
                 author_s = f" by {playlist['author']}" if playlist["author"] != "?" else ""
                 lines.append(f"`{playlist['name']}` — {playlist['tracks']} tracks{author_s}")
             return await ctx.send("\n".join(lines))
-        if not ctx.author.voice:
+        author = cast(discord.Member, ctx.author)
+        if not author.voice:
             return await ctx.send("Join a voice channel first!")
-        playlist = deps.load_playlist(name.strip())
-        if not playlist:
+        loaded_playlist = deps.load_playlist(name.strip())
+        if not loaded_playlist:
             return await ctx.send(f"❌ Playlist `{name.strip()}` not found. Use `!favload list` to see saved playlists.")
-        tracks = playlist.get("tracks", [])
+        tracks = loaded_playlist.get("tracks", [])
         if not tracks:
-            return await ctx.send(f"📭 Playlist `{playlist['name']}` is empty!")
-        await _play_track_list(ctx, tracks, f"playlist \"{playlist['name']}\"")
+            return await ctx.send(f"📭 Playlist `{loaded_playlist['name']}` is empty!")
+        await _play_track_list(ctx, tracks, f"playlist \"{loaded_playlist['name']}\"")
 
     @bot.command(aliases=["plist", "list-playlists", "playlist-dir"])
     async def playlists(ctx: commands.Context):
@@ -168,6 +181,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["blk"])
     async def blacklist_track(ctx: commands.Context, *, number: str = ""):
+        assert ctx.guild is not None
         state = deps.get_state(ctx.guild.id)
         if number:
             try:
@@ -193,7 +207,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             await ctx.send(f"⛔ **Blacklisted** — `{name}`\n*This track will be skipped when you use !play*")
             deps.log.info("⛔ Added to blacklist by %s: %s — %s", ctx.author, name, url)
         if added and state.queue and 0 <= state.index < len(state.queue) and url == state.queue[state.index]:
-            if ctx.voice_client and ctx.voice_client.is_connected():
+            voice_client = cast(discord.VoiceClient | None, ctx.voice_client)
+            if voice_client and voice_client.is_connected():
                 await ctx.send("⏭️ Skipping blacklisted track...")
                 await deps.skip_to_next(ctx)
 

@@ -15,16 +15,18 @@ from archive_runtime import ArchiveRuntime
 from bot_runtime import BotRuntime
 from boot_runtime import StartupEnvironment
 from runtime_io import AudioProcessRuntime
-from collection_service import CollectionService
 from collection_specs import CollectionSpec
 from playback_assets import PlaybackAssetRuntime
 from playback_helpers import NowPlayingDependencies
-from playback_service import PlaybackService
+from runtime_protocols import CollectionRuntimeProtocol, PlaybackRuntimeProtocol
 from runtime_service_facade import RuntimeServiceFacade
 from subsong_runtime import SubsongRuntime
 
 if TYPE_CHECKING:
+    import entrypoint_state_protocols as state_protocols
+
     from entrypoint_bridge import EntrypointComponents
+    from legacy_runtime_bindings import LegacyRuntimeBindings
     from stream_runtime import MonitorAudioSource, StreamRuntime
     from runtime_registration import RuntimeRegistration
     from runtime_composition import ComposedRuntime
@@ -40,8 +42,8 @@ class EntrypointRuntimeComponentState:
     playback_assets: PlaybackAssetRuntime | None = None
     now_playing_deps: NowPlayingDependencies | None = None
     collections: dict[str, CollectionSpec] = field(default_factory=dict)
-    playback_service: PlaybackService | None = None
-    legacy: object | None = None
+    playback_service: PlaybackRuntimeProtocol | None = None
+    legacy: "LegacyRuntimeBindings | None" = None
 
 
 @dataclass(slots=True)
@@ -51,7 +53,7 @@ class EntrypointInitializedRuntimeState:
     runtime_registration: "RuntimeRegistration | None" = None
     composed_runtime: "ComposedRuntime | None" = None
     runtime: BotRuntime | None = None
-    collection_service: CollectionService | None = None
+    collection_service: CollectionRuntimeProtocol | None = None
     lock_file: str | None = None
     shutdown_flag: asyncio.Event | None = None
 
@@ -78,13 +80,11 @@ class EntrypointArchiveMetadataState:
 class EntrypointState:
     """Central mutable state hub for the entrypoint module.
 
-    All consumers access this state through Protocol-based interfaces
-    (EntrypointComponentStateProtocol, EntrypointCompatStateProtocol,
-    EntrypointRuntimeInitializerStateProtocol, etc.) — never through
-    the concrete class. Writes flow through three bulk mutation methods:
-    apply_bootstrap_registry(), apply_runtime_components(), and
-    cache_initialized_app(). Individual @property setters exist for
-    test convenience only.
+    The launcher instantiates this concrete backing store, while consumers
+    depend on focused contracts from entrypoint_state_protocols. Production
+    writes primarily flow through apply_bootstrap_registry(),
+    apply_runtime_components(), and cache_initialized_app(). Property setters
+    retain compatibility with launcher caching and tests.
 
     Dedicated domain methods (runtime_metadata_index(), component_bundle(),
     etc.) replace direct field reads, reducing coupling to internal layout.
@@ -116,14 +116,14 @@ class EntrypointState:
         playback_assets: PlaybackAssetRuntime | None = None,
         now_playing_deps: NowPlayingDependencies | None = None,
         collections: dict[str, CollectionSpec] | None = None,
-        playback_service: PlaybackService | None = None,
-        legacy: object | None = None,
+        playback_service: PlaybackRuntimeProtocol | None = None,
+        legacy: "LegacyRuntimeBindings | None" = None,
         app: "AppAssembly | None" = None,
         startup_env: StartupEnvironment | None = None,
         runtime_registration: "RuntimeRegistration | None" = None,
         composed_runtime: "ComposedRuntime | None" = None,
         runtime: BotRuntime | None = None,
-        collection_service: CollectionService | None = None,
+        collection_service: CollectionRuntimeProtocol | None = None,
         lock_file: str | None = None,
         shutdown_flag: asyncio.Event | None = None,
     ) -> None:
@@ -265,19 +265,19 @@ class EntrypointState:
         self._component_state.collections = value
 
     @property
-    def playback_service(self) -> PlaybackService | None:
+    def playback_service(self) -> PlaybackRuntimeProtocol | None:
         return self._component_state.playback_service
 
     @playback_service.setter
-    def playback_service(self, value: PlaybackService | None) -> None:
+    def playback_service(self, value: PlaybackRuntimeProtocol | None) -> None:
         self._component_state.playback_service = value
 
     @property
-    def legacy(self) -> object | None:
+    def legacy(self) -> "LegacyRuntimeBindings | None":
         return self._component_state.legacy
 
     @legacy.setter
-    def legacy(self, value: object | None) -> None:
+    def legacy(self, value: "LegacyRuntimeBindings | None") -> None:
         self._component_state.legacy = value
 
     @property
@@ -321,11 +321,11 @@ class EntrypointState:
         self._initialized_runtime_state.runtime = value
 
     @property
-    def collection_service(self) -> CollectionService | None:
+    def collection_service(self) -> CollectionRuntimeProtocol | None:
         return self._initialized_runtime_state.collection_service
 
     @collection_service.setter
-    def collection_service(self, value: CollectionService | None) -> None:
+    def collection_service(self, value: CollectionRuntimeProtocol | None) -> None:
         self._initialized_runtime_state.collection_service = value
 
     @property
@@ -377,7 +377,7 @@ class EntrypointState:
         playback_assets: PlaybackAssetRuntime,
         now_playing_deps: NowPlayingDependencies,
         collections: dict[str, CollectionSpec],
-        legacy: object,
+        legacy: "LegacyRuntimeBindings",
     ) -> None:
         self.service_facade = service_facade
         self.stream_runtime = stream_runtime
@@ -403,6 +403,13 @@ class EntrypointState:
     def component_bundle(self) -> "EntrypointComponents":
         from entrypoint_bridge import EntrypointComponents
 
+        assert self.app_services is not None
+        assert self.service_facade is not None
+        assert self.stream_runtime is not None
+        assert self.archive_runtime is not None
+        assert self.playback_assets is not None
+        assert self.now_playing_deps is not None
+        assert self.legacy is not None
         return EntrypointComponents(
             app_services=self.app_services,
             service_facade=self.service_facade,
@@ -456,3 +463,17 @@ class EntrypointState:
 
     def iter_snes_games(self) -> Iterable[tuple[str, dict[str, object]]]:
         return self.runtime_snes_metadata().items()
+
+
+if TYPE_CHECKING:
+    def _assert_entrypoint_state_contracts(state: EntrypointState) -> None:
+        component_access: state_protocols.EntrypointComponentAccessStateProtocol = state
+        component_assembly: state_protocols.EntrypointComponentAssemblyStateProtocol = state
+        resources: state_protocols.EntrypointResourceStateProtocol = state
+        glue: state_protocols.EntrypointGlueStateProtocol = state
+        support: state_protocols.EntrypointSupportStateProtocol = state
+        compat: state_protocols.EntrypointCompatStateProtocol = state
+        runtime: state_protocols.EntrypointRuntimeStateProtocol = state
+        bootstrap: state_protocols.EntrypointBootstrapStateProtocol = state
+        initializer: state_protocols.EntrypointRuntimeInitializerStateProtocol = state
+        complete: state_protocols.EntrypointStateProtocol = state

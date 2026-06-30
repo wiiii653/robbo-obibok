@@ -185,14 +185,13 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         ):
             assembly.compat_policy = EntrypointCompatPolicy(
                 allow_deprecated_runtime_internal_attrs=False,
-                allow_legacy_runtime_compat_attrs=True,
             )
             module = self._load_runtime_module()
             for name in ("_LAUNCHER", "_SURFACE", "_MODULE_DEPS", "_LEGACY_RESOLVE"):
                 with self.assertRaises(AttributeError):
                     getattr(module, name)
 
-    def test_runtime_can_disable_legacy_compat_attrs_independently(self):
+    def test_runtime_does_not_expose_removed_legacy_compat_attrs(self):
         assembly = self._build_fake_assembly()
 
         with (
@@ -201,10 +200,6 @@ class RobboObibokRuntimeTests(unittest.TestCase):
                 return_value=assembly,
             ),
         ):
-            assembly.compat_policy = EntrypointCompatPolicy(
-                allow_deprecated_runtime_internal_attrs=True,
-                allow_legacy_runtime_compat_attrs=False,
-            )
             module = self._load_runtime_module()
             self.assertIs(module.state, assembly.compat_bindings["_STATE"])
             self.assertEqual(module.app_config().bot_token, "cfg-token")
@@ -247,7 +242,6 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         ):
             assembly.compat_policy = EntrypointCompatPolicy(
                 allow_deprecated_runtime_internal_attrs=False,
-                allow_legacy_runtime_compat_attrs=True,
             )
             module = self._load_runtime_module()
             self.assertEqual(module.initialize_runtime().startup_env.bot_token, "runtime-token")
@@ -278,7 +272,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
             self.assertEqual(module.flip_order, ["asma"])
             self.assertEqual(module.flip_seq, ["ASMA"])
 
-    def test_runtime_legacy_compat_attrs_warn_before_removal(self):
+    def test_runtime_legacy_compat_attrs_are_removed(self):
         assembly = self._build_fake_assembly()
 
         with patch(
@@ -286,38 +280,9 @@ class RobboObibokRuntimeTests(unittest.TestCase):
             return_value=assembly,
         ):
             module = self._load_runtime_module()
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                self.assertIs(module._STATE, assembly.compat_bindings["_STATE"])
-
-        self.assertEqual(len(caught), 1)
-        self.assertIn("_STATE", str(caught[0].message))
-        with self.assertRaises(AttributeError):
-            _ = module._FLIP_ORDER
-        with self.assertRaises(AttributeError):
-            _ = module._FLIP_SEQ
-
-    def test_runtime_can_opt_in_to_legacy_flip_compat_attrs_separately(self):
-        assembly = self._build_fake_assembly()
-        assembly.compat_policy = EntrypointCompatPolicy(
-            allow_deprecated_runtime_internal_attrs=True,
-            allow_legacy_runtime_compat_attrs=True,
-            allow_legacy_flip_runtime_compat_attrs=True,
-        )
-
-        with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
-            return_value=assembly,
-        ):
-            module = self._load_runtime_module()
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                self.assertEqual(module._FLIP_ORDER, ["asma"])
-                self.assertEqual(module._FLIP_SEQ, ["ASMA"])
-
-        self.assertEqual(len(caught), 2)
-        self.assertIn("_FLIP_ORDER", str(caught[0].message))
-        self.assertIn("_FLIP_SEQ", str(caught[1].message))
+            for name in ("_STATE", "_app_cfg", "_archive_runtime_config", "_FLIP_ORDER", "_FLIP_SEQ"):
+                with self.assertRaises(AttributeError):
+                    getattr(module, name)
 
     def test_main_delegates_to_run_bot_entrypoint(self):
         signal_calls = []

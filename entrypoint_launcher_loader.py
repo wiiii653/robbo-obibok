@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Mapping, Protocol
+from typing import TYPE_CHECKING, Callable, Mapping, Protocol, cast
 from entrypoint_runtime_surface import (
     EntrypointCompatRuntimeSurface,
     EntrypointRuntimeStateSurface,
@@ -14,6 +14,7 @@ from entrypoint_runtime_surface import (
 
 if TYPE_CHECKING:
     from entrypoint_module import EntrypointModule
+    from entrypoint_launcher_state import BootstrapAppProtocol
 
 from entrypoint_compat_contract import (
     ENTRYPOINT_COMPAT_APP,
@@ -31,7 +32,11 @@ from entrypoint_direct_export_contract import (
     EntrypointDirectExportSpec,
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
 )
-from entrypoint_legacy_bindings import EntrypointLegacyBindings, build_entrypoint_legacy_bindings
+from entrypoint_legacy_bindings import (
+    EntrypointLegacyBindings,
+    EntrypointModuleProtocol,
+    build_entrypoint_legacy_bindings,
+)
 from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH
 
 
@@ -83,7 +88,8 @@ class LazyModuleAttr:
         return getattr(self._target(), name)
 
     def __call__(self, *args, **kwargs):
-        return self._target()(*args, **kwargs)
+        target = cast(Callable[..., object], self._target())
+        return target(*args, **kwargs)
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,7 +119,7 @@ class EntrypointModuleLoader:
         if self.module is None:
             self.module = self.module_factory()
             self.bindings = build_entrypoint_legacy_bindings(
-                entrypoint_module=self.module,
+                entrypoint_module=cast("EntrypointModuleProtocol", self.module),
                 flip_order=self.flip_order,
                 flip_seq=self.flip_seq,
             )
@@ -130,8 +136,8 @@ class EntrypointModuleLoader:
     def resolve_compat(self, name: str) -> object:
         return self.ensure_module().app.compat.resolve(name)
 
-    def bootstrap_app(self) -> object:
-        return self.legacy_bindings().state._APP
+    def bootstrap_app(self) -> "BootstrapAppProtocol":
+        return cast("BootstrapAppProtocol", self.legacy_bindings().state._APP)
 
     def compat(self) -> EntrypointCompatView:
         return EntrypointCompatView(resolve_compat=self.resolve_compat)
@@ -152,21 +158,21 @@ class EntrypointModuleLoader:
         )
 
     def collection_state(self) -> CollectionStateProtocol:
-        return self.resolve_legacy("_STATE")
+        return cast(CollectionStateProtocol, self.resolve_legacy("_STATE"))
 
-    def collection_export(self, spec: str | EntrypointDirectExportSpec) -> object:
+    def collection_export(self, spec: str | EntrypointDirectExportSpec) -> Callable[..., object]:
         binding = self._direct_export_spec(spec)
         state = self.collection_state()
         target = state
         for attr_name in binding.attr_path:
             target = getattr(target, attr_name)
-        return target
+        return cast(Callable[..., object], target)
 
-    def runtime_export(self, spec: str | EntrypointDirectExportSpec) -> object:
+    def runtime_export(self, spec: str | EntrypointDirectExportSpec) -> Callable[..., object]:
         binding = self._direct_export_spec(spec)
         exports = self.legacy_bindings().exports
         try:
-            return exports[binding.export_name]
+            return cast(Callable[..., object], exports[binding.export_name])
         except KeyError as exc:
             raise AttributeError(binding.export_name) from exc
 
@@ -180,6 +186,12 @@ class EntrypointModuleLoader:
 
     def proxy(self, attr_name: str) -> LazyModuleAttr:
         return LazyModuleAttr(self.ensure_module, attr_name)
+
+    def lock_file(self) -> str:
+        lock_file = self.runtime_state_surface().state().lock_file
+        if lock_file is None:
+            raise RuntimeError("runtime lock file is unavailable before initialization")
+        return lock_file
 
     def _direct_export_spec(self, spec: str | EntrypointDirectExportSpec) -> EntrypointDirectExportSpec:
         if isinstance(spec, EntrypointDirectExportSpec):

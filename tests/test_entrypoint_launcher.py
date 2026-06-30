@@ -224,7 +224,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             self.assertEqual(bot_calls, ["ping"])
             self.assertEqual(compat_calls, ["LOCK_FILE"])
 
-    def test_launcher_keeps_legacy_state_config_exports_as_compat_only(self):
+    def test_launcher_exposes_only_stable_state_config_names(self):
         fake_module = build_fake_launcher_module(
             runtime_app=types.SimpleNamespace(startup_env=types.SimpleNamespace(bot_token="runtime-token")),
             init_calls=[],
@@ -235,13 +235,12 @@ class EntrypointLauncherTests(unittest.TestCase):
         with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_legacy_compat_exports")
 
-        self.assertIs(module._STATE, module.state)
-        self.assertEqual(module._app_cfg().bot_token, module.app_config().bot_token)
-        self.assertEqual(module._archive_runtime_config(), module.archive_runtime_config())
-        with self.assertRaises(AttributeError):
-            _ = module._FLIP_ORDER
-        with self.assertRaises(AttributeError):
-            _ = module._FLIP_SEQ
+        for name in ("_STATE", "_app_cfg", "_archive_runtime_config", "_FLIP_ORDER", "_FLIP_SEQ"):
+            with self.assertRaises(AttributeError):
+                getattr(module, name)
+        self.assertIsNotNone(module.state)
+        self.assertIsNotNone(module.app_config())
+        self.assertIsNotNone(module.archive_runtime_config())
         self.assertIn("asma", module.flip_order)
         self.assertTrue(any("ASMA" in item for item in module.flip_seq))
 

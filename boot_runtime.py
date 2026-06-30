@@ -17,7 +17,7 @@ class StartupEnvironment:
 
 def initialize_startup_environment(
     *,
-    bot_token: str,
+    bot_token: str | None,
     root_dir: str,
     validate_runtime_dependencies: Callable[[], None],
     acquire_process_lock: Callable[[str, str], int],

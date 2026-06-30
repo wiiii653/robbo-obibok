@@ -13,13 +13,11 @@ from entrypoint_compat_policy import (
 )
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES,
 )
 
 
 class EntrypointCompatPolicyTests(unittest.TestCase):
-    def test_default_policy_admits_deprecated_internal_and_core_legacy_attrs_only(self):
+    def test_default_policy_admits_deprecated_internal_attrs(self):
         policy = build_compat_policy()
 
         self.assertTrue(
@@ -28,20 +26,7 @@ class EntrypointCompatPolicyTests(unittest.TestCase):
                 for name in ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES
             )
         )
-        self.assertTrue(
-            all(
-                policy.allows_legacy_runtime_compat_attr(name)
-                for name in ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES
-            )
-        )
-        self.assertTrue(
-            all(
-                not policy.allows_legacy_runtime_compat_attr(name)
-                for name in ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES
-            )
-        )
-
-    def test_strict_policy_rejects_all_compat_attrs(self):
+    def test_strict_policy_rejects_deprecated_internal_attrs(self):
         policy = build_strict_compat_policy()
 
         self.assertTrue(
@@ -50,21 +35,9 @@ class EntrypointCompatPolicyTests(unittest.TestCase):
                 for name in ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES
             )
         )
-        self.assertTrue(
-            all(
-                not policy.allows_legacy_runtime_compat_attr(name)
-                for name in (
-                    ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES
-                    | ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES
-                )
-            )
-        )
-
     def test_build_compat_policy_clones_template_without_reusing_instance(self):
         template = EntrypointCompatPolicy(
             allow_deprecated_runtime_internal_attrs=False,
-            allow_legacy_runtime_compat_attrs=True,
-            allow_legacy_flip_runtime_compat_attrs=True,
         )
 
         policy = build_compat_policy(template=template)

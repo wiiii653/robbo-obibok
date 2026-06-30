@@ -9,9 +9,10 @@ from entrypoint_registry import EntrypointExportRegistry
 from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 
 if TYPE_CHECKING:
+    from discord import Colour
     from app_state import PlaylistState
     from entrypoint_app import EntrypointApp
-    from entrypoint_bridge import EntrypointCompatStateProtocol
+    from entrypoint_state_protocols import EntrypointCompatStateProtocol
 
 
 @dataclass(slots=True)
@@ -63,7 +64,7 @@ class EntrypointExportBindings:
         url: str,
         *,
         title: str,
-        color: object,
+        color: Colour,
         footer: str,
         author: str = "",
         extra_fields: list[tuple[str, str]] | None = None,

@@ -1,0 +1,33 @@
+name: integration
+
+on:
+  push:
+    paths:
+      - ".github/workflows/integration.yml"
+      - "requirements.txt"
+      - "tests/integration/**"
+      - "Makefile"
+  pull_request:
+    paths:
+      - ".github/workflows/integration.yml"
+      - "requirements.txt"
+      - "tests/integration/**"
+      - "Makefile"
+  workflow_dispatch:
+
+jobs:
+  real-dependencies:
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_INTEGRATION_TOKEN: ${{ secrets.DISCORD_INTEGRATION_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Run real dependency integration tests
+        run: make test-integration

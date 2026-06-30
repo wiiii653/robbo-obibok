@@ -7,7 +7,7 @@ import os
 import shutil
 import signal
 import sys
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Sequence
 
 
 async def run_startup_steps(
@@ -29,7 +29,11 @@ def log_preloaded_cache(label: str, tracks: list[str] | None, *, logger) -> None
         logger.info("%s local: %d tracks preloaded", label, len(tracks))
 
 
-def schedule_background_tasks(task_factories: list[Callable[[], Awaitable[object]]], *, loop) -> None:
+def schedule_background_tasks(
+    task_factories: Sequence[Callable[[], Awaitable[object]]],
+    *,
+    loop,
+) -> None:
     """Create background tasks from factory callables."""
     for factory in task_factories:
         loop.create_task(factory())

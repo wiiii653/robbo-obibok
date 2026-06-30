@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from app_state import PlaylistState
 from entrypoint_bridge import EntrypointComponentAccess
@@ -12,8 +12,8 @@ from playback_helpers import play_via_audacious, queue_position, send_now_playin
 
 if TYPE_CHECKING:
     from discord import Colour
-    from entrypoint_bridge import EntrypointGlueStateProtocol
     from entrypoint_resources import EntrypointResources
+    from entrypoint_state_protocols import EntrypointGlueStateProtocol
 
 
 @dataclass(slots=True)
@@ -24,8 +24,8 @@ class EntrypointGlue:
 
     def apply_queue_state(self, state: PlaylistState, queue_state: dict[str, object]) -> bool:
         state.set_queue_state(
-            list(queue_state["queue"]),
-            int(queue_state["index"]),
+            list(cast(list[str], queue_state["queue"])),
+            int(cast(int, queue_state["index"])),
             loop=bool(queue_state["loop"]),
         )
         return bool(queue_state.get("restored"))

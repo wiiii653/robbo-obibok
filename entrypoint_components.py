@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Protocol
+from typing import TYPE_CHECKING, Awaitable, Callable
 
 from app_bootstrap import BootstrappedApp
 from app_context import AppContext
@@ -24,12 +24,17 @@ from entrypoint_component_builders import (
     build_stream_runtime,
 )
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
-from entrypoint_legacy_bindings import EntrypointLegacyBindings
+import entrypoint_state_protocols as state_protocols
+from legacy_runtime_bindings import LegacyRuntimeBindings
 from playback_assets import PlaybackAssetRuntime
 from playback_helpers import NowPlayingDependencies
 from runtime_protocols import SubsongRuntimeProtocol
 from runtime_service_facade import RuntimeServiceFacade
 from stream_runtime import StreamRuntime
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
+    from stream_runtime import MonitorAudioSource
 
 
 @dataclass(slots=True)
@@ -46,7 +51,7 @@ class EntrypointBootstrapBundle:
 class EntrypointRuntimeBundle:
     service_facade: RuntimeServiceFacade
     stream_runtime: StreamRuntime
-    active_streams: dict[int, object]
+    active_streams: dict[int, "MonitorAudioSource"]
     archive_runtime: ArchiveRuntime
 
 
@@ -55,7 +60,7 @@ class EntrypointMediaBundle:
     playback_assets: PlaybackAssetRuntime
     now_playing_deps: NowPlayingDependencies
     collections: dict[str, CollectionSpec]
-    legacy: EntrypointLegacyBindings
+    legacy: LegacyRuntimeBindings
 
 
 @dataclass(slots=True)
@@ -63,47 +68,6 @@ class EntrypointComponents:
     bootstrap: EntrypointBootstrapBundle
     runtime: EntrypointRuntimeBundle
     media: EntrypointMediaBundle
-
-
-class EntrypointComponentStateProtocol(Protocol):
-    bootstrapped_app: BootstrappedApp | None
-    app_context: AppContext | None
-    app_state: AppRuntimeState | None
-    archives: ArchiveCatalog | None
-    app_services: AppServicesProtocol | None
-    archive_views: ArchiveRegistryViews | None
-    service_facade: RuntimeServiceFacade | None
-    stream_runtime: StreamRuntime | None
-    active_streams: dict[int, object]
-    archive_runtime: ArchiveRuntime | None
-    playback_assets: PlaybackAssetRuntime | None
-    now_playing_deps: NowPlayingDependencies | None
-    collections: dict[str, CollectionSpec]
-    legacy: EntrypointLegacyBindings | object | None
-
-    def apply_bootstrap_registry(
-        self,
-        *,
-        bootstrapped_app: BootstrappedApp,
-        app_context: AppContext,
-        app_state: AppRuntimeState,
-        archives: ArchiveCatalog,
-        app_services: AppServicesProtocol,
-        archive_views: ArchiveRegistryViews,
-    ) -> None: ...
-
-    def apply_runtime_components(
-        self,
-        *,
-        service_facade: RuntimeServiceFacade,
-        stream_runtime: StreamRuntime,
-        active_streams: dict[int, object],
-        archive_runtime: ArchiveRuntime,
-        playback_assets: PlaybackAssetRuntime,
-        now_playing_deps: NowPlayingDependencies,
-        collections: dict[str, CollectionSpec],
-        legacy: object,
-    ) -> None: ...
 
 
 @dataclass(slots=True)
@@ -118,14 +82,14 @@ class EntrypointComponentDeps:
     archive_runtime_config: ArchiveRuntimeConfig
     subsongs: SubsongRuntimeProtocol
     build_temp_path: Callable[[str], str]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[ClientSession]]
     clear_predownload_state: Callable[[PlaylistState], None]
-    blacklist_filter: Callable[[list[str], int | str], list[str]]
+    blacklist_filter: Callable[[list[str], dict[object, object], int | str], list[str]]
     stop_all_players_impl: Callable[..., None]
     audacious_play: Callable[[str], None]
     audacious_stop: Callable[[], None]
     cleanup_subsong_temp_wavs_impl: Callable[[PlaylistState], None]
-    build_legacy_bindings: Callable[..., EntrypointLegacyBindings]
+    build_legacy_bindings: Callable[..., LegacyRuntimeBindings]
 
 
 def build_entrypoint_components(
@@ -207,7 +171,10 @@ def build_entrypoint_components(
     )
 
 
-def apply_entrypoint_components(state: EntrypointComponentStateProtocol, components: EntrypointComponents) -> None:
+def apply_entrypoint_components(
+    state: state_protocols.EntrypointComponentAssemblyStateProtocol,
+    components: EntrypointComponents,
+) -> None:
     if hasattr(state, "apply_bootstrap_registry"):
         state.apply_bootstrap_registry(
             bootstrapped_app=components.bootstrap.bootstrapped_app,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import shutil
 import subprocess
@@ -20,9 +21,9 @@ class PlaybackAssetRuntime:
     hvsc_base: str
     hvsc_dir: str
     ym_temp_dir: str
-    logger: object
+    logger: logging.Logger
     build_temp_path: Callable[[str], str]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[aiohttp.ClientSession]]
     ym_cache_max_size: int = 200 * 1024 * 1024
     ym_cache_max_entries: int = 50
     _ym_last_wav_path: str | None = None
@@ -47,7 +48,7 @@ class PlaybackAssetRuntime:
 
     async def download_sap(self, url: str, retries: int = 2) -> str:
         filepath = self.build_temp_path(url)
-        last_err = None
+        last_err: BaseException | None = None
         session = await self.get_shared_session()
         for attempt in range(retries + 1):
             try:
@@ -61,6 +62,8 @@ class PlaybackAssetRuntime:
                 last_err = exc
                 if attempt < retries:
                     await asyncio.sleep(1)
+        if last_err is None:
+            raise RuntimeError(f"SAP download failed without an exception: {url}")
         raise last_err
 
     def ym_to_wav(self, ym_path: str) -> str:
@@ -73,12 +76,12 @@ class PlaybackAssetRuntime:
 
         extract_ok = False
         try:
-            result = subprocess.run(
+            extract_result = subprocess.run(
                 ["7z", "x", "-y", ym_path, f"-o{work_dir}"],
                 capture_output=True,
                 timeout=15,
             )
-            extract_ok = result.returncode == 0
+            extract_ok = extract_result.returncode == 0
         except Exception:
             pass
 

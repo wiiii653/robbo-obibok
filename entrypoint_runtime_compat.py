@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from typing import Callable
 
 from entrypoint_compat_policy import EntrypointCompatPolicy
@@ -59,19 +58,9 @@ def is_runtime_internal_attr(name: str) -> bool:
     return name in RUNTIME_INTERNAL_ATTR_NAMES
 
 
-def allows_legacy_runtime_compat_attr(name: str, *, compat_policy: EntrypointCompatPolicy) -> bool:
-    return compat_policy.allows_legacy_runtime_compat_attr(name)
-
-
-def warn_legacy_runtime_compat_attr(name: str) -> None:
-    warnings.warn(
-        f"{name} is a deprecated legacy compatibility attribute; prefer the stable alias surface",
-        DeprecationWarning,
-        stacklevel=3,
-    )
-
-
 def _warn_deprecated_internal_attr(name: str) -> None:
+    import warnings
+
     assert name in ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES
     warnings.warn(
         f"{name} is a deprecated runtime compatibility attribute and will be removed in a future refactor",

@@ -18,7 +18,7 @@ def build_entrypoint_runtime_tasks(
     component_access: Any,
     raw_callbacks: EntrypointRawCallbacks,
     compute_timeout_seconds: Callable[..., int],
-    is_gme_format_path: Callable[[str], bool],
+    is_gme_format_path: Callable[[str | None], bool],
     should_advance_after_stop: Callable[..., tuple[bool, float | None]],
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]],
     should_disconnect_for_empty_channel: Callable[..., tuple[bool, float | None]],

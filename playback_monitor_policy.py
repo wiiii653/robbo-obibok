@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Awaitable, Callable
+from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, TypeVar
 
 from app_state import PlaylistState
 
 if TYPE_CHECKING:
     from stream_runtime import MonitorAudioSource
+
+T = TypeVar("T")
+
+
+class RunSyncProtocol(Protocol):
+    def __call__(self, func: Callable[..., T], *args: object) -> Awaitable[T]: ...
 
 @dataclass(slots=True)
 class MonitorPolicyDependencies:
@@ -21,9 +27,9 @@ class MonitorPolicyDependencies:
     get_output_length: Callable[[], int]
     get_song_length: Callable[[], int]
     get_state: Callable[[int], PlaylistState]
-    is_gme_format_path: Callable[[str], bool]
+    is_gme_format_path: Callable[[str | None], bool]
     logger: logging.Logger
-    run_sync: Callable[..., Awaitable[object]]
+    run_sync: RunSyncProtocol
     should_advance_after_stop: Callable[..., tuple[bool, float | None]]
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]]
     should_force_timeout_stop: Callable[[int, int], bool]

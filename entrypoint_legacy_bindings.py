@@ -9,17 +9,18 @@ from typing import TYPE_CHECKING, Callable, Protocol
 from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
-from entrypoint_bridge import EntrypointSupportStateProtocol
 from entrypoint_guild import GuildScope
 from entrypoint_resources import EntrypointResources
+from entrypoint_state_protocols import EntrypointStateProtocol
 
 if TYPE_CHECKING:
+    from aiohttp import ClientSession
     from discord.ext import commands
     from entrypoint_app import EntrypointApp
 
 
 class SessionRuntimeProtocol(Protocol):
-    async def get_shared_session(self) -> object:
+    async def get_shared_session(self) -> ClientSession:
         ...
 
     async def close_shared_session(self) -> None:
@@ -66,7 +67,7 @@ class EntrypointSupportProtocol(Protocol):
     logger: logging.Logger
     session_runtime: SessionRuntimeProtocol
     boot: EntrypointBootstrapBuilder
-    state: EntrypointSupportStateProtocol
+    state: EntrypointStateProtocol
     resources: LegacyAudioResourcesProtocol
     guild_scope: GuildScope
 
@@ -89,8 +90,8 @@ class EntrypointLegacyStateBindings:
     log: logging.Logger
     _SESSION_RUNTIME: SessionRuntimeProtocol
     BOOT: EntrypointBootstrapBuilder
-    _STATE: EntrypointSupportStateProtocol
-    _RESOURCES: EntrypointResources
+    _STATE: EntrypointStateProtocol
+    _RESOURCES: LegacyAudioResourcesProtocol
     _GUILD_SCOPE: GuildScope
     modarchive_name_map: dict[str, str]
     snes_metadata: dict[str, dict[str, object]]
@@ -135,6 +136,12 @@ class EntrypointLegacyBindings:
         if name in self.exports:
             return self.exports[name]
         raise AttributeError(name)
+
+    def get(self, key: str, default: object = None) -> object:
+        try:
+            return self.resolve(key)
+        except AttributeError:
+            return default
 
 
 def build_entrypoint_legacy_bindings(

@@ -64,7 +64,8 @@ class EntrypointRuntimeBuilderTests(unittest.TestCase):
         self.assertEqual(runtime_callbacks.playback.clear_predownload_state, "clear_predownload")
         self.assertEqual(runtime_callbacks.collection.switch_collection, "switch_collection")
         self.assertEqual(runtime_callbacks.bootstrap.cleanup_orphan_players, "cleanup_orphans")
-        self.assertEqual(runtime_callbacks.library, "library_callbacks")
+        self.assertEqual(runtime_callbacks.library.load_user_tracks, "load_tracks")
+        self.assertEqual(runtime_callbacks.library.remove_user_track, "remove_track")
 
         initializer = build_entrypoint_runtime_initializer(
             bot="bot",

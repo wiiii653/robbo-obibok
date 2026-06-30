@@ -6,18 +6,25 @@ import json
 import os
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Awaitable, Callable
+from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, cast
 
 from app_state import PlaylistState
 from collection_specs import CollectionSpec
 
 if TYPE_CHECKING:
     from archive_catalog import CollectionInfo
+    from discord.ext import commands
+
+
+class CollectionArchiveProtocol(Protocol):
+    def get_collection_info(self, mode: str) -> "CollectionInfo": ...
+
+    async def load_tracks_for_mode(self, mode: str) -> list[str] | None: ...
 
 
 @dataclass(slots=True)
 class CollectionService:
-    archives: object
+    archives: CollectionArchiveProtocol
     collections: dict[str, CollectionSpec]
     root_dir: str
     status_count_cache: dict[str, tuple[float, int | str]]
@@ -46,7 +53,15 @@ class CollectionService:
             state.set_loaded_collection_name(state.collection_mode)
         return bool(state.tracks)
 
-    async def switch_collection(self, ctx: object, mode: str, *, flip_seq=None) -> bool:
+    async def switch_collection(
+        self,
+        ctx: object,
+        mode: str,
+        *,
+        flip_seq: list[str] | None = None,
+    ) -> bool:
+        ctx = cast("commands.Context[commands.Bot]", ctx)
+        assert ctx.guild is not None
         state = self.get_state(ctx.guild.id)
         cfg = self.collections[mode]
 
@@ -73,8 +88,11 @@ class CollectionService:
                 state.set_loaded_collection_name(str(state_update["loaded_collection"]))
                 self.save_last_collection(mode)
                 self.set_volume_for_collection(mode)
-                state.set_tracks(list(state_update["tracks"]))
-                state.set_queue_state(list(state_update["queue"]), int(state_update["index"]))
+                state.set_tracks(list(cast(list[str], state_update["tracks"])))
+                state.set_queue_state(
+                    list(cast(list[str], state_update["queue"])),
+                    int(cast(int, state_update["index"])),
+                )
                 if flip_seq:
                     seq = self.flip_sequence_formatter(flip_seq, cfg.flip_tag)
                     await ctx.send((cfg.flip_ready_empty_msg or "") + f"\n{seq}")
@@ -93,10 +111,16 @@ class CollectionService:
             return False
 
         state_update = self.build_collection_state_update(mode, tracks)
-        state.set_loaded_collection(str(state_update["loaded_collection"]), list(state_update["tracks"]))
+        state.set_loaded_collection(
+            str(state_update["loaded_collection"]),
+            list(cast(list[str], state_update["tracks"])),
+        )
         self.save_last_collection(mode)
         self.set_volume_for_collection(mode)
-        state.set_queue_state(list(state_update["queue"]), int(state_update["index"]))
+        state.set_queue_state(
+            list(cast(list[str], state_update["queue"])),
+            int(cast(int, state_update["index"])),
+        )
 
         if flip_seq:
             seq = self.flip_sequence_formatter(flip_seq, cfg.flip_tag)
@@ -130,7 +154,12 @@ class CollectionService:
             if isinstance(data, list):
                 count: int | str = len(data)
             elif isinstance(data, dict):
-                count = data.get("total_sets") or len(data.get("tracks", data.get("count", [])))
+                raw_count = data.get("total_sets")
+                if isinstance(raw_count, int):
+                    count = raw_count
+                else:
+                    tracks = data.get("tracks", data.get("count", []))
+                    count = len(tracks) if isinstance(tracks, (list, dict, str)) else "?"
             else:
                 count = "?"
         except Exception:

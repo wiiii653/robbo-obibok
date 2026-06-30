@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
+from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
+
 from entrypoint_callback_groups import (
     AppEntrypointCallbacks,
     BootstrapEntrypointCallbacks,
     CollectionEntrypointCallbacks,
     EntrypointRawCallbacks,
+    LibraryEntrypointCallbacks,
     PlaybackEntrypointCallbacks,
 )
 from entrypoint_facade import EntrypointFacade
@@ -50,7 +53,12 @@ def build_entrypoint_runtime_callbacks(
             queue_position=glue.queue_position,
             send_now_playing_embed=glue.send_now_playing_embed,
         ),
-        library=raw_callbacks.library,
+        library=LibraryEntrypointCallbacks(
+            filter_blacklisted_track_entries=raw_callbacks.library.filter_blacklisted_track_entries,
+            load_user_tracks=raw_callbacks.library.load_user_tracks,
+            remove_user_track=raw_callbacks.library.remove_user_track,
+            toggle_user_track_entry=raw_callbacks.library.toggle_user_track_entry,
+        ),
         collection=CollectionEntrypointCallbacks(
             auto_play_after_switch=facade.auto_play_after_switch,
             build_collection_state_update=raw_callbacks.collection.build_collection_state_update,
@@ -78,12 +86,12 @@ def build_entrypoint_runtime_initializer(
     status_count_cache: dict[str, tuple[float, int | str]],
     flip_order: list[str],
     flip_seq: list[str],
-    validate_runtime_dependencies: Callable[[], list[str]],
+    validate_runtime_dependencies: Callable[[], None],
     component_access: EntrypointComponentAccess,
-    build_playback_handlers: Callable[..., object],
-    register_core_events: Callable[..., object],
-    register_playback_commands: Callable[..., object],
-    register_library_commands: Callable[..., object],
+    build_playback_handlers: Callable[[PlaybackHandlerDependencies], PlaybackHandlerMap],
+    register_core_events: Callable[..., None],
+    register_playback_commands: Callable[..., None],
+    register_library_commands: Callable[..., None],
     runtime_tasks: EntrypointRuntimeTasks,
     runtime_callbacks: AppEntrypointCallbacks,
 ) -> EntrypointRuntimeInitializer:

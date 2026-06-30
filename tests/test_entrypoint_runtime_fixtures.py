@@ -30,6 +30,14 @@ class FakeCollectionCallbacks:
     set_volume_for_collection: object = "set_volume"
 
 
+@dataclass(slots=True)
+class FakeLibraryCallbacks:
+    filter_blacklisted_track_entries: object = "filter_entries"
+    load_user_tracks: object = "load_tracks"
+    remove_user_track: object = "remove_track"
+    toggle_user_track_entry: object = "toggle_track"
+
+
 class FakeRuntimeTaskInputs:
     def __init__(self):
         self.app_cfg_getter = lambda: types.SimpleNamespace()
@@ -52,7 +60,7 @@ class FakeRuntimeCallbackInputs:
         )
         self.raw_callbacks = types.SimpleNamespace(
             playback=FakePlaybackCallbacks(),
-            library="library_callbacks",
+            library=FakeLibraryCallbacks(),
             collection=FakeCollectionCallbacks(),
             bootstrap=FakeBootstrapCallbacks(),
         )

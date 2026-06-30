@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from archive_catalog import CollectionInfo
 from app_state import PlaylistState
 from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
 
 
 @dataclass(slots=True)
@@ -40,8 +43,9 @@ class LegacyRuntimeBindings:
 
     async def fetch_metadata_batch(
         self,
-        session: object,
+        session: ClientSession,
         urls: list[str],
+        *,
         batch_size: int = 20,
     ) -> dict[str, dict[str, str]]:
         return await self.archive_runtime.fetch_metadata_batch(session, urls, batch_size=batch_size)
@@ -118,7 +122,13 @@ class LegacyRuntimeBindings:
     def stop_all_players(self) -> None:
         self.service_facade.stop_all_players(self.cleanup_subsong_temp_wavs_impl)
 
-    async def switch_collection(self, ctx: object, mode: str, *, flip_seq=None) -> bool:
+    async def switch_collection(
+        self,
+        ctx: object,
+        mode: str,
+        *,
+        flip_seq: list[str] | None = None,
+    ) -> bool:
         return await self.service_facade.switch_collection(ctx, mode, flip_seq=flip_seq)
 
     def get_cache_count(self, fname: str) -> int | str:

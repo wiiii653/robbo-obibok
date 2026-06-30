@@ -266,9 +266,14 @@ class AppRuntimeState:
     def _prune_message_track_map(self) -> None:
         if len(self.message_track_map) <= self._message_track_map_max:
             return
+
+        def message_timestamp(item: tuple[int, dict[str, object]]) -> float:
+            value = item[1].get("timestamp", 0)
+            return float(value) if isinstance(value, (int, float)) else 0.0
+
         sorted_ids = sorted(
             self.message_track_map.items(),
-            key=lambda item: item[1].get("timestamp", 0),
+            key=message_timestamp,
             reverse=True,
         )
         self.message_track_map.clear()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+from typing import TYPE_CHECKING, Callable, cast
 
 from collection_catalog import (
     FLIP_ORDER as COLLECTION_FLIP_ORDER,
@@ -11,7 +12,6 @@ from collection_catalog import (
 )
 from entrypoint_compat_policy import build_compat_policy
 from entrypoint_module_bindings import (
-    resolve_compat_binding_attr,
     resolve_bound_entrypoint_module_attr,
     resolve_compat_entrypoint_module_attr,
 )
@@ -23,6 +23,10 @@ from entrypoint_runtime_surface import (
     build_stable_runtime_surface,
 )
 import runtime_bootstrap
+
+if TYPE_CHECKING:
+    from discord.ext import commands
+    from entrypoint_runtime import AppAssembly
 
 BOT_TOKEN = ""
 _ASSEMBLY = None
@@ -58,9 +62,9 @@ def _build_strict_executable_assembly():
 
 @dataclass(slots=True)
 class ExecutableRuntimeHolder:
-    assembly_builder: object
-    assembly: object | None = None
-    app: object | None = None
+    assembly_builder: Callable[[], entrypoint_executable_assembly.EntrypointExecutableAssembly]
+    assembly: entrypoint_executable_assembly.EntrypointExecutableAssembly | None = None
+    app: "AppAssembly | None" = None
 
     def ensure_assembly(self):
         if self.assembly is None:
@@ -114,19 +118,6 @@ def _compat_runtime_surface():
     return build_compat_runtime_surface(_assembly_compat_bindings())
 
 
-def _resolve_legacy_compat_attr(name: str):
-    if not entrypoint_runtime_compat.allows_legacy_runtime_compat_attr(
-        name,
-        compat_policy=_assembly_compat_policy(),
-    ):
-        raise AttributeError(name)
-    entrypoint_runtime_compat.warn_legacy_runtime_compat_attr(name)
-    return resolve_compat_binding_attr(
-        name,
-        compat_bindings=_assembly_compat_bindings(),
-    )
-
-
 def initialize_runtime():
     global BOT_TOKEN
     assembly = _ensure_executable_assembly()
@@ -166,10 +157,6 @@ def __getattr__(name: str):
                     bindings=_assembly_bindings(),
                 )
             except AttributeError:
-                try:
-                    return _resolve_legacy_compat_attr(name)
-                except AttributeError:
-                    pass
                 return resolve_compat_entrypoint_module_attr(
                     name,
                     fallback_resolver=_assembly_surface().resolve,
@@ -191,7 +178,7 @@ def main():
         install_runtime_hooks=runtime_bootstrap.install_runtime_hooks,
         handle_signal=handle_signal,
         release_process_lock=runtime_bootstrap.release_process_lock,
-        bot=_stable_runtime_surface().bot(),
+        bot=cast("commands.Bot", _stable_runtime_surface().resolve("bot")),
         lock_file_getter=assembly.launcher.runtime.lock_file,
         token_getter=assembly.launcher.runtime.bot_token,
     )
@@ -223,7 +210,7 @@ def main_strict():
         install_runtime_hooks=runtime_bootstrap.install_runtime_hooks,
         handle_signal=handle_signal_strict,
         release_process_lock=runtime_bootstrap.release_process_lock,
-        bot=stable_surface.bot(),
+        bot=cast("commands.Bot", stable_surface.resolve("bot")),
         lock_file_getter=assembly.launcher.runtime.lock_file,
         token_getter=assembly.launcher.runtime.bot_token,
     )

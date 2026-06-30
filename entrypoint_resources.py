@@ -4,30 +4,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Protocol
+from typing import Any
 
 from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
 from entrypoint_helpers import build_temp_path as build_entry_temp_path
+import entrypoint_state_protocols as state_protocols
 from runtime_io import AudioProcessRuntime
 from subsong_runtime import SubsongRuntime
-
-class EntrypointResourceStateProtocol(Protocol):
-    audio_runtime: AudioProcessRuntime | None
-    subsongs_runtime: SubsongRuntime | None
 
 
 @dataclass(slots=True)
 class EntrypointResources:
     boot: EntrypointBootstrapBuilder
-    state: EntrypointResourceStateProtocol
+    state: state_protocols.EntrypointResourceStateProtocol
     logger: logging.Logger
 
     def app_cfg(self) -> AppConfig:
         return self.boot.app_cfg
 
-    def config(self) -> dict[str, object]:
+    def config(self) -> dict[str, Any]:
         return self.boot.config
 
     def archive_runtime_config(self) -> ArchiveRuntimeConfig:

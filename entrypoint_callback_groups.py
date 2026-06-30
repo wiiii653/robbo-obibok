@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 from app_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory
 from collection_specs import CollectionSpec
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
 
 @dataclass(slots=True)
 class PlaybackEntrypointCallbacks:
@@ -19,9 +22,9 @@ class PlaybackEntrypointCallbacks:
     classify_track_route: Callable[..., dict[str, str]]
     clear_predownload_state: Callable[..., None]
     cleanup_subsong_temp_wavs: Callable[[PlaylistState], None]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[ClientSession]]
     is_playing: Callable[[], bool]
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     play_subsong: Callable[..., Awaitable[bool]]
     play_via_audacious: Callable[..., Awaitable[None]]
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]]
@@ -37,7 +40,7 @@ class PlaybackStaticCallbacks:
     audacious_stop: Callable[[], None]
     classify_track_route: Callable[..., dict[str, str]]
     clear_predownload_state: Callable[..., None]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[ClientSession]]
     is_playing: Callable[[], bool]
     prepare_playback_queue: Callable[..., dict[str, object]]
 

@@ -12,6 +12,7 @@ from bot_dependencies import PlaybackHandlerDependencies
 from bot_runtime import RuntimeConfig, RuntimeState
 from app_services import AppServicesProtocol
 from collection_specs import CollectionSpec
+from collection_service import CollectionArchiveProtocol
 from entrypoint_callback_groups import AppEntrypointCallbacks
 from playback_assets import PlaybackAssetRuntime
 from runtime_bootstrap import (
@@ -56,7 +57,7 @@ def build_startup_env(
     *,
     bot_token: str | None,
     root_dir: str,
-    validate_runtime_dependencies: Callable[[], list[str]],
+    validate_runtime_dependencies: Callable[[], None],
 ) -> StartupEnvironment:
     return initialize_startup_environment(
         bot_token=bot_token,
@@ -140,7 +141,7 @@ def build_app_callbacks(
     stream_runtime: StreamRuntimeProtocol,
     callbacks: AppEntrypointCallbacks,
     set_ym_last_wav_path: Callable[[str | None], None],
-    archives: CollectionRuntimeProtocol,
+    archives: CollectionArchiveProtocol,
     last_collection_file: str,
     logger: logging.Logger,
     loop: asyncio.AbstractEventLoop,

@@ -9,7 +9,7 @@ from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from boot_runtime import StartupEnvironment
 from bot_runtime import BotRuntime
-from entrypoint_runtime_surface import EntrypointRuntimeStateProtocol
+from entrypoint_state_protocols import EntrypointRuntimeStateProtocol
 
 if TYPE_CHECKING:
     from entrypoint_runtime import AppAssembly
@@ -73,11 +73,15 @@ class EntrypointRuntimeController:
 
     async def graceful_shutdown(self) -> None:
         self.initialize_runtime()
-        await self.loader.runtime_state_surface().state().runtime.graceful_shutdown()
+        runtime = self.loader.runtime_state_surface().state().runtime
+        assert runtime is not None
+        await runtime.graceful_shutdown()
 
     def handle_signal(self, signum: int, frame: object) -> None:
         self.initialize_runtime()
-        self.loader.runtime_state_surface().state().runtime.handle_signal(signum, frame)
+        runtime = self.loader.runtime_state_surface().state().runtime
+        assert runtime is not None
+        runtime.handle_signal(signum, frame)
 
     def lock_file(self) -> str:
         return self.loader.lock_file()

@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Mapping, MutableMapping, Sequence
 
 from robbo_obibok_launch import selected_entry_script_from_env
 from runtime_support import load_dotenv_file
@@ -17,8 +17,8 @@ ROOT = Path(__file__).resolve().parent
 def load_runtime_environment(
     *,
     root: Path = ROOT,
-    env: dict[str, str] | None = None,
-) -> dict[str, str]:
+    env: MutableMapping[str, str] | None = None,
+) -> MutableMapping[str, str]:
     runtime_env = os.environ if env is None else env
     load_dotenv_file(str(root / ".env"))
     if not runtime_env.get("DISCORD_BOT_TOKEN"):

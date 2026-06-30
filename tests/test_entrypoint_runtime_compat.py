@@ -8,25 +8,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from entrypoint_runtime_compat import (
-    warn_legacy_runtime_compat_attr,
     resolve_runtime_internal_attr,
 )
 from entrypoint_compat_policy import build_compat_policy
 
 
 class EntrypointRuntimeCompatTests(unittest.TestCase):
-    def test_legacy_runtime_warning_message_is_explicit(self):
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            warn_legacy_runtime_compat_attr("_STATE")
-
-        self.assertEqual(len(caught), 1)
-        self.assertIs(caught[0].category, DeprecationWarning)
-        self.assertEqual(
-            str(caught[0].message),
-            "_STATE is a deprecated legacy compatibility attribute; prefer the stable alias surface",
-        )
-
     def test_deprecated_internal_warning_message_is_explicit(self):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 from app_bootstrap import ArchiveRegistryViews, BootstrappedApp, bootstrap_app
 from app_config import AppConfig
@@ -20,7 +20,7 @@ from runtime_support import load_dotenv_file
 @dataclass(slots=True)
 class EntrypointBootstrap:
     app_cfg: AppConfig
-    config: dict[str, object]
+    config: dict[str, Any]
     archive_runtime_config: ArchiveRuntimeConfig
     bootstrapped_app: BootstrappedApp
     app_context: AppContext
@@ -37,7 +37,7 @@ class EntrypointBootstrapBuilder:
     load_last_collection: Callable[[str], str | None]
     atomic_json_write: Callable[[str, object, object], None]
     _app_cfg: AppConfig | None = None
-    _config: dict[str, object] | None = None
+    _config: dict[str, Any] | None = None
     _archive_runtime_config: ArchiveRuntimeConfig | None = None
     _bootstrap: EntrypointBootstrap | None = None
 
@@ -51,7 +51,7 @@ class EntrypointBootstrapBuilder:
         return self._app_cfg
 
     @property
-    def config(self) -> dict[str, object]:
+    def config(self) -> dict[str, Any]:
         return self.app_cfg.config if self._config is None else self._config
 
     @property

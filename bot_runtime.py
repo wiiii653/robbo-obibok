@@ -5,39 +5,40 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Awaitable, Callable, Iterable, Mapping, Protocol
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable, Mapping, cast
 
 from app_services import AppServicesProtocol
 from app_state import PlaylistState
 from bot_dependencies import (
+    CommandDecoratorFactory,
     LibraryCommandDependencies,
     PlaybackCommandDependencies,
     PlaybackHandlerDependencies,
+    SearchTracksProtocol,
 )
 from bot_events import CoreEventDependencies
 from collection_specs import CollectionSpec
-from collection_service import CollectionService
-from session_runtime import MetadataSessionDependencies, PlaybackSessionDependencies
+from collection_service import CollectionArchiveProtocol, CollectionService
+from session_runtime import (
+    EmbedFactoryProtocol,
+    MetadataSessionDependencies,
+    PlaybackSessionContext,
+    PlaybackSessionDependencies,
+)
 
 if TYPE_CHECKING:
+    import discord
+    from aiohttp import ClientSession
     from archive_catalog import CollectionInfo
     from discord.ext import commands
     from stream_runtime import MonitorAudioSource
-
-
-class EmbedFactoryProtocol(Protocol):
-    def __call__(self, *args: object, **kwargs: object) -> object: ...
-
-
-class CommandDecoratorFactoryProtocol(Protocol):
-    def __call__(self) -> object: ...
 
 
 @dataclass(slots=True)
 class RuntimeConfig:
     ASMA_BASE: str
     ASMA_DIR: str
-    AUTO_START_CHANNEL: str
+    AUTO_START_CHANNEL: str | None
     AY_DIR: str
     FLIP_ORDER: list[str]
     FLIP_SEQ: list[str]
@@ -134,7 +135,7 @@ class PlaybackSessionCallbacks:
     filter_blacklisted: Callable[[list[str], int | str], list[str]]
     get_collection_info: Callable[[str], "CollectionInfo"]
     load_asma_local_cache: Callable[[], list[str] | None]
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     parse_sap_header: Callable[[str], dict[str, str]]
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]]
     prepare_playback_queue: Callable[..., dict[str, object]]
@@ -154,13 +155,13 @@ class PlaybackCommandCallbacks:
     is_playing: Callable[[], bool]
     load_snes_cache: Callable[[], list[str] | None]
     load_tracks_for_mode: Callable[[str], Awaitable[list[str] | None]]
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     parse_sap_header: Callable[[str], dict[str, str]]
     parse_sid_header: Callable[[bytes], dict[str, str]]
     play_current_track: Callable[[object], Awaitable[bool]]
     prepare_playback_queue: Callable[..., dict[str, object]]
     register_np_message: Callable[[int, str, str, str], None]
-    search_tracks: Callable[[str, list[str], int], list[str]]
+    search_tracks: SearchTracksProtocol
     skip_to_next: Callable[[object], Awaitable[None]]
 
 
@@ -175,7 +176,7 @@ class PlaybackHandlerCallbacks:
     download_modarchive_module: Callable[..., Awaitable[str]]
     download_sap: Callable[..., Awaitable[str]]
     download_spc_rsn: Callable[..., Awaitable[str | None]]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[ClientSession]]
     get_subsongs: Callable[[str], list[float]]
     parse_sap_header: Callable[[str], dict[str, str]]
     parse_sid_header: Callable[[bytes], dict[str, str]]
@@ -233,7 +234,7 @@ class BootstrapCallbacks:
     close_shared_session: Callable[[], Awaitable[None]]
     log_preloaded_cache: Callable[[str, list[str] | None], None]
     logger: logging.Logger
-    mod_only: CommandDecoratorFactoryProtocol
+    mod_only: CommandDecoratorFactory
     release_process_lock: Callable[[str], None]
     run_startup_steps: Callable[..., Awaitable[None]]
     save_metadata_cache: Callable[[dict], None]
@@ -341,7 +342,7 @@ class BotRuntime:
 
     def build_collection_service(
         self,
-        archives: object,
+        archives: CollectionArchiveProtocol,
         *,
         status_count_cache: dict[str, tuple[float, int | str]],
     ) -> CollectionService:
@@ -489,7 +490,12 @@ class BotRuntime:
     async def start_targeted_playback_session(self, ctx: object, state: PlaylistState, url: str) -> bool:
         from session_runtime import start_targeted_playback_session
 
-        return await start_targeted_playback_session(ctx, state, url, self.build_playback_session_deps())
+        return await start_targeted_playback_session(
+            cast(PlaybackSessionContext, ctx),
+            state,
+            url,
+            self.build_playback_session_deps(),
+        )
 
     async def graceful_shutdown(self) -> None:
         self.state.shutdown_flag.set()
@@ -502,7 +508,7 @@ class BotRuntime:
         self.state.active_streams.clear()
         self.playback.command.audacious_stop()
         for vc in list(self.state.bot.voice_clients):
-            await vc.disconnect()
+            await cast("discord.VoiceClient", vc).disconnect()
         await self.bootstrap.close_shared_session()
         self.bootstrap.cleanup_temp_dir(self.config.TEMP_DIR, logger=self.bootstrap.logger)
 

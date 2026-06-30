@@ -100,8 +100,11 @@ def prepare_playback_queue(
 ) -> dict[str, object]:
     """Build queue/index/loop state from saved data or a fresh track list."""
     if can_restore_queue(saved, tracks, collection_mode, min_queue_length=min_queue_length):
+        assert saved is not None
+        saved_queue = saved["queue"]
+        assert isinstance(saved_queue, list)
         return {
-            "queue": list(saved["queue"]),
+            "queue": list(saved_queue),
             "index": saved.get("index", 0),
             "loop": saved.get("loop", default_loop),
             "restored": True,
@@ -243,7 +246,8 @@ def load_cached_json_file(path: str, cache_state: dict[str, object]) -> dict:
     except OSError:
         return {}
     if cache_state.get("data") is not None and cache_state.get("mtime") == mtime:
-        return dict(cache_state["data"])
+        cached_data = cache_state["data"]
+        return dict(cached_data) if isinstance(cached_data, dict) else {}
     try:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)

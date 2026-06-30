@@ -24,7 +24,7 @@ class BotDependenciesTests(unittest.TestCase):
         self.assertNotIn("message_track_map", annotations)
         self.assertEqual(
             annotations["get_message_track"],
-            "Callable[[int], dict[str, str] | None]",
+            "Callable[[int], dict[str, object] | None]",
         )
 
     def test_playback_command_dependencies_use_accessors_for_metadata_and_snes_maps(self):

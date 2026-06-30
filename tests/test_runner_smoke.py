@@ -211,7 +211,6 @@ class RunnerSmokeTests(unittest.TestCase):
         ):
             assembly.compat_policy = EntrypointCompatPolicy(
                 allow_deprecated_runtime_internal_attrs=False,
-                allow_legacy_runtime_compat_attrs=True,
             )
             try:
                 spec.loader.exec_module(module)
@@ -278,10 +277,6 @@ class RunnerSmokeTests(unittest.TestCase):
                 return_value=assembly,
             ),
         ):
-            assembly.compat_policy = EntrypointCompatPolicy(
-                allow_deprecated_runtime_internal_attrs=True,
-                allow_legacy_runtime_compat_attrs=False,
-            )
             try:
                 spec.loader.exec_module(module)
                 self.assertIs(module.state, assembly.compat_bindings["_STATE"])
@@ -483,7 +478,6 @@ assembly = types.SimpleNamespace(
     },
     compat_policy=EntrypointCompatPolicy(
         allow_deprecated_runtime_internal_attrs=False,
-        allow_legacy_runtime_compat_attrs=True,
     ),
 )
 captured = {}

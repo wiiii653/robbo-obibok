@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 from app_services import AppServicesProtocol
 from app_state import PlaylistState
-from bot_dependencies import CommandDecoratorFactory
+from bot_dependencies import CommandDecoratorFactory, SearchTracksProtocol
+from collection_service import CollectionArchiveProtocol
 from runtime_composition import (
     BootstrapCompositionCallbacks,
     CollectionCompositionCallbacks,
@@ -17,6 +18,9 @@ from runtime_composition import (
     PlaybackHandlerCompositionCallbacks,
     PlaybackSessionCompositionCallbacks,
 )
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
 from runtime_protocols import (
     ArchiveRuntimeProtocol,
     CollectionRuntimeProtocol,
@@ -41,9 +45,9 @@ def build_playback_composition_callbacks(
     classify_track_route: Callable[..., dict[str, str]],
     clear_predownload_state: Callable[..., None],
     cleanup_subsong_temp_wavs: Callable[[PlaylistState], None],
-    get_shared_session: Callable[[], Awaitable[object]],
+    get_shared_session: Callable[[], Awaitable[ClientSession]],
     is_playing: Callable[[], bool],
-    monitor_playback: Callable[..., Awaitable[None]],
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]],
     play_subsong: Callable[..., Awaitable[bool]],
     play_via_audacious: Callable[..., Awaitable[None]],
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]],
@@ -143,7 +147,7 @@ def build_library_composition_callbacks(
 
 def build_collection_composition_callbacks(
     *,
-    archives: CollectionRuntimeProtocol,
+    archives: CollectionArchiveProtocol,
     archive_runtime: ArchiveRuntimeProtocol,
     service_facade: ServiceFacadeProtocol,
     stream_runtime: StreamRuntimeProtocol,

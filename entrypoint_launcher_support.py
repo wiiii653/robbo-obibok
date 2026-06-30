@@ -9,9 +9,9 @@ from logging.handlers import RotatingFileHandler
 from typing import Callable
 
 from entrypoint_bootstrap import EntrypointBootstrapBuilder, build_entrypoint_bootstrap
-from entrypoint_bridge import EntrypointSupportStateProtocol
 from entrypoint_guild import GuildScope
 from entrypoint_resources import EntrypointResources
+from entrypoint_state_protocols import EntrypointStateProtocol
 from runtime_io import SharedSessionRuntime
 
 
@@ -45,7 +45,7 @@ class EntrypointSupport:
     logger: logging.Logger
     session_runtime: SharedSessionRuntime
     boot: EntrypointBootstrapBuilder
-    state: EntrypointSupportStateProtocol
+    state: EntrypointStateProtocol
     resources: EntrypointResources
     guild_scope: GuildScope
 
@@ -56,7 +56,7 @@ def build_entrypoint_support(
     logger_name: str,
     load_last_collection: Callable[[str], str | None],
     atomic_json_write: Callable[[str, object, object], None],
-    state: EntrypointSupportStateProtocol | None = None,
+    state: EntrypointStateProtocol | None = None,
     configure_logger: Callable[[str, str], logging.Logger] = configure_entrypoint_logger,
 ) -> EntrypointSupport:
     root_dir = os.path.dirname(os.path.abspath(module_path))

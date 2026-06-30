@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Mapping, Protocol
+from typing import Callable, Iterable, Mapping, Protocol, cast
 
 from entrypoint_compat_contract import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
 from entrypoint_direct_export_contract import (
@@ -165,8 +165,7 @@ ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES = (
 )
 
 ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES = (
-    ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES
-    | ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES
+    ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES
     | ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES
 )
 
@@ -278,7 +277,7 @@ def _resolve_binding_value(
     if value is None:
         value = surface.resolve(spec.export_name)
     if spec.copy_value:
-        return list(value)
+        return list(cast(Iterable[object], value))
     return value
 
 
@@ -291,7 +290,7 @@ def _resolve_compat_binding_value(
     if value is None:
         value = resolver(spec.export_name)
     if spec.copy_value:
-        return list(value)
+        return list(cast(Iterable[object], value))
     return value
 
 
@@ -300,8 +299,8 @@ def _compat_binding_source_map(
 ) -> EntrypointCompatBindingSource:
     export_map = getattr(source, "export_map", None)
     if callable(export_map):
-        return export_map()
-    return source
+        return cast(EntrypointCompatBindingSource, export_map())
+    return cast(EntrypointCompatBindingSource, source)
 
 
 def _compat_binding_resolver(
@@ -311,7 +310,10 @@ def _compat_binding_resolver(
 ) -> Callable[[str], object]:
     if resolver is not None:
         return resolver
-    return source.resolve
+    resolve = getattr(source, "resolve", None)
+    if not callable(resolve):
+        raise TypeError("compatibility binding source has no resolver")
+    return cast(Callable[[str], object], resolve)
 
 
 def _compat_source_get(

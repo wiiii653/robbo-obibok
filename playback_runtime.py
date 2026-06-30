@@ -7,7 +7,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Protocol, TypeVar, cast
 
 from app_state import PlaylistState
 from playback_monitor_policy import (
@@ -18,8 +18,16 @@ from playback_monitor_policy import (
 )
 
 if TYPE_CHECKING:
+    import discord
     from discord.ext import commands
     from stream_runtime import MonitorAudioSource
+
+
+T = TypeVar("T")
+
+
+class RunSyncProtocol(Protocol):
+    def __call__(self, func: Callable[..., T], *args: object) -> Awaitable[T]: ...
 
 
 @dataclass(slots=True)
@@ -31,9 +39,9 @@ class MonitorDependencies:
     audacious_stop: Callable[[], None]
     compute_timeout_seconds: Callable[..., int]
     get_state: Callable[[int], PlaylistState]
-    is_gme_format_path: Callable[[str], bool]
+    is_gme_format_path: Callable[[str | None], bool]
     is_playing: Callable[[], bool]
-    pre_download_next: Callable[[PlaylistState], Awaitable[None]]
+    pre_download_next: Callable[[PlaylistState], Coroutine[Any, Any, None]]
     save_queue: Callable[[PlaylistState], None]
     should_advance_after_stop: Callable[..., tuple[bool, float | None]]
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]]
@@ -46,7 +54,7 @@ class MonitorDependencies:
     get_output_length: Callable[[], int]
     get_song_length: Callable[[], int]
     logger: logging.Logger
-    run_sync: Callable[..., Awaitable[object]]
+    run_sync: RunSyncProtocol
 
 
 @dataclass(slots=True)
@@ -55,8 +63,17 @@ class WatchdogDependencies:
     ensure_audacious: Callable[[], None]
     setup_virtual_sink: Callable[[], None]
     logger: logging.Logger
-    run_sync: Callable[..., Awaitable[object]]
-async def monitor_playback(ctx: object, vc: object, guild_id: int, deps: MonitorDependencies):
+    run_sync: RunSyncProtocol
+
+
+async def monitor_playback(
+    ctx: object,
+    vc: object,
+    guild_id: int,
+    deps: MonitorDependencies,
+) -> None:
+    ctx = cast("commands.Context[commands.Bot]", ctx)
+    vc = cast("discord.VoiceClient", vc)
     empty_since = None
     not_playing_since = None
     drop_confirmed_since = None
@@ -152,21 +169,21 @@ async def monitor_playback(ctx: object, vc: object, guild_id: int, deps: Monitor
         stream.cleanup()
 
 
-async def health_watchdog(bot: "commands.Bot", deps: WatchdogDependencies):
+async def health_watchdog(bot: "commands.Bot", deps: WatchdogDependencies) -> None:
     await bot.wait_until_ready()
     while not bot.is_closed():
         await asyncio.sleep(30)
         try:
-            result = await deps.run_sync(
+            process_result = await deps.run_sync(
                 lambda: subprocess.run(["pgrep", "-x", "audacious"], capture_output=True)
             )
-            if result.returncode != 0:
+            if process_result.returncode != 0:
                 deps.logger.warning("Audacious not running, restarting...")
                 await deps.run_sync(deps.ensure_audacious)
-            result = await deps.run_sync(
+            sink_result = await deps.run_sync(
                 lambda: subprocess.run(["pactl", "list", "sinks", "short"], capture_output=True, text=True)
             )
-            if deps.SINK_NAME not in result.stdout:
+            if deps.SINK_NAME not in sink_result.stdout:
                 deps.logger.warning("Virtual sink missing, recreating...")
                 await deps.run_sync(deps.setup_virtual_sink)
         except Exception as exc:

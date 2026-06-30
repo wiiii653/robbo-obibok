@@ -3,51 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Mapping, Protocol
+from typing import Callable, Mapping, cast
 
 from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
-
-if TYPE_CHECKING:
-    import asyncio
-
-    from bot_runtime import BotRuntime
-    from entrypoint_runtime import AppAssembly
-    from runtime_registration import RuntimeRegistration
-    from runtime_composition import ComposedRuntime
-
-
-class EntrypointRuntimeStateProtocol(Protocol):
-    app: "AppAssembly | None"
-    startup_env: object | None
-    runtime_registration: "RuntimeRegistration | None"
-    composed_runtime: "ComposedRuntime | None"
-    runtime: "BotRuntime | None"
-    collection_service: object | None
-    playback_service: object | None
-    lock_file: str | None
-    shutdown_flag: "asyncio.Event | None"
-
-    def cache_initialized_app(self, app: "AppAssembly") -> "AppAssembly": ...
-
-
-class EntrypointBootstrapStateProtocol(Protocol):
-    archives: object | None
-    service_facade: object | None
-
-    def runtime_metadata_index(self) -> dict[str, dict[str, str]]: ...
-
-    def runtime_modarchive_name_map(self) -> Mapping[str, str]: ...
-
-    def runtime_snes_metadata(self) -> Mapping[str, dict[str, object]]: ...
-
-
-class EntrypointRuntimeInitializerStateProtocol(
-    EntrypointRuntimeStateProtocol,
-    EntrypointBootstrapStateProtocol,
-    Protocol,
-):
-    pass
+import entrypoint_state_protocols as state_protocols
 
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
@@ -131,14 +91,16 @@ class EntrypointStableRuntimeSurface:
 class EntrypointRuntimeStateSurface:
     bindings: Mapping[str, object]
 
-    def state(self) -> EntrypointRuntimeStateProtocol:
-        return self.bindings["_STATE"]
+    def state(self) -> state_protocols.EntrypointRuntimeStateProtocol:
+        return cast(state_protocols.EntrypointRuntimeStateProtocol, self.bindings["_STATE"])
 
     def app_config(self) -> AppConfig:
-        return self.bindings["_app_cfg"]()
+        factory = cast(Callable[[], AppConfig], self.bindings["_app_cfg"])
+        return factory()
 
     def archive_runtime_config(self) -> ArchiveRuntimeConfig:
-        return self.bindings["_archive_runtime_config"]()
+        factory = cast(Callable[[], ArchiveRuntimeConfig], self.bindings["_archive_runtime_config"])
+        return factory()
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,7 +192,9 @@ def build_compat_runtime_surface(
     )
 
 
-def _build_surface_method(spec: EntrypointStableBindingSpec):
+def _build_surface_method(
+    spec: EntrypointStableBindingSpec,
+) -> Callable[[EntrypointStableRuntimeSurface], object]:
     def _method(self: EntrypointStableRuntimeSurface) -> object:
         if self.alias_bindings is not None and spec.binding_name in self.alias_bindings:
             return self.alias_bindings[spec.binding_name]

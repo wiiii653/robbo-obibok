@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Callable
 
 from app_config import AppConfig
+from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
 
 from entrypoint_app_builders import build_entrypoint_component_access
 from entrypoint_callback_groups import EntrypointRawCallbacks
@@ -42,17 +43,17 @@ class EntrypointApp:
 
 @dataclass(slots=True)
 class EntrypointRegistrationDeps:
-    build_playback_handlers: Callable[..., object]
-    register_core_events: Callable[..., object]
-    register_playback_commands: Callable[..., object]
-    register_library_commands: Callable[..., object]
-    validate_runtime_dependencies: Callable[[], list[str]]
+    build_playback_handlers: Callable[[PlaybackHandlerDependencies], PlaybackHandlerMap]
+    register_core_events: Callable[..., None]
+    register_playback_commands: Callable[..., None]
+    register_library_commands: Callable[..., None]
+    validate_runtime_dependencies: Callable[[], None]
 
 
 @dataclass(slots=True)
 class EntrypointRuntimePolicyDeps:
     compute_timeout_seconds: Callable[..., int]
-    is_gme_format_path: Callable[[str], bool]
+    is_gme_format_path: Callable[[str | None], bool]
     should_advance_after_stop: Callable[..., tuple[bool, float | None]]
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]]
     should_disconnect_for_empty_channel: Callable[..., tuple[bool, float | None]]

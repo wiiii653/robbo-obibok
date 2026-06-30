@@ -7,12 +7,12 @@ import logging
 from typing import TYPE_CHECKING, Awaitable, Callable
 
 from boot_runtime import StartupEnvironment
-from bot_dependencies import PlaybackHandlerDependencies
+from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
 from entrypoint_bridge import EntrypointComponentAccess
 from entrypoint_callback_groups import AppEntrypointCallbacks
 from entrypoint_resources import EntrypointResources
-from entrypoint_runtime_surface import EntrypointRuntimeInitializerStateProtocol
+from entrypoint_state_protocols import EntrypointRuntimeInitializerStateProtocol
 
 if TYPE_CHECKING:
     from discord.ext import commands
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class RuntimeRegistrationHooks:
-    build_playback_handlers: Callable[[PlaybackHandlerDependencies], dict[str, object]]
+    build_playback_handlers: Callable[[PlaybackHandlerDependencies], PlaybackHandlerMap]
     register_core_events: Callable[..., None]
     register_playback_commands: Callable[..., None]
     register_library_commands: Callable[..., None]
@@ -38,7 +38,7 @@ class EntrypointRuntimeInitializer:
     status_count_cache: dict[str, tuple[float, int | str]]
     flip_order: list[str]
     flip_seq: list[str]
-    validate_runtime_dependencies: Callable[[], list[str]]
+    validate_runtime_dependencies: Callable[[], None]
     components: EntrypointComponentAccess
     registration_hooks: RuntimeRegistrationHooks
     callbacks: AppEntrypointCallbacks
@@ -96,6 +96,7 @@ class EntrypointRuntimeInitializer:
 
         component_bundle = self.components.require()
         app_cfg = self.resources.app_cfg()
+        assert self.state.archives is not None
         return build_app_callbacks(
             app_services=component_bundle.app_services,
             archive_runtime=component_bundle.archive_runtime,
@@ -114,6 +115,7 @@ class EntrypointRuntimeInitializer:
         from entrypoint_runtime import create_app as create_entry_app
 
         self.components.require()
+        assert self.state.service_facade is not None
         startup_env = self.build_startup_environment()
         return create_entry_app(
             startup_env=startup_env,

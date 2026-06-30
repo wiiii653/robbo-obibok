@@ -7,17 +7,28 @@ import logging
 import os
 import random
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Awaitable, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Protocol, cast
 
 from archive_catalog import CollectionInfo
 from app_state import PlaylistState
 
 if TYPE_CHECKING:
+    import discord
     from discord.ext import commands
+
+    class PlaybackSessionContext(commands.Context[commands.Bot]):
+        guild: discord.Guild
+        author: discord.Member
+        voice_client: discord.VoiceClient | None
+else:
+    class PlaybackSessionContext(Protocol):
+        guild: object
+        author: object
+        voice_client: object | None
 
 
 class EmbedFactoryProtocol(Protocol):
-    def __call__(self, *args: object, **kwargs: object) -> object: ...
+    def __call__(self, **kwargs: Any) -> "discord.Embed": ...
 
 
 @dataclass(slots=True)
@@ -38,7 +49,7 @@ class PlaybackSessionDependencies:
     load_asma_local_cache: Callable[[], list[str] | None]
     load_queue: Callable[[int], dict[str, object] | None]
     log: logging.Logger
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     parse_sap_header: Callable[[str], dict[str, str]]
     playback_handlers: dict[str, Callable[..., Awaitable[bool]]]
     prepare_playback_queue: Callable[..., dict[str, object]]
@@ -61,7 +72,7 @@ class MetadataSessionDependencies:
     store_metadata_entry: Callable[[str, dict[str, str]], None]
 
 
-async def pre_download_next(state: PlaylistState, deps: PlaybackSessionDependencies):
+async def pre_download_next(state: PlaylistState, deps: PlaybackSessionDependencies) -> None:
     url = state.next_queue_url()
     if url is None:
         return
@@ -84,14 +95,19 @@ async def start_targeted_playback_session(
     url: str,
     deps: PlaybackSessionDependencies,
 ) -> bool:
+    ctx = cast(PlaybackSessionContext, ctx)
+    assert ctx.guild is not None
+    author = cast("discord.Member", ctx.author)
+    assert author.voice is not None
+    assert author.voice.channel is not None
     if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-    vc = await ctx.author.voice.channel.connect()
+        await cast("discord.VoiceClient", ctx.voice_client).disconnect()
+    vc: discord.VoiceClient = cast("discord.VoiceClient", await author.voice.channel.connect())
     state.bind_voice_context(guild_id=ctx.guild.id, ctx=ctx, vc=vc)
     state.set_loop_enabled(deps.PLAYBACK_LOOP)
     deps.clear_predownload_state(state)
 
-    base_queue = deps.filter_blacklisted(list(state.tracks), ctx.author.id)
+    base_queue = deps.filter_blacklisted(list(state.tracks), author.id)
     if deps.PLAYBACK_SHUFFLE:
         random.shuffle(base_queue)
     queue, index = deps.place_track_in_queue(base_queue, url)
@@ -106,7 +122,9 @@ async def start_targeted_playback_session(
     return False
 
 
-async def play_current_track(ctx: object, deps: PlaybackSessionDependencies):
+async def play_current_track(ctx: object, deps: PlaybackSessionDependencies) -> bool:
+    ctx = cast(PlaybackSessionContext, ctx)
+    assert ctx.guild is not None
     state = deps.get_state(ctx.guild.id)
     url = state.current_queue_url()
     if url is None:
@@ -134,7 +152,14 @@ async def play_current_track(ctx: object, deps: PlaybackSessionDependencies):
         return False
 
 
-async def skip_to_next(ctx, deps: PlaybackSessionDependencies, play_subsong, cleanup_subsong_temp_wavs):
+async def skip_to_next(
+    ctx: object,
+    deps: PlaybackSessionDependencies,
+    play_subsong: Callable[[object, PlaylistState, int], Awaitable[bool]],
+    cleanup_subsong_temp_wavs: Callable[[PlaylistState], None],
+) -> None:
+    ctx = cast(PlaybackSessionContext, ctx)
+    assert ctx.guild is not None
     state = deps.get_state(ctx.guild.id)
     if not state.queue:
         await ctx.send("No tracks in queue. Use !play.")
@@ -174,25 +199,33 @@ async def skip_to_next(ctx, deps: PlaybackSessionDependencies, play_subsong, cle
         else:
             await ctx.send("Playlist ended.")
             if state.vc and state.vc.is_connected():
-                await state.vc.disconnect()
+                await cast("discord.VoiceClient", state.vc).disconnect()
             return
 
     deps.save_queue(state)
     await play_current_track(state.ctx or ctx, deps)
 
 
-async def auto_play_after_switch(ctx: object, state: PlaylistState, deps: PlaybackSessionDependencies) -> None:
-    if not ctx.author.voice or not state.tracks:
+async def auto_play_after_switch(
+    ctx: object,
+    state: PlaylistState,
+    deps: PlaybackSessionDependencies,
+) -> None:
+    ctx = cast(PlaybackSessionContext, ctx)
+    assert ctx.guild is not None
+    author = cast("discord.Member", ctx.author)
+    if not author.voice or not state.tracks:
         return
     deps.log.info("auto_play_after_switch: queue_len=%d, index=%d", state.queue_length(), state.index)
-    queue = deps.filter_blacklisted(list(state.tracks), ctx.author.id)
+    queue = deps.filter_blacklisted(list(state.tracks), author.id)
     if deps.PLAYBACK_SHUFFLE:
         random.shuffle(queue)
     state.set_queue_state(queue, 0, loop=deps.PLAYBACK_LOOP)
 
     if not state.vc or not state.vc.is_connected():
         try:
-            vc = await ctx.author.voice.channel.connect()
+            assert author.voice.channel is not None
+            vc: discord.VoiceClient = cast("discord.VoiceClient", await author.voice.channel.connect())
             state.bind_voice_context(guild_id=ctx.guild.id, ctx=ctx, vc=vc)
         except Exception as exc:
             await ctx.send(f"❌ Could not connect: {exc}")
@@ -208,7 +241,7 @@ async def auto_play_after_switch(ctx: object, state: PlaylistState, deps: Playba
         state.set_monitor_task(deps.bot.loop.create_task(deps.monitor_playback(ctx, state.vc, ctx.guild.id)))
 
 
-async def fetch_metadata_background(bot, deps: MetadataSessionDependencies):
+async def fetch_metadata_background(bot: "commands.Bot", deps: MetadataSessionDependencies) -> None:
     await bot.wait_until_ready()
     await asyncio.sleep(30)
     cached = deps.load_asma_local_cache()

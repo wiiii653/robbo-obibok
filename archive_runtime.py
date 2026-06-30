@@ -4,18 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import subprocess
 import time
 from dataclasses import dataclass, field
 from urllib.parse import urljoin
-from typing import Awaitable, Callable
+from typing import TYPE_CHECKING, Awaitable, Callable
 
 import aiohttp
 
 from archive_downloads import download_modarchive_module as archive_download_modarchive_module
 from archive_downloads import download_spc_rsn as archive_download_spc_rsn
+
+if TYPE_CHECKING:
+    from archive_catalog import ArchiveCatalog
 
 SAP_LINE_RE = re.compile(rb"^([A-Z]+)\s+(.+)")
 SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
@@ -47,12 +51,12 @@ class ArchiveRuntimeConfig:
 
 @dataclass(slots=True)
 class ArchiveRuntime:
-    archives: object
-    logger: object
+    archives: "ArchiveCatalog"
+    logger: logging.Logger
     snes_spc_dir: str
     temp_dir: str
     build_temp_path: Callable[[str], str]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[aiohttp.ClientSession]]
     config: ArchiveRuntimeConfig
     _crawl_semaphore: asyncio.Semaphore = field(init=False)
 

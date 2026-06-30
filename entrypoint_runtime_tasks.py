@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 from app_config import AppConfig
 from app_state import PlaylistState
 from entrypoint_bridge import EntrypointComponentAccess
-from entrypoint_runtime_surface import EntrypointRuntimeStateProtocol
+from entrypoint_state_protocols import EntrypointRuntimeStateProtocol
 from entrypoint_tasks import health_watchdog_entry, monitor_playback_entry
 
 if TYPE_CHECKING:
@@ -27,21 +27,22 @@ class EntrypointRuntimeTasks:
     audacious_song: Callable[[], str]
     audacious_stop: Callable[[], None]
     compute_timeout_seconds: Callable[..., int]
-    is_gme_format_path: Callable[[str], bool]
+    is_gme_format_path: Callable[[str | None], bool]
     is_playing: Callable[[], bool]
-    pre_download_next: Callable[[PlaylistState], asyncio.Future]
+    pre_download_next: Callable[[PlaylistState], Coroutine[Any, Any, None]]
     should_advance_after_stop: Callable[..., tuple[bool, float | None]]
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]]
     should_disconnect_for_empty_channel: Callable[..., tuple[bool, float | None]]
     should_force_timeout_stop: Callable[[int, int], bool]
     should_start_predownload: Callable[..., bool]
-    skip_to_next: Callable[[object], asyncio.Future]
+    skip_to_next: Callable[[object], Awaitable[None]]
     stop_all_players: Callable[[], None]
     ensure_audacious: Callable[[], None]
     setup_virtual_sink: Callable[[], None]
 
     async def monitor_playback(self, ctx: object, vc: object, guild_id: int) -> None:
         component_bundle = self.components.require()
+        assert self.state.shutdown_flag is not None
         await monitor_playback_entry(
             ctx,
             vc,

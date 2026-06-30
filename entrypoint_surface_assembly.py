@@ -17,8 +17,8 @@ from entrypoint_runtime_surface import build_stable_runtime_surface_bindings
 from entrypoint_surface_runtime import EntrypointModuleSurface
 
 if TYPE_CHECKING:
-    from entrypoint_bridge import EntrypointCompatStateProtocol
     from entrypoint_launcher_runtime import LazyEntrypointLauncher
+    from entrypoint_state_protocols import EntrypointCompatStateProtocol
 
 
 class LazyCallableExport:
@@ -35,9 +35,9 @@ class LazyCallableExport:
 class EntrypointSurfaceLoaderProtocol(Protocol):
     def resolve_legacy(self, name: str) -> object: ...
 
-    def collection_export(self, spec: EntrypointDirectExportSpec) -> Callable[..., object]: ...
+    def collection_export(self, spec: str | EntrypointDirectExportSpec) -> Callable[..., object]: ...
 
-    def runtime_export(self, spec: EntrypointDirectExportSpec) -> Callable[..., object]: ...
+    def runtime_export(self, spec: str | EntrypointDirectExportSpec) -> Callable[..., object]: ...
 
 
 def build_entrypoint_compat_registry_attrs(
@@ -45,13 +45,16 @@ def build_entrypoint_compat_registry_attrs(
     state: EntrypointCompatStateProtocol,
     guild_id_getter: Callable[[], int | None],
 ) -> dict[str, Callable[[], object]]:
-    registry_attrs = {}
+    def state_attr_getter(attr: str) -> Callable[[], object]:
+        return lambda: getattr(state, attr)
+
+    registry_attrs: dict[str, Callable[[], object]] = {}
     for spec in ENTRYPOINT_COMPAT_RUNTIME_BINDINGS:
         if spec.export_name == "GUILD_ID":
             registry_attrs[spec.export_name] = guild_id_getter
             continue
         assert spec.state_attr is not None
-        registry_attrs[spec.export_name] = lambda attr=spec.state_attr: getattr(state, attr)
+        registry_attrs[spec.export_name] = state_attr_getter(spec.state_attr)
     return registry_attrs
 
 
@@ -60,7 +63,7 @@ def build_entrypoint_direct_export_map(
     resolve_collection: Callable[[EntrypointDirectExportSpec], Callable[..., object]],
     resolve_runtime: Callable[[EntrypointDirectExportSpec], Callable[..., object]],
 ) -> dict[str, object]:
-    exports = {}
+    exports: dict[str, object] = {}
     for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS:
         if spec.source_name == "collection":
             exports[spec.export_name] = resolve_collection(spec)

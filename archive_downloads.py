@@ -52,7 +52,7 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_s
 
 
 async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path, get_shared_session, logger, retries: int = 2) -> str:
-    last_err = None
+    last_err: BaseException | None = None
     session = await get_shared_session()
     for attempt in range(retries + 1):
         try:
@@ -75,4 +75,6 @@ async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path
             if attempt < retries:
                 await asyncio.sleep(2)
     logger.error("ModArchive download failed after retries: %s", last_err)
+    if last_err is None:
+        raise RuntimeError(f"ModArchive download failed without an exception: {url}")
     raise last_err

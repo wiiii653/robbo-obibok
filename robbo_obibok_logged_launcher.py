@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import MutableMapping
 
 from robbo_obibok_launcher import load_runtime_environment, selected_entry_command
 from robbo_obibok_launch import selected_entry_script_from_env
@@ -18,7 +19,7 @@ def build_logged_launch_command(
     *,
     root: Path = ROOT,
     env: dict[str, str] | None = None,
-) -> tuple[dict[str, str], list[str]]:
+) -> tuple[MutableMapping[str, str], list[str]]:
     runtime_env = load_runtime_environment(root=root, env=os.environ if env is None else env)
     entry_script = selected_entry_script_from_env(runtime_env)
     command = selected_entry_command(root=root, env=runtime_env, entry_script=entry_script)

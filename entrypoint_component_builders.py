@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Awaitable, Callable
+from typing import TYPE_CHECKING, Awaitable, Callable
 
 from app_services import AppServicesProtocol
 from archive_catalog import ArchiveCatalog
@@ -15,6 +15,9 @@ from playback_helpers import NowPlayingDependencies
 from runtime_protocols import SubsongRuntimeProtocol
 from runtime_service_facade import RuntimeServiceFacade
 from stream_runtime import StreamRuntime
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
 
 
 def _build_now_playing_embed(**kwargs):
@@ -67,7 +70,7 @@ def build_archive_runtime(
     snes_spc_dir: str,
     temp_dir: str,
     build_temp_path: Callable[[str], str],
-    get_shared_session: Callable[[], Awaitable[object]],
+    get_shared_session: Callable[[], Awaitable[ClientSession]],
     config: ArchiveRuntimeConfig,
 ) -> ArchiveRuntime:
     return ArchiveRuntime(
@@ -90,7 +93,7 @@ def build_playback_assets(
     ym_temp_dir: str,
     logger: logging.Logger,
     build_temp_path: Callable[[str], str],
-    get_shared_session: Callable[[], Awaitable[object]],
+    get_shared_session: Callable[[], Awaitable[ClientSession]],
 ) -> PlaybackAssetRuntime:
     return PlaybackAssetRuntime(
         asma_base=asma_base,

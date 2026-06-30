@@ -61,11 +61,20 @@ class RuntimeServiceFacade:
     async def play_current_track(self, ctx: object) -> bool:
         return await self._playback().play_current_track(ctx)
 
+    async def pre_download_next(self, state: PlaylistState) -> None:
+        await self._playback().pre_download_next(state)
+
+    async def start_targeted_playback_session(self, ctx: object, state: PlaylistState, url: str) -> bool:
+        return await self._playback().start_targeted_playback_session(ctx, state, url)
+
     async def skip_to_next(self, ctx: object) -> None:
         await self._playback().skip_to_next(ctx)
 
     async def auto_play_after_switch(self, ctx: object, state: PlaylistState) -> None:
         await self._playback().auto_play_after_switch(ctx, state)
+
+    async def fetch_metadata_background(self) -> None:
+        await self._playback().fetch_metadata_background()
 
     def stop_all_players(self, cleanup_subsong_temp_wavs: Callable[[PlaylistState], None]) -> None:
         self.stop_all_players_impl(self.app_services.iter_guild_states(), cleanup_subsong_temp_wavs)

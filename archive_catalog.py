@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 from types import MappingProxyType
 import logging
-from typing import Awaitable, Callable, Iterable, Mapping
+from typing import Awaitable, Callable, Iterable, Mapping, TypeVar
 
 from archive_runtime import ArchiveRuntimeConfig
 
@@ -19,6 +19,7 @@ ArchivePaths = ArchiveRuntimeConfig
 
 TrackLoadResult = list[str] | None | Awaitable[list[str] | None]
 TrackLoader = Callable[[], TrackLoadResult]
+SessionT = TypeVar("SessionT")
 
 
 @dataclass(slots=True)
@@ -143,9 +144,9 @@ class ArchiveCatalog:
 
     async def fetch_metadata_batch(
         self,
-        session: object,
+        session: SessionT,
         urls: list[str],
-        fetch_single: Callable[[object, str], Awaitable[object]],
+        fetch_single: Callable[[SessionT, str], Awaitable[dict[str, str]]],
         batch_size: int = 20,
     ) -> dict[str, dict[str, str]]:
         results: dict[str, dict[str, str]] = {}
@@ -265,7 +266,7 @@ class ArchiveCatalog:
 
     def _load_path_cache(self, cache_path: str, label: str) -> list[str] | None:
         data = self._load_json_cache(cache_path)
-        if data is None:
+        if not isinstance(data, dict):
             return None
         tracks = [track["path"] for track in data.get("tracks", [])]
         self.logger.info("%s: loaded %d tracks from cache", label, len(tracks))
@@ -351,9 +352,9 @@ class ArchiveCatalog:
     async def load_tracks_for_mode(self, mode: str) -> list[str] | None:
         info = self.get_collection_info(mode)
         result = info.load_tracks()
-        tracks = await result if asyncio.iscoroutine(result) else result
+        tracks = await result if isinstance(result, Awaitable) else result
         if not tracks and mode == "hvsc" and info.fallback_load:
             self.logger.info("HVSC: cache empty, downloading index...")
             fallback = info.fallback_load()
-            tracks = await fallback if asyncio.iscoroutine(fallback) else fallback
+            tracks = await fallback if isinstance(fallback, Awaitable) else fallback
         return tracks

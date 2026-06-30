@@ -4,13 +4,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Awaitable, Callable, Iterable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable, Protocol
 
 from archive_catalog import CollectionInfo
 from app_state import PlaylistState
 
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
 
-CommandDecoratorFactory = Callable[[], object]
+
+CommandDecoratorFactory = Callable[[], Callable[[Any], Any]]
+PlaybackHandlerMap = dict[str, Callable[..., Awaitable[bool]]]
+
+
+class SearchTracksProtocol(Protocol):
+    def __call__(
+        self,
+        query: str,
+        tracks: list[str],
+        *,
+        limit: int = 10,
+    ) -> list[str]: ...
 
 
 @dataclass(slots=True)
@@ -40,14 +54,14 @@ class PlaybackCommandDependencies:
     metadata_index_size: Callable[[], int]
     mod_only: CommandDecoratorFactory
     get_modarchive_track_name: Callable[[str], str | None]
-    monitor_playback: Callable[..., Awaitable[None]]
+    monitor_playback: Callable[..., Coroutine[Any, Any, None]]
     parse_sap_header: Callable[[str], dict[str, str]]
     parse_sid_header: Callable[[bytes], dict[str, str]]
     play_current_track: Callable[[object], Awaitable[bool]]
     prepare_playback_queue: Callable[..., dict[str, object]]
     register_np_message: Callable[[int, str, str, str], None]
     save_queue: Callable[[PlaylistState], None]
-    search_tracks: Callable[[str, list[str], int], list[str]]
+    search_tracks: SearchTracksProtocol
     skip_to_next: Callable[[object], Awaitable[None]]
     has_snes_metadata: Callable[[], bool]
     iter_snes_metadata: Callable[[], Iterable[tuple[str, dict[str, object]]]]
@@ -72,7 +86,7 @@ class LibraryCommandDependencies:
     load_playlist: Callable[[str], dict | None]
     load_user_tracks: Callable[[dict, int | str], list[dict]]
     log: logging.Logger
-    get_message_track: Callable[[int], dict[str, str] | None]
+    get_message_track: Callable[[int], dict[str, object] | None]
     monitor_playback: Callable[..., Awaitable[None]]
     play_current_track: Callable[[object], Awaitable[bool]]
     remove_user_track: Callable[[dict, int | str, str], tuple[dict, bool]]
@@ -100,7 +114,7 @@ class PlaybackHandlerDependencies:
     download_modarchive_module: Callable[[str], Awaitable[str]]
     download_sap: Callable[[str], Awaitable[str]]
     download_spc_rsn: Callable[[str, str, str], Awaitable[str | None]]
-    get_shared_session: Callable[[], Awaitable[object]]
+    get_shared_session: Callable[[], Awaitable[ClientSession]]
     get_subsongs: Callable[[str], list[float]]
     log: logging.Logger
     parse_sap_header: Callable[[str], dict[str, str]]

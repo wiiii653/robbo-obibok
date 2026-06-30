@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 from app_state import PlaylistState
 from playback_process import audtool_output_length, audtool_song_length
@@ -28,7 +28,7 @@ async def monitor_playback_entry(
     get_state: Callable[[int], PlaylistState],
     is_gme_format_path: Callable[[str | None], bool],
     is_playing: Callable[[], bool],
-    pre_download_next: Callable[[PlaylistState], Awaitable[None]],
+    pre_download_next: Callable[[PlaylistState], Coroutine[Any, Any, None]],
     save_queue: Callable[[PlaylistState], None],
     should_advance_after_stop: Callable[..., tuple[bool, float | None]],
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]],

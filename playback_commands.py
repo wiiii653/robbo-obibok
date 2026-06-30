@@ -6,6 +6,7 @@ import asyncio
 import random
 import re
 import subprocess
+from typing import TYPE_CHECKING, Protocol, cast
 
 import aiohttp
 import discord
@@ -14,15 +15,29 @@ from discord.ext import commands
 from bot_dependencies import PlaybackCommandDependencies
 
 
-def _collection_color(color_name: str):
+if TYPE_CHECKING:
+    class PlaybackContext(commands.Context[commands.Bot]):
+        guild: discord.Guild
+        author: discord.Member
+        voice_client: discord.VoiceClient | None
+else:
+    class PlaybackContext(Protocol):
+        guild: discord.Guild
+        author: discord.Member
+        voice_client: discord.VoiceClient | None
+
+        async def send(self, *args: object, **kwargs: object) -> discord.Message: ...
+
+
+def _collection_color(color_name: str) -> discord.Color:
     if color_name.startswith("#"):
         return discord.Color.from_str(color_name)
     return getattr(discord.Color, color_name)()
 
 
-def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
+def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependencies) -> None:
     @bot.command(aliases=["radio", "start", "pl"])
-    async def play(ctx: commands.Context, *, query: str = ""):
+    async def play(ctx: PlaybackContext, *, query: str = ""):
         if not ctx.author.voice:
             return await ctx.send("Join a voice channel first!")
 
@@ -53,7 +68,9 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
 
-        vc = await ctx.author.voice.channel.connect()
+        assert ctx.author.voice is not None
+        assert ctx.author.voice.channel is not None
+        vc: discord.VoiceClient = cast(discord.VoiceClient, await ctx.author.voice.channel.connect())
         state = deps.get_state(ctx.guild.id)
         state.bind_voice_context(guild_id=ctx.guild.id, ctx=ctx, vc=vc)
         state.set_loop_enabled(deps.PLAYBACK_LOOP)
@@ -87,7 +104,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
 
     @bot.command(aliases=["st"])
     @deps.mod_only()
-    async def stop(ctx: commands.Context):
+    async def stop(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         await deps.stop_state_streams(state)
         await asyncio.get_event_loop().run_in_executor(None, deps.stop_all_players)
@@ -99,14 +116,14 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send("⏹️ Stopped.")
 
     @bot.command(aliases=["next", "nt"])
-    async def skip(ctx: commands.Context):
+    async def skip(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         if not state.queue:
             return await ctx.send("Nothing playing.")
         await deps.skip_to_next(ctx)
 
     @bot.command()
-    async def np(ctx: commands.Context):
+    async def np(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         if not deps.is_playing():
             return await ctx.send("Nothing playing right now.")
@@ -158,7 +175,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         )
 
     @bot.command()
-    async def volume(ctx: commands.Context, *, level: str = ""):
+    async def volume(ctx: PlaybackContext, *, level: str = ""):
         if not level:
             r = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: subprocess.run(["pactl", "get-sink-volume", "asma_bot"], capture_output=True, text=True)
@@ -182,7 +199,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
             await ctx.send("Usage: `!volume <0-200>` or `!volume` to show current.")
 
     @bot.command(aliases=["q"])
-    async def queue(ctx: commands.Context):
+    async def queue(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         if not state.queue:
             return await ctx.send("Queue is empty. Use !play to start.")
@@ -204,7 +221,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send(embed=embed)
 
     @bot.command()
-    async def sleep(ctx: commands.Context, *, minutes: str = ""):
+    async def sleep(ctx: PlaybackContext, *, minutes: str = ""):
         if not minutes:
             return await ctx.send("Usage: `!sleep <minutes>` — stops playback after N minutes.")
         try:
@@ -232,7 +249,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
             await ctx.send("Usage: `!sleep <minutes>` — e.g. `!sleep 30`")
 
     @bot.command(aliases=["repeat"])
-    async def loop(ctx: commands.Context):
+    async def loop(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         state.set_loop_enabled(not state.loop)
         deps.save_queue(state)
@@ -240,7 +257,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send(embed=discord.Embed(title=f"Loop {status}", color=discord.Color.blue()))
 
     @bot.command()
-    async def history(ctx: commands.Context):
+    async def history(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         if not state.queue:
             return await ctx.send("Nothing has been played yet.")
@@ -256,7 +273,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send("\n".join(lines))
 
     @bot.command()
-    async def jump(ctx: commands.Context, *, position: str = ""):
+    async def jump(ctx: PlaybackContext, *, position: str = ""):
         if not position:
             return await ctx.send("Usage: `!jump <number>` — jump to track position in queue.")
         state = deps.get_state(ctx.guild.id)
@@ -275,7 +292,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
 
     @bot.command()
     @deps.mod_only()
-    async def clear(ctx: commands.Context):
+    async def clear(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         state.clear_queue_state()
         deps.save_queue(state)
@@ -287,7 +304,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send("🗑️ Queue cleared.")
 
     @bot.command()
-    async def ocko(ctx: commands.Context):
+    async def ocko(ctx: PlaybackContext):
         owls = [
             "🦉 **OCKO**\n      ___  \n     / _ \\ \n  _ | |_| |\n / | | __ |\n|  | | |_| |\n \\  \\|  _  |\n  \\   \\_/  |\n   |       |\n   |   |   |\n   |___|___|",
             "🦉 **OCKO**\n    .---.\n   / .-._)\n .´:  _  `.\n |  (_)  |\n :       ;\n  `.___.´",
@@ -298,7 +315,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send(f"```\n{random.choice(owls)}\n```")
 
     @bot.command(name="help")
-    async def help_command(ctx: commands.Context):
+    async def help_command(ctx: PlaybackContext):
         embed = discord.Embed(
             title="🤖 Robbo Obibok — Help",
             description="Seven collections, one bot — **the biggest chiptune radio on Discord.**\nJoin a voice channel and `!play`!",
@@ -354,7 +371,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send(embed=embed)
 
     @bot.command()
-    async def export(ctx: commands.Context):
+    async def export(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         if not state.queue:
             return await ctx.send("Queue is empty.")
@@ -375,7 +392,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
     @bot.command()
     @deps.mod_only()
     @commands.cooldown(1, 300, commands.BucketType.guild)
-    async def refresh(ctx: commands.Context):
+    async def refresh(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         state.clear_loaded_collection()
         tracks = await deps.load_tracks_for_mode("asma")
@@ -388,7 +405,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
     @bot.command()
     @deps.mod_only()
     @commands.cooldown(1, 300, commands.BucketType.guild)
-    async def reindex(ctx: commands.Context):
+    async def reindex(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         if not state.tracks:
             return await ctx.send("No tracks loaded. Use !play first.")
@@ -402,7 +419,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send(f"✅ Metadata indexed: **{deps.metadata_index_size()}** tracks total.")
 
     @bot.command()
-    async def stats(ctx: commands.Context):
+    async def stats(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         total = len(state.tracks)
         queue_len = state.queue_length()
@@ -417,7 +434,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         )
 
     @bot.command()
-    async def search(ctx: commands.Context, *, query: str):
+    async def search(ctx: PlaybackContext, *, query: str):
         state = deps.get_state(ctx.guild.id)
         if not state.tracks:
             return await ctx.send("No tracks loaded. Use !play first.")
@@ -446,31 +463,31 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send("\n".join(lines))
 
     @bot.command(aliases=["c64", "sid"])
-    async def hvsc(ctx: commands.Context):
+    async def hvsc(ctx: PlaybackContext):
         await deps.switch_collection(ctx, "hvsc")
 
     @bot.command()
-    async def asma(ctx: commands.Context):
+    async def asma(ctx: PlaybackContext):
         await deps.switch_collection(ctx, "asma")
 
     @bot.command(aliases=["modarchive", "tracker", "modules"])
-    async def mod(ctx: commands.Context):
+    async def mod(ctx: PlaybackContext):
         await deps.switch_collection(ctx, "modarchive")
 
     @bot.command(aliases=["zx", "zxspectrum", "spectrum"])
-    async def ay(ctx: commands.Context):
+    async def ay(ctx: PlaybackContext):
         await deps.switch_collection(ctx, "ay")
 
     @bot.command(aliases=["atarist", "ym2149"])
-    async def ym(ctx: commands.Context):
+    async def ym(ctx: PlaybackContext):
         await deps.switch_collection(ctx, "ym")
 
     @bot.command(aliases=["tm", "demoscene"])
-    async def tiny(ctx: commands.Context):
+    async def tiny(ctx: PlaybackContext):
         await deps.switch_collection(ctx, "tiny")
 
     @bot.command(aliases=["snes", "spc", "supernintendo", "nintendo"])
-    async def snes_cmd(ctx: commands.Context, *, query: str = None):
+    async def snes_cmd(ctx: PlaybackContext, *, query: str | None = None):
         state = deps.get_state(ctx.guild.id)
         if query:
             query_lower = query.strip().lower()
@@ -480,7 +497,9 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
                 return await ctx.send("❌ SNES SPC cache not found. Run `build_snes_index.py` first!")
             results = []
             for url, entry in deps.iter_snes_metadata():
-                haystack = (entry.get("name", "") + " " + ", ".join(entry.get("composers", []))).lower()
+                name = cast(str, entry.get("name", ""))
+                composers = cast(list[str], entry.get("composers", []))
+                haystack = (name + " " + ", ".join(composers)).lower()
                 if all(word in haystack for word in query_lower.split()):
                     results.append(entry)
                     if len(results) >= 10:
@@ -489,15 +508,15 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
                 return await ctx.send(f"🔍 **No SNES games matching `{query}`.**")
             lines = [f"🔍 **SNES results for `{query}`**"]
             for i, game in enumerate(results, 1):
-                composers = ", ".join(game.get("composers", [])) or "Unknown"
-                lines.append(f"`{i}.` **{game.get('name', '?')}** — {composers} ({game.get('tracks', '?')}t)")
+                composer_text = ", ".join(cast(list[str], game.get("composers", []))) or "Unknown"
+                lines.append(f"`{i}.` **{game.get('name', '?')}** — {composer_text} ({game.get('tracks', '?')}t)")
             lines += ["", "Use `!play <number>` to play, or `!snes` to switch to SPC collection."]
-            state.set_search_results([game["rsn_url"] for game in results])
+            state.set_search_results([cast(str, game["rsn_url"]) for game in results])
             return await ctx.send("\n".join(lines))
         await deps.switch_collection(ctx, "spc")
 
     @bot.command(aliases=["mode", "collection", "all"])
-    async def status(ctx: commands.Context):
+    async def status(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         cache_map = {
             "asma_cache_local.json": ("🟢", "Atari SAP (ASMA)"),
@@ -529,7 +548,7 @@ def register_playback_commands(bot, deps: PlaybackCommandDependencies) -> None:
         await ctx.send("\n".join(lines))
 
     @bot.command(aliases=["switch", "toggle", "fl"])
-    async def flip(ctx: commands.Context):
+    async def flip(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         try:
             idx = deps.FLIP_ORDER.index(state.collection_mode)

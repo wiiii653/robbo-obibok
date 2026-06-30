@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, TYPE_CHECKING
 
+from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
+
 from entrypoint_app import (
     EntrypointApp,
     EntrypointRegistrationDeps,
@@ -37,20 +39,20 @@ class EntrypointModule:
 
 @dataclass(slots=True)
 class EntrypointModuleRuntimeDeps:
-    build_playback_handlers: Callable[..., object]
-    register_core_events: Callable[..., object]
-    register_playback_commands: Callable[..., object]
-    register_library_commands: Callable[..., object]
-    validate_runtime_dependencies: Callable[[], list[str]]
+    build_playback_handlers: Callable[[PlaybackHandlerDependencies], PlaybackHandlerMap]
+    register_core_events: Callable[..., None]
+    register_playback_commands: Callable[..., None]
+    register_library_commands: Callable[..., None]
+    validate_runtime_dependencies: Callable[[], None]
     classify_track_route: Callable[..., dict[str, str]]
     compute_timeout_seconds: Callable[..., int]
-    is_gme_format_path: Callable[[str], bool]
+    is_gme_format_path: Callable[[str | None], bool]
     should_advance_after_stop: Callable[..., tuple[bool, float | None]]
     should_confirm_output_drop: Callable[..., tuple[bool, float | None]]
     should_disconnect_for_empty_channel: Callable[..., tuple[bool, float | None]]
     should_force_timeout_stop: Callable[[int, int], bool]
     should_start_predownload: Callable[..., bool]
-    mod_only: Callable[[], object]
+    mod_only: CommandDecoratorFactory
 
 
 @dataclass(slots=True)
@@ -58,11 +60,20 @@ class EntrypointModuleCollectionDeps:
     build_collection_state_update: Callable[[str, list[str]], dict[str, object]]
     format_flip_sequence: Callable[[list[str], str], str]
     prepare_playback_queue: Callable[..., dict[str, object]]
-    remove_user_track: Callable[..., object]
-    filter_blacklisted_track_entries: Callable[..., object]
-    filter_blacklisted_track_urls: Callable[..., object]
-    load_user_tracks: Callable[..., object]
-    toggle_user_track_entry: Callable[..., object]
+    remove_user_track: Callable[[dict[str, object], int | str, str], tuple[dict[str, object], bool]]
+    filter_blacklisted_track_entries: Callable[
+        [list[dict[str, object]], dict[str, object], int],
+        list[dict[str, object]],
+    ]
+    filter_blacklisted_track_urls: Callable[
+        [list[str], dict[object, object], int | str],
+        list[str],
+    ]
+    load_user_tracks: Callable[[dict[str, object], int | str], list[dict[str, object]]]
+    toggle_user_track_entry: Callable[
+        [dict[str, object], int | str, dict[str, object]],
+        tuple[dict[str, object], bool],
+    ]
     flip_order: list[str]
     flip_seq: list[str]
 

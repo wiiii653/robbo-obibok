@@ -3,73 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Protocol
+from typing import TYPE_CHECKING, Callable
 
 from app_services import AppServicesProtocol
 from collection_specs import CollectionSpec
+import entrypoint_state_protocols as state_protocols
 
 if TYPE_CHECKING:
+    from legacy_runtime_bindings import LegacyRuntimeBindings
     from playback_assets import PlaybackAssetRuntime
     from playback_helpers import NowPlayingDependencies
-    from playback_service import PlaybackService
-    from runtime_protocols import ArchiveRuntimeProtocol
+    from runtime_protocols import ArchiveRuntimeProtocol, PlaybackRuntimeProtocol
     from runtime_service_facade import RuntimeServiceFacade
     from stream_runtime import MonitorAudioSource, StreamRuntime
-
-
-class EntrypointComponentStateProtocol(Protocol):
-    app_services: AppServicesProtocol
-    service_facade: "RuntimeServiceFacade"
-    stream_runtime: "StreamRuntime"
-    archive_runtime: "ArchiveRuntimeProtocol"
-    playback_assets: "PlaybackAssetRuntime"
-    now_playing_deps: "NowPlayingDependencies"
-    collections: dict[str, CollectionSpec]
-    active_streams: dict[int, "MonitorAudioSource"]
-    playback_service: "PlaybackService | None"
-    legacy: object
-
-    def component_bundle(self) -> "EntrypointComponents": ...
-
-
-class EntrypointGlueStateProtocol(Protocol):
-    """Minimal state interface for EntrypointGlue.
-
-    EntrypointGlue stores the state reference but never reads from it
-    directly — all access goes through EntrypointResources and
-    EntrypointComponentAccess.
-    """
-    pass
-
-
-class EntrypointSupportStateProtocol(Protocol):
-    """State interface for EntrypointSupport storage.
-
-    Covers fields accessed directly from support.state across
-    all callers: EntrypointResources reads audio_runtime and
-    subsongs_runtime; app wiring reads archive_runtime and
-    service_facade. All other consumers receive support.state
-    through their own protocol-based constructors.
-    """
-    audio_runtime: object | None
-    subsongs_runtime: object | None
-    archive_runtime: object | None
-    service_facade: object | None
-
-
-class EntrypointCompatStateProtocol(Protocol):
-    """State interface for legacy compat access patterns.
-
-    Attributes accessed dynamically via getattr in
-    build_entrypoint_compat_registry_attrs.
-    """
-    stream_runtime: object | None
-    now_playing_deps: object | None
-    legacy: object | None
-    app: object | None
-    runtime_registration: object | None
-    lock_file: str | None
-    shutdown_flag: object | None
 
 
 @dataclass(slots=True)
@@ -82,19 +28,26 @@ class EntrypointComponents:
     now_playing_deps: "NowPlayingDependencies"
     collections: dict[str, CollectionSpec]
     active_streams: dict[int, "MonitorAudioSource"]
-    playback_service: "PlaybackService | None"
-    legacy: object
+    playback_service: "PlaybackRuntimeProtocol | None"
+    legacy: "LegacyRuntimeBindings"
 
 
 @dataclass(slots=True)
 class EntrypointComponentAccess:
-    state: EntrypointComponentStateProtocol
+    state: state_protocols.EntrypointComponentAccessStateProtocol
     ensure_components: Callable[[], None]
 
     def require(self) -> EntrypointComponents:
         self.ensure_components()
         if hasattr(self.state, "component_bundle"):
             return self.state.component_bundle()
+        assert self.state.app_services is not None
+        assert self.state.service_facade is not None
+        assert self.state.stream_runtime is not None
+        assert self.state.archive_runtime is not None
+        assert self.state.playback_assets is not None
+        assert self.state.now_playing_deps is not None
+        assert self.state.legacy is not None
         return EntrypointComponents(
             app_services=self.state.app_services,
             service_facade=self.state.service_facade,

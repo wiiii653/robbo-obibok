@@ -8,7 +8,7 @@ from typing import Any, Awaitable, Callable
 
 @dataclass(slots=True)
 class CoreEventDependencies:
-    AUTO_START_CHANNEL: str
+    AUTO_START_CHANNEL: str | None
     PLAYBACK_LOOP: bool
     PLAYBACK_SHUFFLE: bool
     apply_queue_state: Callable[[Any, dict[str, object]], bool]
@@ -23,7 +23,7 @@ class CoreEventDependencies:
     monitor_playback: Callable[..., Awaitable[None]]
     play_current_track: Callable[[Any], Awaitable[bool]]
     prepare_playback_queue: Callable[..., dict[str, object]]
-    run_startup_steps: Callable[[list[tuple[str, Callable[[], Any]]]], Awaitable[None]]
+    run_startup_steps: Callable[[], Awaitable[None]]
     save_queue: Callable[[Any], None]
     schedule_background_tasks: Callable[[list[Callable[[], Awaitable[None]]]], None]
 

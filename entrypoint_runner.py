@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 import discord
 from discord.ext import commands
@@ -14,7 +14,7 @@ def build_default_intents() -> discord.Intents:
     return intents
 
 
-def create_bot(command_prefix: str | Callable[..., object]) -> commands.Bot:
+def create_bot(command_prefix: Any) -> commands.Bot:
     bot = commands.Bot(command_prefix=command_prefix, intents=build_default_intents())
     bot.remove_command("help")
     return bot

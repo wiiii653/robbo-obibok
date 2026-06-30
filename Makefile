@@ -1,11 +1,12 @@
 # Robbo Obibok — Makefile
-# Targets: install | run | test | test-launchers | clean | build-indexes | help
+# Targets: install | run | test | typecheck | test-integration | test-launchers | clean | build-indexes | help
 
-.PHONY: install run run-strict test test-launchers clean build-indexes help
+.PHONY: install run run-strict test typecheck test-integration test-launchers clean build-indexes help
 
 SHELL := /bin/bash
 VENV  := venv
 PYTHON := $(VENV)/bin/python3
+DEV_STAMP := $(VENV)/.dev-installed
 
 help:
 	@echo "Robbo Obibok — Makefile"
@@ -14,6 +15,8 @@ help:
 	@echo "  make run             # Start the bot (reads .env when present)"
 	@echo "  make run-strict      # Start the bot in strict compatibility mode"
 	@echo "  make test            # Run unit tests"
+	@echo "  make typecheck       # Run static type checks"
+	@echo "  make test-integration # Run real dependency integration tests"
 	@echo "  make test-launchers  # Run launcher smoke tests"
 	@echo "  make build-indexes   # Build all local track indexes"
 	@echo "  make clean           # Remove venv, caches, temp files"
@@ -29,6 +32,10 @@ $(VENV)/bin/activate: requirements.txt
 	@$(VENV)/bin/pip install --quiet -r requirements.txt
 	@touch $(VENV)/bin/activate
 	@echo "✅ Virtual environment ready"
+
+$(DEV_STAMP): $(VENV)/bin/activate requirements-dev.txt
+	@$(VENV)/bin/pip install --quiet -r requirements-dev.txt
+	@touch $(DEV_STAMP)
 
 build-indexes: $(VENV)/bin/activate
 	@echo "🏗️  Building local track indexes..."
@@ -56,6 +63,14 @@ test: $(VENV)/bin/activate
 	@echo "🧪 Running tests..."
 	@cd $(CURDIR) && if [ -f .env ]; then set -a; source .env; set +a; fi; $(PYTHON) -m pytest tests/ -v --tb=short 2>/dev/null \
 		|| $(PYTHON) -m unittest discover -s tests/ -v
+
+typecheck: $(DEV_STAMP)
+	@echo "Running static type checks..."
+	@cd $(CURDIR) && $(VENV)/bin/mypy
+
+test-integration: $(VENV)/bin/activate
+	@echo "Running real dependency integration tests..."
+	@cd $(CURDIR) && $(PYTHON) -m unittest discover -s tests/integration -v
 
 clean:
 	@echo "🧹 Cleaning..."

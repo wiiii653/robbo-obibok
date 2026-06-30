@@ -117,8 +117,6 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
         self.assertIs(assembly.bindings, bindings)
         self.assertIs(assembly.compat_bindings, compat_bindings)
         self.assertTrue(assembly.compat_policy.allow_deprecated_runtime_internal_attrs)
-        self.assertTrue(assembly.compat_policy.allow_legacy_runtime_compat_attrs)
-        self.assertFalse(assembly.compat_policy.allow_legacy_flip_runtime_compat_attrs)
         build_dependencies.assert_called_once_with(
             flip_order=["asma"],
             flip_seq=["ASMA"],
