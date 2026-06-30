@@ -31,10 +31,13 @@ def log_preloaded_cache(label: str, tracks: list[str] | None, *, logger) -> None
 
 def schedule_background_tasks(
     task_factories: Sequence[Callable[[], Awaitable[object]]],
-    *,
-    loop,
 ) -> None:
-    """Create background tasks from factory callables."""
+    """Create background tasks from factory callables.
+
+    Relies on a running event loop — works when called from within
+    an async context (e.g. on_ready).
+    """
+    loop = asyncio.get_event_loop()
     for factory in task_factories:
         loop.create_task(factory())
 

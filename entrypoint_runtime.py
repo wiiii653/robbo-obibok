@@ -144,7 +144,6 @@ def build_app_callbacks(
     archives: CollectionArchiveProtocol,
     last_collection_file: str,
     logger: logging.Logger,
-    loop: asyncio.AbstractEventLoop,
 ) -> AppCompositionCallbacks:
     return AppCompositionCallbacks(
         playback=build_playback_composition_callbacks(
@@ -209,7 +208,7 @@ def build_app_callbacks(
                 ],
                 logger=logger,
             ),
-            schedule_background_tasks=lambda tasks: schedule_background_tasks(tasks, loop=loop),
+            schedule_background_tasks=lambda tasks: schedule_background_tasks(tasks),
         ),
     )
 

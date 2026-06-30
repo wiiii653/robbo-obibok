@@ -108,7 +108,6 @@ class EntrypointRuntimeInitializer:
             archives=self.state.archives,
             last_collection_file=app_cfg.last_collection_file,
             logger=self.logger,
-            loop=self.bot.loop,
         )
 
     def create_app(self) -> AppAssembly:
