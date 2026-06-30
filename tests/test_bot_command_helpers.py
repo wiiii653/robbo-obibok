@@ -22,7 +22,7 @@ from test_support import (
 )
 
 import bot_events
-import entrypoint_checks
+from entrypoint_glue import build_single_guild_check, mod_only
 import library_commands
 import playback_handlers
 import playback_commands
@@ -268,7 +268,7 @@ class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
 class SingleGuildCheckTests(unittest.TestCase):
     def test_rejects_wrong_guild(self):
         guild_id = 12345
-        single_guild_check = entrypoint_checks.build_single_guild_check(
+        single_guild_check = build_single_guild_check(
             guild_id_getter=lambda: guild_id
         )
         ctx = MagicMock()
@@ -277,7 +277,7 @@ class SingleGuildCheckTests(unittest.TestCase):
 
     def test_allows_correct_guild(self):
         guild_id = 12345
-        single_guild_check = entrypoint_checks.build_single_guild_check(
+        single_guild_check = build_single_guild_check(
             guild_id_getter=lambda: guild_id
         )
         ctx = MagicMock()
@@ -285,7 +285,7 @@ class SingleGuildCheckTests(unittest.TestCase):
         self.assertTrue(single_guild_check(ctx))
 
     def test_allows_when_unset(self):
-        single_guild_check = entrypoint_checks.build_single_guild_check(
+        single_guild_check = build_single_guild_check(
             guild_id_getter=lambda: None
         )
         ctx = MagicMock()

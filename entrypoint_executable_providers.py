@@ -11,7 +11,7 @@ from bot_persistence import (
     load_user_tracks,
     toggle_user_track_entry,
 )
-from entrypoint_checks import mod_only
+from entrypoint_glue import mod_only
 from entrypoint_module_config import (
     EntrypointModuleCollectionConfig,
     EntrypointModulePlaybackPolicyConfig,

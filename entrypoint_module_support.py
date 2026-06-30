@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
 from app_state import PlaylistState
-from entrypoint_checks import build_single_guild_check
+from entrypoint_glue import build_single_guild_check
 from entrypoint_launcher_support import EntrypointSupport, build_entrypoint_support
 from entrypoint_runner import create_bot
 
