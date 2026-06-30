@@ -22,6 +22,7 @@ class CoreEventDependencies:
     log_preloaded_cache: Callable[[str, list[str] | None], None]
     load_asma_local_cache: Callable[[], list[str] | None]
     load_hvsc_local_cache: Callable[[], list[str] | None]
+    load_snes_cache: Callable[[], list[str] | None]
     monitor_playback: Callable[..., Awaitable[None]]
     play_current_track: Callable[[Any], Awaitable[bool]]
     prepare_playback_queue: Callable[..., dict[str, object]]
@@ -35,12 +36,14 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
     async def on_ready():
         deps.log.info("Ready: %s", bot.user)
         await deps.run_startup_steps()
-        asma_cache, hvsc_cache = await asyncio.gather(
+        asma_cache, hvsc_cache, snes_cache = await asyncio.gather(
             asyncio.to_thread(deps.load_asma_local_cache),
             asyncio.to_thread(deps.load_hvsc_local_cache),
+            asyncio.to_thread(deps.load_snes_cache),
         )
         deps.log_preloaded_cache("ASMA", asma_cache)
         deps.log_preloaded_cache("HVSC", hvsc_cache)
+        deps.log_preloaded_cache("SNES", snes_cache)
         deps.schedule_background_tasks([health_watchdog, fetch_metadata_background])
 
     @bot.event

@@ -173,6 +173,8 @@ def classify_track_route(url: str, current_mode: str, *, snes_known: bool = Fals
     """Classify a track URL/path into a collection mode and playback handler key."""
     if current_mode == "spc" or snes_known:
         return {"mode": "spc", "handler": "spc"}
+    if "snesmusic.org" in url:
+        return {"mode": "spc", "handler": "spc"}
     if "://" not in url and url.endswith((".mod", ".xm", ".it", ".s3m", ".med", ".dmf", ".mo3")):
         return {"mode": "tiny", "handler": "tiny"}
     if "hvsc.c64.org" in url or url.endswith(".sid"):

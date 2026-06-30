@@ -203,6 +203,7 @@ class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
             log_preloaded_cache=lambda label, tracks: calls.append(("cache", label, tracks)),
             load_asma_local_cache=lambda: ["a"],
             load_hvsc_local_cache=lambda: ["b"],
+            load_snes_cache=lambda: ["snes1"],
             monitor_playback=self._true_async,
             play_current_track=self._true_async,
             prepare_playback_queue=lambda *args, **kwargs: {},
@@ -236,6 +237,7 @@ class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
             log_preloaded_cache=lambda label, tracks: calls.append((label, list(tracks or []))),
             load_asma_local_cache=lambda: ["asma"],
             load_hvsc_local_cache=lambda: ["hvsc"],
+            load_snes_cache=lambda: ["snes2"],
             monitor_playback=self._true_async,
             play_current_track=self._true_async,
             prepare_playback_queue=lambda *args, **kwargs: {},
@@ -259,6 +261,7 @@ class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
                 "startup",
                 ("ASMA", ["asma"]),
                 ("HVSC", ["hvsc"]),
+                ("SNES", ["snes2"]),
                 ("tasks", 2),
             ],
         )

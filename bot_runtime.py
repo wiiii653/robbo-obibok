@@ -378,6 +378,7 @@ class BotRuntime:
             log_preloaded_cache=self.bootstrap.log_preloaded_cache,
             load_asma_local_cache=self.playback.session.load_asma_local_cache,
             load_hvsc_local_cache=self.collection.load_hvsc_local_cache,
+            load_snes_cache=self.playback.command.load_snes_cache,
             monitor_playback=self.playback.command.monitor_playback,
             play_current_track=self.playback.command.play_current_track,
             prepare_playback_queue=self.playback.command.prepare_playback_queue,
