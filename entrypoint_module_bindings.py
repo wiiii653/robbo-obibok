@@ -133,6 +133,39 @@ class EntrypointExportGraph:
     def supported_names(self, *, dict_attr_names: frozenset[str]) -> frozenset[str]:
         return dict_attr_names | self.public_bound_names() | self.compat_names
 
+    # ── Single-source convenience methods ─────────────────────────────
+    # These reference existing sets so all tests keep passing.
+
+    def stable_alias_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_ATTR_NAMES
+
+    def legacy_core_compat_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES
+
+    def legacy_flip_compat_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES
+
+    def legacy_compat_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES
+
+    def deprecated_internal_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES
+
+    def helper_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_HELPER_ATTR_NAMES
+
+    def stable_internal_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_STABLE_INTERNAL_ATTR_NAMES
+
+    def public_direct_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_PUBLIC_DIRECT_COMPAT_ATTR_NAMES
+
+    def private_direct_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_PRIVATE_DIRECT_ATTR_NAMES
+
+    def fallback_names(self) -> frozenset[str]:
+        return ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES
+
 
 ENTRYPOINT_MODULE_STABLE_BINDINGS = (
     EntrypointBindingSpec("bot"),

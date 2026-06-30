@@ -16,7 +16,7 @@ the default and strict launchers usable and the relevant test surfaces green.
 | 1 — Process-lock isolation | Complete |
 | 2 — Command boundary | Complete |
 | 3 — State lifecycle | Complete |
-| 4 — Compatibility indirection | Not started |
+| 4 — Compatibility indirection | Complete |
 | 5 — Operational diagnostics | Not started |
 | 6 — Dependencies and documentation | Not started |
 

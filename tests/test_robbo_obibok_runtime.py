@@ -44,7 +44,10 @@ class RobboObibokRuntimeTests(unittest.TestCase):
             providers=types.SimpleNamespace(),
             deps=object(),
             launcher=types.SimpleNamespace(
-                loader=types.SimpleNamespace(ensure_module=lambda: None),
+                loader=types.SimpleNamespace(
+                    ensure_module=lambda: None,
+                    resolve=lambda name: compat_calls.append(name) or f"resolved:{name}",
+                ),
                 runtime=runtime,
             ),
             legacy_resolve=lambda name: compat_calls.append(name) or f"resolved:{name}",
