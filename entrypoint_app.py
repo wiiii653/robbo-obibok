@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Callable
 from app_config import AppConfig
 from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
 
-from entrypoint_app_builders import build_entrypoint_component_access
+from entrypoint_bridge import EntrypointComponentAccess
 from entrypoint_callback_groups import EntrypointRawCallbacks
 from entrypoint_components import EntrypointComponentDeps, apply_entrypoint_components, build_entrypoint_components
 from entrypoint_facade import EntrypointFacade
@@ -146,4 +146,15 @@ def build_entrypoint_app(
         runtime_tasks=runtime_tasks,
         runtime_initializer=runtime_initializer,
         compat=compat,
+    )
+
+
+def build_entrypoint_component_access(
+    *,
+    support: EntrypointSupport,
+    ensure_components: Callable[[], None],
+) -> EntrypointComponentAccess:
+    return EntrypointComponentAccess(
+        state=support.state,
+        ensure_components=ensure_components,
     )
