@@ -23,8 +23,11 @@ if TYPE_CHECKING:
 class PlaybackService:
     runtime: "BotRuntime"
     bot: "commands.Bot"
-    play_subsong: Callable[[object, PlaylistState, int], Awaitable[bool]]
+    play_subsong: Callable[..., Awaitable[bool]]
     cleanup_subsong_temp_wavs: Callable[[PlaylistState], None]
+    audacious_stop: Callable[[], None]
+    audacious_play: Callable[[str], None]
+    setup_monitor_source: Callable[[object], None]
 
     async def pre_download_next(self, state: PlaylistState) -> None:
         await pre_download_next(state, self.runtime.build_playback_session_deps())
@@ -36,10 +39,17 @@ class PlaybackService:
         return await play_current_track(ctx, self.runtime.build_playback_session_deps())
 
     async def skip_to_next(self, ctx: object) -> None:
+        async def _play_subsong(ctx: object, state: PlaylistState, subsong: int) -> bool:
+            return await self.play_subsong(
+                ctx, state, subsong,
+                audacious_stop=self.audacious_stop,
+                audacious_play=self.audacious_play,
+                setup_monitor_source=self.setup_monitor_source,
+            )
         await skip_to_next(
             ctx,
             self.runtime.build_playback_session_deps(),
-            self.play_subsong,
+            _play_subsong,
             self.cleanup_subsong_temp_wavs,
         )
 

@@ -155,7 +155,7 @@ async def play_current_track(ctx: object, deps: PlaybackSessionDependencies) -> 
 async def skip_to_next(
     ctx: object,
     deps: PlaybackSessionDependencies,
-    play_subsong: Callable[[object, PlaylistState, int], Awaitable[bool]],
+    play_subsong: Callable[..., Awaitable[bool]],
     cleanup_subsong_temp_wavs: Callable[[PlaylistState], None],
 ) -> None:
     ctx = cast(PlaybackSessionContext, ctx)
