@@ -20,6 +20,7 @@ install_discord_stubs()
 from entrypoint_state import (
     EntrypointComponentAccessStateProtocol,
     EntrypointComponentAssemblyStateProtocol,
+    EntrypointLifecycle,
     EntrypointState,
 )
 from domain_context import ArchiveRegistryViews
@@ -115,3 +116,94 @@ class EntrypointStateProtocolTests(unittest.TestCase):
 
     def test_component_assembly_and_access_contracts_are_distinct(self):
         self.assertIsNot(EntrypointComponentAssemblyStateProtocol, EntrypointComponentAccessStateProtocol)
+
+
+class EntrypointLifecycleTests(unittest.TestCase):
+    def test_initial_state_is_uninitialized(self):
+        state = EntrypointState()
+        self.assertEqual(state._lifecycle, EntrypointLifecycle.UNINITIALIZED)
+
+    def test_apply_bootstrap_registry_transitions_to_bootstrap(self):
+        state = EntrypointState()
+        archive_views = ArchiveRegistryViews(
+            metadata_index=MappingProxyType({}),
+            modarchive_name_map=MappingProxyType({}),
+            sid_durations=MappingProxyType({}),
+            snes_metadata=MappingProxyType({}),
+        )
+        state.apply_bootstrap_registry(
+            bootstrapped_app="boot",
+            app_context="context",
+            app_state="state",
+            archives="archives",
+            app_services="services",
+            archive_views=archive_views,
+        )
+        self.assertEqual(state._lifecycle, EntrypointLifecycle.BOOTSTRAP)
+
+    def test_apply_runtime_components_transitions_to_components(self):
+        state = EntrypointState()
+        archive_views = ArchiveRegistryViews(
+            metadata_index=MappingProxyType({}),
+            modarchive_name_map=MappingProxyType({}),
+            sid_durations=MappingProxyType({}),
+            snes_metadata=MappingProxyType({}),
+        )
+        state.apply_bootstrap_registry(
+            bootstrapped_app="boot",
+            app_context="context",
+            app_state="state",
+            archives="archives",
+            app_services="services",
+            archive_views=archive_views,
+        )
+        state.apply_runtime_components(
+            service_facade="facade",
+            stream_runtime="stream",
+            active_streams={},
+            archive_runtime="archive",
+            playback_assets="assets",
+            now_playing_deps="np",
+            collections={},
+            legacy="legacy",
+        )
+        self.assertEqual(state._lifecycle, EntrypointLifecycle.COMPONENTS)
+
+    def test_cache_initialized_app_transitions_to_runtime(self):
+        state = EntrypointState()
+        app = types.SimpleNamespace(
+            startup_env=types.SimpleNamespace(lock_file="/tmp/lock", shutdown_flag=asyncio.Event()),
+            runtime_registration=types.SimpleNamespace(
+                composed="composed", runtime="runtime"
+            ),
+            collection_service="collection",
+            playback_service="playback",
+        )
+        state.cache_initialized_app(app)
+        self.assertEqual(state._lifecycle, EntrypointLifecycle.RUNTIME)
+
+    def test_apply_bootstrap_registry_asserts_on_reapply(self):
+        state = EntrypointState()
+        archive_views = ArchiveRegistryViews(
+            metadata_index=MappingProxyType({}),
+            modarchive_name_map=MappingProxyType({}),
+            sid_durations=MappingProxyType({}),
+            snes_metadata=MappingProxyType({}),
+        )
+        state.apply_bootstrap_registry(
+            bootstrapped_app="boot",
+            app_context="context",
+            app_state="state",
+            archives="archives",
+            app_services="services",
+            archive_views=archive_views,
+        )
+        with self.assertRaises(AssertionError):
+            state.apply_bootstrap_registry(
+                bootstrapped_app="boot",
+                app_context="context",
+                app_state="state",
+                archives="archives",
+                app_services="services",
+                archive_views=archive_views,
+            )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from enum import auto, Enum
 from typing import TYPE_CHECKING, Iterable, Mapping, Protocol
 
 from domain_context import ArchiveRegistryViews, BootstrappedApp
@@ -204,6 +205,19 @@ class EntrypointArchiveMetadataState:
     fallback_snes_metadata: dict[str, dict[str, object]] = field(default_factory=dict)
 
 
+class EntrypointLifecycle(Enum):
+    """Lifecycle phase of the entrypoint state machine.
+
+    Transitions: UNINITIALIZED → BOOTSTRAP → COMPONENTS → RUNTIME → RUNNING → STOPPED
+    """
+    UNINITIALIZED = auto()
+    BOOTSTRAP = auto()
+    COMPONENTS = auto()
+    RUNTIME = auto()
+    RUNNING = auto()
+    STOPPED = auto()
+
+
 @dataclass(slots=True)
 class EntrypointState:
     """Central mutable state hub for the entrypoint module.
@@ -225,6 +239,7 @@ class EntrypointState:
     _initialized_runtime_state: EntrypointInitializedRuntimeState = field(
         default_factory=EntrypointInitializedRuntimeState
     )
+    _lifecycle: EntrypointLifecycle = EntrypointLifecycle.UNINITIALIZED
 
     def __init__(
         self,
@@ -287,6 +302,7 @@ class EntrypointState:
             lock_file=lock_file,
             shutdown_flag=shutdown_flag,
         )
+        self._lifecycle = EntrypointLifecycle.UNINITIALIZED
 
     @property
     def service_facade(self) -> RuntimeServiceFacade | None:
@@ -488,12 +504,15 @@ class EntrypointState:
         app_services: AppServicesProtocol,
         archive_views: ArchiveRegistryViews,
     ) -> None:
+        assert self._lifecycle == EntrypointLifecycle.UNINITIALIZED, \
+            f"cannot apply bootstrap in {self._lifecycle}"
         self.bootstrapped_app = bootstrapped_app
         self.app_context = app_context
         self.app_state = app_state
         self.archives = archives
         self.app_services = app_services
         self.archive_views = archive_views
+        self._lifecycle = EntrypointLifecycle.BOOTSTRAP
 
     def apply_runtime_components(
         self,
@@ -507,6 +526,8 @@ class EntrypointState:
         collections: dict[str, CollectionSpec],
         legacy: "LegacyRuntimeBindings",
     ) -> None:
+        assert self._lifecycle in (EntrypointLifecycle.BOOTSTRAP, EntrypointLifecycle.UNINITIALIZED), \
+            f"cannot apply runtime components in {self._lifecycle}"
         self.service_facade = service_facade
         self.stream_runtime = stream_runtime
         self.active_streams = active_streams
@@ -515,8 +536,11 @@ class EntrypointState:
         self.now_playing_deps = now_playing_deps
         self.collections = collections
         self.legacy = legacy
+        self._lifecycle = EntrypointLifecycle.COMPONENTS
 
     def cache_initialized_app(self, app: "AppAssembly") -> "AppAssembly":
+        assert self._lifecycle in (EntrypointLifecycle.COMPONENTS, EntrypointLifecycle.BOOTSTRAP, EntrypointLifecycle.UNINITIALIZED), \
+            f"cannot cache initialized app in {self._lifecycle}"
         self.app = app
         self.startup_env = app.startup_env
         self.lock_file = self.startup_env.lock_file
@@ -526,6 +550,7 @@ class EntrypointState:
         self.runtime = self.runtime_registration.runtime
         self.collection_service = app.collection_service
         self.playback_service = app.playback_service
+        self._lifecycle = EntrypointLifecycle.RUNTIME
         return app
 
     def component_bundle(self) -> "EntrypointComponents":
