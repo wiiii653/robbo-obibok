@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_compat_contract import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
-from entrypoint_direct_export_contract import ENTRYPOINT_DIRECT_EXPORT_BINDINGS
+from entrypoint_module_bindings import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
+from entrypoint_module_bindings import ENTRYPOINT_DIRECT_EXPORT_BINDINGS
 from entrypoint_surface_assembly import (
     EntrypointSurfaceExportAdapter,
     build_entrypoint_compat_registry_attrs,

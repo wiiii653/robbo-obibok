@@ -16,7 +16,7 @@ install_discord_stubs()
 from entrypoint_launcher_config import build_entrypoint_launcher
 from entrypoint_executable_assembly import build_entrypoint_legacy_resolver
 from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH
-from entrypoint_direct_export_contract import ENTRYPOINT_DIRECT_COLLECTION_BINDINGS
+from entrypoint_module_bindings import ENTRYPOINT_DIRECT_COLLECTION_BINDINGS
 
 
 class EntrypointLauncherConfigTests(unittest.TestCase):

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from entrypoint_module import EntrypointModule
     from entrypoint_launcher_state import BootstrapAppProtocol
 
-from entrypoint_compat_contract import (
+from entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_APP,
     ENTRYPOINT_COMPAT_GUILD_ID,
     ENTRYPOINT_COMPAT_LEGACY,
@@ -28,7 +28,7 @@ from entrypoint_compat_contract import (
     ENTRYPOINT_COMPAT_VIEW_SPECS_BY_NAME,
     EntrypointCompatBindingSpec,
 )
-from entrypoint_direct_export_contract import (
+from entrypoint_module_bindings import (
     EntrypointDirectExportSpec,
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
 )

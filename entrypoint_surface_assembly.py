@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Callable, Mapping, Protocol
 
-from entrypoint_compat_contract import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
-from entrypoint_direct_export_contract import (
+from entrypoint_module_bindings import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
+from entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_EXPORT_BINDINGS,
     EntrypointDirectExportSpec,
     SurfaceExportResolver,

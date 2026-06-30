@@ -3,14 +3,130 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Iterable, Mapping, Protocol, cast
+from typing import Any, Callable, Iterable, Mapping, Protocol, cast
 
-from entrypoint_compat_contract import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
-from entrypoint_direct_export_contract import (
-    ENTRYPOINT_DIRECT_EXPORT_BINDINGS,
-    ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS,
-    ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS,
+
+@dataclass(frozen=True, slots=True)
+class EntrypointCompatBindingSpec:
+    export_name: str
+    view_name: str
+    state_attr: str | None = None
+
+
+ENTRYPOINT_COMPAT_GUILD_ID = EntrypointCompatBindingSpec("GUILD_ID", "guild_id")
+ENTRYPOINT_COMPAT_STREAM_RUNTIME = EntrypointCompatBindingSpec(
+    "_STREAM_RUNTIME",
+    "stream_runtime",
+    "stream_runtime",
 )
+ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS = EntrypointCompatBindingSpec(
+    "_NOW_PLAYING_DEPS",
+    "now_playing_deps",
+    "now_playing_deps",
+)
+ENTRYPOINT_COMPAT_LEGACY = EntrypointCompatBindingSpec("_LEGACY", "legacy_runtime", "legacy")
+ENTRYPOINT_COMPAT_APP = EntrypointCompatBindingSpec("_APP", "app_instance", "app")
+ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION = EntrypointCompatBindingSpec(
+    "_RUNTIME_REGISTRATION",
+    "runtime_registration",
+    "runtime_registration",
+)
+ENTRYPOINT_COMPAT_LOCK_FILE = EntrypointCompatBindingSpec("LOCK_FILE", "lock_file", "lock_file")
+ENTRYPOINT_COMPAT_SHUTDOWN_FLAG = EntrypointCompatBindingSpec(
+    "_shutdown_flag",
+    "shutdown_flag",
+    "shutdown_flag",
+)
+
+ENTRYPOINT_COMPAT_RUNTIME_BINDINGS = (
+    ENTRYPOINT_COMPAT_GUILD_ID,
+    ENTRYPOINT_COMPAT_STREAM_RUNTIME,
+    ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS,
+    ENTRYPOINT_COMPAT_LEGACY,
+    ENTRYPOINT_COMPAT_APP,
+    ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION,
+    ENTRYPOINT_COMPAT_LOCK_FILE,
+    ENTRYPOINT_COMPAT_SHUTDOWN_FLAG,
+)
+
+ENTRYPOINT_COMPAT_VIEW_SPECS_BY_NAME = {
+    spec.view_name: spec for spec in ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
+}
+
+
+@dataclass(frozen=True, slots=True)
+class EntrypointDirectExportSpec:
+    export_name: str
+    source_name: str
+    attr_path: tuple[str, ...] = ()
+    public_module_attr: bool = True
+
+
+ENTRYPOINT_DIRECT_COLLECTION_BINDINGS = (
+    EntrypointDirectExportSpec("_skip_to_next", "collection", ("legacy", "skip_to_next")),
+    EntrypointDirectExportSpec(
+        "_cleanup_orphan_players",
+        "collection",
+        ("legacy", "cleanup_orphan_players"),
+    ),
+    EntrypointDirectExportSpec("_stop_all_players", "collection", ("legacy", "stop_all_players")),
+    EntrypointDirectExportSpec(
+        "_auto_play_after_switch",
+        "collection",
+        ("legacy", "auto_play_after_switch"),
+    ),
+    EntrypointDirectExportSpec("_play_subsong", "collection", ("legacy", "play_subsong")),
+    EntrypointDirectExportSpec(
+        "_cleanup_subsong_temp_wavs",
+        "collection",
+        ("service_facade", "cleanup_subsong_temp_wavs"),
+    ),
+    EntrypointDirectExportSpec(
+        "_switch_collection",
+        "collection",
+        ("service_facade", "switch_collection"),
+    ),
+)
+
+ENTRYPOINT_DIRECT_RUNTIME_BINDINGS = (
+    EntrypointDirectExportSpec("_after_stream_end", "runtime"),
+    EntrypointDirectExportSpec("_ensure_entrypoint_components", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_apply_queue_state", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_place_track_in_queue", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_queue_position", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_cancel_monitor", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("pre_download_next", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_start_targeted_playback_session", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_play_via_audacious", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("_send_now_playing_embed", "runtime", public_module_attr=False),
+    EntrypointDirectExportSpec("monitor_playback", "runtime"),
+    EntrypointDirectExportSpec("fetch_metadata_background", "runtime"),
+    EntrypointDirectExportSpec("health_watchdog", "runtime"),
+)
+
+ENTRYPOINT_DIRECT_EXPORT_BINDINGS = (
+    ENTRYPOINT_DIRECT_COLLECTION_BINDINGS + ENTRYPOINT_DIRECT_RUNTIME_BINDINGS
+)
+
+ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME = {
+    spec.export_name: spec for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS
+}
+
+ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS = tuple(
+    spec for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS if spec.public_module_attr
+)
+
+ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS = tuple(
+    spec for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS if not spec.public_module_attr
+)
+
+
+class SurfaceExportResolver(Protocol):
+    def resolve_legacy(self, name: str) -> Any: ...
+
+    def resolve_collection(self, spec: EntrypointDirectExportSpec) -> Callable[..., Any]: ...
+
+    def resolve_runtime(self, spec: EntrypointDirectExportSpec) -> Callable[..., Any]: ...
 
 
 @dataclass(frozen=True, slots=True)

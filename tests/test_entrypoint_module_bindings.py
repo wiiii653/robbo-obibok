@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_direct_export_contract import (
+from entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_COLLECTION_BINDINGS,
     ENTRYPOINT_DIRECT_RUNTIME_BINDINGS,
     ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS,

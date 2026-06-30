@@ -8,10 +8,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from entrypoint_launcher_loader import EntrypointModuleLoader
-from entrypoint_compat_contract import (
+from entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
 )
-from entrypoint_direct_export_contract import (
+from entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
 )
 
