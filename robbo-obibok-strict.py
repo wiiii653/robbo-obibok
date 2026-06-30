@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from robbo_obibok_cli import run_runtime_entrypoint
+from robbo_obibok_runtime import run_runtime_entrypoint
 
 
 def main() -> None:

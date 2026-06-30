@@ -5,7 +5,7 @@ from __future__ import annotations
 
 
 def main() -> None:
-    from robbo_obibok_cli import run_runtime_entrypoint
+    from robbo_obibok_runtime import run_runtime_entrypoint
 
     run_runtime_entrypoint()
 
