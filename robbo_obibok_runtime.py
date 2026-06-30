@@ -18,8 +18,7 @@ from entrypoint_module_bindings import (
 import entrypoint_executable_assembly
 import entrypoint_runner
 from entrypoint_runtime_surface import (
-    build_compat_runtime_surface,
-    build_stable_runtime_surface,
+    build_runtime_surface,
 )
 import runtime_bootstrap
 
@@ -98,14 +97,10 @@ def _assembly_surface():
 
 
 def _stable_runtime_surface():
-    return build_stable_runtime_surface(
+    return build_runtime_surface(
         _assembly_bindings(),
         alias_source=_assembly_compat_bindings(),
     )
-
-
-def _compat_runtime_surface():
-    return build_compat_runtime_surface(_assembly_compat_bindings())
 
 
 def initialize_runtime():
@@ -185,7 +180,7 @@ def main_strict():
         ensure_assembly().launcher.runtime.handle_signal(signum, frame)
 
     assembly = ensure_assembly()
-    stable_surface = build_stable_runtime_surface(
+    stable_surface = build_runtime_surface(
         assembly.bindings,
         alias_source=assembly.compat_bindings,
     )

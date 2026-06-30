@@ -6,13 +6,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_runtime_surface import EntrypointStableRuntimeSurface
-from entrypoint_runtime_surface import EntrypointCompatRuntimeSurface
+from entrypoint_runtime_surface import EntrypointRuntimeSurface
 from entrypoint_runtime_surface import EntrypointRuntimeStateSurface
-from entrypoint_runtime_surface import build_compat_runtime_surface
+from entrypoint_runtime_surface import build_runtime_surface
 from entrypoint_runtime_surface import build_runtime_state_surface
-from entrypoint_runtime_surface import build_stable_runtime_surface
-from entrypoint_runtime_surface import ENTRYPOINT_COMPAT_RUNTIME_SURFACE_BINDINGS
 from entrypoint_runtime_surface import ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS
 from entrypoint_runtime_surface import ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
 from entrypoint_module_bindings import (
@@ -51,10 +48,6 @@ class EntrypointRuntimeSurfaceTests(unittest.TestCase):
             [spec.binding_name for spec in ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS],
         )
         self.assertEqual(
-            [spec.export_name for spec in ENTRYPOINT_MODULE_LEGACY_COMPAT_BINDINGS],
-            [spec.binding_name for spec in ENTRYPOINT_COMPAT_RUNTIME_SURFACE_BINDINGS],
-        )
-        self.assertEqual(
             [(spec.alias_name, spec.binding_name) for spec in ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS],
             [(spec.method_name, spec.binding_name) for spec in ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS],
         )
@@ -83,7 +76,7 @@ class EntrypointRuntimeSurfaceTests(unittest.TestCase):
             "_FLIP_ORDER": ["asma"],
             "_FLIP_SEQ": ["ASMA"],
         }
-        surface = EntrypointStableRuntimeSurface(bindings=bindings, alias_bindings=alias_bindings)
+        surface = EntrypointRuntimeSurface(bindings=bindings, alias_bindings=alias_bindings)
 
         self.assertEqual(surface.bot(), "bot")
         self.assertEqual(surface.single_guild_check(), "check")
@@ -110,7 +103,7 @@ class EntrypointRuntimeSurfaceTests(unittest.TestCase):
             "_archive_runtime_config": "archive",
         }
 
-        surface = build_stable_runtime_surface(
+        surface = build_runtime_surface(
             source,
             resolver=source.__getitem__,
             binding_names={"bot"},
@@ -140,61 +133,8 @@ class EntrypointRuntimeSurfaceTests(unittest.TestCase):
         self.assertIs(surface.app_config(), app_config)
         self.assertIs(surface.archive_runtime_config(), archive_runtime_config)
 
-    def test_compat_runtime_surface_exposes_legacy_binding_names(self):
-        surface = EntrypointCompatRuntimeSurface(
-            bindings={
-                "_STATE": "state",
-                "_app_cfg": "cfg",
-                "_archive_runtime_config": "archive",
-                "_FLIP_ORDER": ["asma"],
-                "_FLIP_SEQ": ["ASMA"],
-            }
-        )
-
-        self.assertEqual(surface.resolve("_STATE"), "state")
-        self.assertEqual(surface.resolve("_app_cfg"), "cfg")
-        self.assertEqual(surface.resolve("_FLIP_ORDER"), ["asma"])
-        with self.assertRaises(AttributeError):
-            surface.resolve("bot")
-
-    def test_build_compat_runtime_surface_uses_legacy_binding_contract(self):
-        source = {
-            "_STATE": "state",
-            "_app_cfg": "cfg",
-            "_archive_runtime_config": "archive",
-            "_FLIP_ORDER": ["asma"],
-            "_FLIP_SEQ": ["ASMA"],
-        }
-
-        surface = build_compat_runtime_surface(
-            source,
-            resolver=source.__getitem__,
-        )
-
-        self.assertEqual(surface.resolve("_STATE"), "state")
-        self.assertEqual(surface.resolve("_archive_runtime_config"), "archive")
-
-    def test_build_runtime_state_surface_uses_narrow_typed_contract(self):
-        state = object()
-        app_config = object()
-        archive_runtime_config = object()
-        source = {
-            "_STATE": state,
-            "_app_cfg": lambda: app_config,
-            "_archive_runtime_config": lambda: archive_runtime_config,
-        }
-
-        surface = build_runtime_state_surface(
-            source,
-            resolver=source.__getitem__,
-        )
-
-        self.assertIs(surface.state(), state)
-        self.assertIs(surface.app_config(), app_config)
-        self.assertIs(surface.archive_runtime_config(), archive_runtime_config)
-
     def test_stable_runtime_surface_rejects_non_stable_names(self):
-        surface = EntrypointStableRuntimeSurface(
+        surface = EntrypointRuntimeSurface(
             bindings={
                 "bot": "bot",
                 "single_guild_check": "check",

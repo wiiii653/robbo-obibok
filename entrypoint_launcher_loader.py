@@ -6,11 +6,10 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Callable, Mapping, Protocol, cast
 from entrypoint_runtime_surface import (
-    EntrypointCompatRuntimeSurface,
     EntrypointRuntimeStateSurface,
-    EntrypointStableRuntimeSurface,
+    EntrypointRuntimeSurface,
     build_runtime_state_surface,
-    build_stable_runtime_surface,
+    build_runtime_surface,
 )
 
 if TYPE_CHECKING:
@@ -289,8 +288,8 @@ class EntrypointModuleLoader:
     def resolve_compat_view(self, view_name: str) -> object:
         return self.compat().resolve_view(view_name)
 
-    def stable_runtime_surface(self) -> EntrypointStableRuntimeSurface:
-        return build_stable_runtime_surface(
+    def stable_runtime_surface(self) -> EntrypointRuntimeSurface:
+        return build_runtime_surface(
             self.legacy_bindings(),
             resolver=self.resolve_legacy,
         )

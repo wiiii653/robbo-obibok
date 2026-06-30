@@ -13,7 +13,7 @@ from entrypoint_module_bindings import (
     SurfaceExportResolver,
 )
 from entrypoint_module_bindings import ENTRYPOINT_MODULE_STABLE_NAMES
-from entrypoint_runtime_surface import build_stable_runtime_surface_bindings
+from entrypoint_runtime_surface import build_runtime_surface_bindings
 
 
 @dataclass(slots=True)
@@ -116,7 +116,7 @@ def build_entrypoint_surface_exports(*, resolver: SurfaceExportResolver) -> Mapp
         resolve_runtime=lazy_runtime,
     )
     return MappingProxyType(
-        build_stable_runtime_surface_bindings(
+        build_runtime_surface_bindings(
             resolver,
             resolver=resolver.resolve_legacy,
             binding_names=set(ENTRYPOINT_MODULE_STABLE_NAMES),

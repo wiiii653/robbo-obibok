@@ -1,4 +1,4 @@
-"""Typed stable runtime-surface helpers."""
+"""Typed runtime-surface helpers."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import entrypoint_state_protocols as state_protocols
 
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
-    ENTRYPOINT_MODULE_LEGACY_COMPAT_BINDINGS,
     ENTRYPOINT_MODULE_STABLE_BINDINGS,
 )
 
@@ -20,11 +19,6 @@ from entrypoint_module_bindings import (
 class EntrypointStableBindingSpec:
     binding_name: str
     method_name: str
-
-
-@dataclass(frozen=True, slots=True)
-class EntrypointCompatBindingSpec:
-    binding_name: str
 
 
 ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS = tuple(
@@ -41,10 +35,6 @@ ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS = tuple(
     )
     for spec in ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS
 )
-ENTRYPOINT_COMPAT_RUNTIME_SURFACE_BINDINGS = tuple(
-    EntrypointCompatBindingSpec(spec.export_name)
-    for spec in ENTRYPOINT_MODULE_LEGACY_COMPAT_BINDINGS
-)
 
 ENTRYPOINT_STABLE_RUNTIME_SURFACE_SPECS_BY_BINDING = {
     spec.binding_name: spec for spec in ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
@@ -60,13 +50,10 @@ ENTRYPOINT_RUNTIME_STATE_BINDING_NAMES = frozenset(
         "_archive_runtime_config",
     }
 )
-ENTRYPOINT_COMPAT_RUNTIME_SURFACE_NAMES = frozenset(
-    spec.binding_name for spec in ENTRYPOINT_COMPAT_RUNTIME_SURFACE_BINDINGS
-)
 
 
 @dataclass(frozen=True, slots=True)
-class EntrypointStableRuntimeSurface:
+class EntrypointRuntimeSurface:
     bindings: Mapping[str, object]
     alias_bindings: Mapping[str, object] | None = None
 
@@ -103,17 +90,7 @@ class EntrypointRuntimeStateSurface:
         return factory()
 
 
-@dataclass(frozen=True, slots=True)
-class EntrypointCompatRuntimeSurface:
-    bindings: Mapping[str, object]
-
-    def resolve(self, name: str) -> object:
-        if name not in ENTRYPOINT_COMPAT_RUNTIME_SURFACE_NAMES:
-            raise AttributeError(name)
-        return self.bindings[name]
-
-
-def build_stable_runtime_surface_bindings(
+def build_runtime_surface_bindings(
     source: object,
     *,
     resolver: Callable[[str], object] | None = None,
@@ -135,14 +112,14 @@ def build_stable_runtime_surface_bindings(
     }
 
 
-def build_stable_runtime_surface(
+def build_runtime_surface(
     source: object,
     *,
     resolver: Callable[[str], object] | None = None,
     binding_names: set[str] | None = None,
     alias_source: object | None = None,
     alias_resolver: Callable[[str], object] | None = None,
-) -> "EntrypointStableRuntimeSurface":
+) -> "EntrypointRuntimeSurface":
     if alias_source is None:
         alias_source = source
     if alias_resolver is None:
@@ -152,8 +129,8 @@ def build_stable_runtime_surface(
             alias_resolver = alias_source.__getitem__
         else:
             alias_resolver = lambda name: getattr(alias_source, name)
-    return EntrypointStableRuntimeSurface(
-        bindings=build_stable_runtime_surface_bindings(
+    return EntrypointRuntimeSurface(
+        bindings=build_runtime_surface_bindings(
             source,
             resolver=resolver,
             binding_names=binding_names,
@@ -177,25 +154,10 @@ def build_runtime_state_surface(
     )
 
 
-def build_compat_runtime_surface(
-    source: object,
-    *,
-    resolver: Callable[[str], object] | None = None,
-) -> EntrypointCompatRuntimeSurface:
-    if resolver is None:
-        if isinstance(source, Mapping):
-            resolver = source.__getitem__
-        else:
-            resolver = lambda name: getattr(source, name)
-    return EntrypointCompatRuntimeSurface(
-        bindings={name: resolver(name) for name in ENTRYPOINT_COMPAT_RUNTIME_SURFACE_NAMES}
-    )
-
-
 def _build_surface_method(
     spec: EntrypointStableBindingSpec,
-) -> Callable[[EntrypointStableRuntimeSurface], object]:
-    def _method(self: EntrypointStableRuntimeSurface) -> object:
+) -> Callable[[EntrypointRuntimeSurface], object]:
+    def _method(self: EntrypointRuntimeSurface) -> object:
         if self.alias_bindings is not None and spec.binding_name in self.alias_bindings:
             return self.alias_bindings[spec.binding_name]
         return self.bindings[spec.binding_name]
@@ -214,4 +176,4 @@ def _build_alias_bindings(alias_resolver: Callable[[str], object]) -> dict[str, 
 
 
 for _spec in (ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS + ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS):
-    setattr(EntrypointStableRuntimeSurface, _spec.method_name, _build_surface_method(_spec))
+    setattr(EntrypointRuntimeSurface, _spec.method_name, _build_surface_method(_spec))
