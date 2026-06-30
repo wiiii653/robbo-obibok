@@ -27,7 +27,7 @@ from entrypoint_module_config import (
 )
 from entrypoint_module import EntrypointModuleDeps
 from entrypoint_startup import atomic_json_write, load_last_collection, save_last_collection
-from entrypoint_surface_runtime import EntrypointModuleSurface
+from entrypoint_surface_assembly import EntrypointModuleSurface
 from entrypoint_surface_assembly import build_entrypoint_module_surface
 
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Callable, Mapping, Protocol
 
-from entrypoint_module_bindings import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
+from entrypoint_module_bindings import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS, ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES
 from entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_EXPORT_BINDINGS,
     EntrypointDirectExportSpec,
@@ -14,7 +14,25 @@ from entrypoint_module_bindings import (
 )
 from entrypoint_module_bindings import ENTRYPOINT_MODULE_STABLE_NAMES
 from entrypoint_runtime_surface import build_stable_runtime_surface_bindings
-from entrypoint_surface_runtime import EntrypointModuleSurface
+
+
+@dataclass(slots=True)
+class EntrypointModuleSurface:
+    exports: Mapping[str, object]
+    resolve_fallback: Callable[[str], object]
+    allowed_fallback_names: frozenset[str] = ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES
+
+    def export_map(self) -> Mapping[str, object]:
+        return self.exports
+
+    def resolve(self, name: str) -> object:
+        direct = self.exports.get(name)
+        if direct is not None:
+            return direct
+        if name not in self.allowed_fallback_names:
+            raise AttributeError(name)
+        return self.resolve_fallback(name)
+
 
 if TYPE_CHECKING:
     from entrypoint_launcher_runtime import LazyEntrypointLauncher

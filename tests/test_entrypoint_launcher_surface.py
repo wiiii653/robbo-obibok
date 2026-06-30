@@ -19,7 +19,7 @@ from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
 )
-from entrypoint_surface_runtime import EntrypointModuleSurface
+from entrypoint_surface_assembly import EntrypointModuleSurface
 
 
 class EntrypointLauncherSurfaceTests(unittest.TestCase):
