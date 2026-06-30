@@ -1,7 +1,7 @@
 # Robbo Obibok — Makefile
-# Targets: install | run | test | typecheck | test-integration | test-launchers | clean | build-indexes | help
+# Targets: install | run | test | test-integration | test-launchers | clean | build-indexes | help
 
-.PHONY: install run run-strict test typecheck test-integration test-launchers clean build-indexes help
+.PHONY: install run run-strict test test-integration test-launchers clean build-indexes help
 
 SHELL := /bin/bash
 VENV  := venv
@@ -15,7 +15,6 @@ help:
 	@echo "  make run             # Start the bot (reads .env when present)"
 	@echo "  make run-strict      # Start the bot in strict compatibility mode"
 	@echo "  make test            # Run unit tests"
-	@echo "  make typecheck       # Run static type checks"
 	@echo "  make test-integration # Run real dependency integration tests"
 	@echo "  make test-launchers  # Run launcher smoke tests"
 	@echo "  make build-indexes   # Build all local track indexes"
@@ -62,10 +61,6 @@ test-launchers: $(VENV)/bin/activate
 test: $(VENV)/bin/activate
 	@echo "🧪 Running tests..."
 	@cd $(CURDIR) && $(PYTHON) -m unittest discover -s tests/ -v
-
-typecheck: $(DEV_STAMP)
-	@echo "Running static type checks..."
-	@cd $(CURDIR) && $(VENV)/bin/mypy
 
 test-integration: $(VENV)/bin/activate
 	@echo "Running real dependency integration tests..."

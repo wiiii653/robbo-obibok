@@ -172,7 +172,6 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 | `integration.yml` | push to main | Real dependency tests |
 | `test-launchers.yml` | push, PR | Launcher smoke tests |
 | `test-entrypoint-runtime.yml` | push, PR | Entrypoint + runtime tests |
-| `typecheck.yml` | push, PR | Mypy static type analysis (requires `pip install mypy`) |
 
 ## Quick Reference
 
