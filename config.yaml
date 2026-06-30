@@ -43,6 +43,8 @@ audio:
   sample_rate: 48000            # output sample rate
   channels: 2                   # stereo
   format: "s16le"               # PCM format
+# The Compressor effect plugin is auto-enabled at startup
+# for consistent loudness. Configure in ~/.config/audacious/config.
 
 # Playback
 playback:
