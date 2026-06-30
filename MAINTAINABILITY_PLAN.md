@@ -12,8 +12,8 @@ the default and strict launchers usable and the relevant test surfaces green.
 
 | Phase | State |
 |---|---|
-| 0 — Reproducible baseline | Not started |
-| 1 — Process-lock isolation | Not started |
+| 0 — Reproducible baseline | Complete |
+| 1 — Process-lock isolation | Complete |
 | 2 — Command boundary | Not started |
 | 3 — State lifecycle | Not started |
 | 4 — Compatibility indirection | Not started |

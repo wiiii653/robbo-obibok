@@ -113,6 +113,7 @@ def initialize_startup_environment(
     *,
     bot_token: str | None,
     root_dir: str,
+    lock_file: str | None = None,
     validate_runtime_dependencies: Callable[[], None],
     acquire_process_lock: Callable[[str, str], int],
     process_name: str,
@@ -125,7 +126,8 @@ def initialize_startup_environment(
     except RuntimeError as exc:
         raise SystemExit(str(exc))
 
-    lock_file = os.path.join(root_dir, "obibok.pid")
+    if lock_file is None:
+        lock_file = os.path.join(root_dir, "obibok.pid")
     acquire_process_lock(lock_file, process_name)
     return StartupEnvironment(
         bot_token=bot_token,

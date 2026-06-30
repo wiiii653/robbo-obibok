@@ -1,4 +1,5 @@
 import sys
+import os
 import asyncio
 import tempfile
 from pathlib import Path
@@ -50,3 +51,53 @@ class StartupEnvironmentTests(unittest.TestCase):
             )
 
         self.assertIn("DISCORD_BOT_TOKEN", str(ctx.exception))
+
+    def test_initialize_startup_environment_accepts_explicit_lock_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            custom_lock = os.path.join(temp_dir, "custom-test.pid")
+            env = initialize_startup_environment(
+                bot_token="token",
+                root_dir="/some/project/root",
+                lock_file=custom_lock,
+                validate_runtime_dependencies=lambda: None,
+                acquire_process_lock=acquire_process_lock,
+                process_name="test-case",
+            )
+            self.assertEqual(env.lock_file, custom_lock)
+            self.assertTrue(os.path.exists(custom_lock))
+            release_process_lock(custom_lock)
+
+    def test_initialize_startup_environment_default_lock_from_root_dir(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env = initialize_startup_environment(
+                bot_token="token",
+                root_dir=temp_dir,
+                validate_runtime_dependencies=lambda: None,
+                acquire_process_lock=acquire_process_lock,
+                process_name="test-case",
+            )
+            self.assertEqual(env.lock_file, os.path.join(temp_dir, "obibok.pid"))
+            self.assertTrue(os.path.exists(env.lock_file))
+            release_process_lock(env.lock_file)
+
+    def test_isolated_lock_does_not_conflict_with_held_lock(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Simulate a running bot: hold a lock on obibok.pid
+            prod_lock = os.path.join(temp_dir, "obibok.pid")
+            acquire_process_lock(prod_lock, "production-bot")
+            try:
+                # Isolated test should use a different lock path
+                isolated_lock = os.path.join(temp_dir, "test-isolated.pid")
+                env = initialize_startup_environment(
+                    bot_token="token",
+                    root_dir="/some/root",
+                    lock_file=isolated_lock,
+                    validate_runtime_dependencies=lambda: None,
+                    acquire_process_lock=acquire_process_lock,
+                    process_name="isolated-test",
+                )
+                self.assertNotEqual(env.lock_file, prod_lock)
+                self.assertEqual(env.lock_file, isolated_lock)
+                release_process_lock(isolated_lock)
+            finally:
+                release_process_lock(prod_lock)

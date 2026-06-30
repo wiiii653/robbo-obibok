@@ -60,10 +60,12 @@ def build_startup_env(
     bot_token: str | None,
     root_dir: str,
     validate_runtime_dependencies: Callable[[], None],
+    lock_file: str | None = None,
 ) -> StartupEnvironment:
     return initialize_startup_environment(
         bot_token=bot_token,
         root_dir=root_dir,
+        lock_file=lock_file,
         validate_runtime_dependencies=validate_runtime_dependencies,
         acquire_process_lock=acquire_process_lock,
         process_name="robbo-obibok.py",
