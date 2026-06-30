@@ -410,10 +410,10 @@ class EntrypointRuntimeStateAccess:
     def ensure_initialized(self) -> "AppAssembly":
         if self.state.app is None:
             app = self.app.runtime_initializer.initialize_runtime()
-            if hasattr(self.state, "cache_initialized_app"):
-                return self.state.cache_initialized_app(app)
-            self.state.app = app
-        self.state.startup_env = self.state.app.startup_env
+            if self.state.app is None:
+                self.state.app = app
+        if self.state.app is not None:
+            self.state.startup_env = self.state.app.startup_env
         return self.state.app
 
 

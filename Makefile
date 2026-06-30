@@ -12,6 +12,7 @@ help:
 	@echo "Robbo Obibok — Makefile"
 	@echo ""
 	@echo "  make install         # Full installation (system deps + venv + indexes)"
+	@echo "  make install-dev     # Install dev dependencies (pytest)"
 	@echo "  make run             # Start the bot (reads .env when present)"
 	@echo "  make run-strict      # Start the bot in strict compatibility mode"
 	@echo "  make test            # Run unit tests"
@@ -54,11 +55,14 @@ run-strict: $(VENV)/bin/activate
 	@echo "🎵 Starting Robbo Obibok in strict compatibility mode..."
 	@cd $(CURDIR) && ROBBO_STRICT_COMPAT=1 ./run_bot.sh
 
+install-dev: $(DEV_STAMP)
+	@echo "✅ Development dependencies installed (pytest, etc.)"
+
 test-launchers: $(VENV)/bin/activate
 	@echo "🧪 Running launcher smoke tests..."
 	@cd $(CURDIR) && ./test_launchers.sh
 
-test: $(VENV)/bin/activate
+test: $(DEV_STAMP)
 	@echo "🧪 Running tests..."
 	@cd $(CURDIR) && $(PYTHON) -m unittest discover -s tests/ -v
 

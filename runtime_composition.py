@@ -292,6 +292,9 @@ def compose_runtime(
         bot=state.bot,
         play_subsong=app_callbacks.playback.handler.play_subsong,
         cleanup_subsong_temp_wavs=app_callbacks.playback.handler.cleanup_subsong_temp_wavs,
+        audacious_stop=app_callbacks.playback.handler.audacious_stop,
+        audacious_play=app_callbacks.playback.handler.audacious_play,
+        setup_monitor_source=app_callbacks.playback.handler.setup_monitor_source,
     )
     return ComposedRuntime(
         runtime=runtime,

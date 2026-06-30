@@ -19,6 +19,20 @@ REQUIRED_EXTERNAL_TOOLS: dict[str, str] = {
     "unrar": "SNES RSN extraction",
 }
 
+# Tools needed before Discord connection; others are format-specific.
+STARTUP_REQUIRED_TOOLS: dict[str, str] = {
+    "audacious": "headless playback engine",
+    "audtool": "Audacious remote control",
+    "pactl": "PipeWire/PulseAudio sink management",
+}
+
+FORMAT_SPECIFIC_TOOLS: dict[str, str] = {
+    "ffmpeg": "audio capture and transcoding",
+    "ffprobe": "module subsong inspection",
+    "7z": "YM archive extraction",
+    "unrar": "SNES RSN extraction",
+}
+
 
 def load_dotenv_file(
     dotenv_path: str,
@@ -67,6 +81,41 @@ def validate_runtime_dependencies(required_tools: dict[str, str] | None = None) 
     missing = get_missing_dependencies(required_tools)
     if missing:
         raise RuntimeError(format_missing_dependencies(missing))
+
+
+def format_subprocess_error(
+    *,
+    component: str,
+    command: list[str],
+    exit_code: int,
+    stderr_text: str = "",
+    remedy: str = "",
+) -> str:
+    """Format a structured error message for a subprocess failure.
+
+    Parameters
+    ----------
+    component:
+        Human-readable name of the subsystem that failed
+        (e.g. "Audacious", "PipeWire volume control").
+    command:
+        The argv that was run.
+    exit_code:
+        Return code of the failed process.
+    stderr_text:
+        Captured stderr output (truncated to 500 chars).
+    remedy:
+        Suggested action for the operator.
+    """
+    parts = [f"[{component}] Command failed (exit {exit_code}): {' '.join(command)}"]
+    if stderr_text:
+        truncated = stderr_text[:500]
+        if len(stderr_text) > 500:
+            truncated += "..."
+        parts.append(f"  stderr: {truncated}")
+    if remedy:
+        parts.append(f"  remedy: {remedy}")
+    return "\n".join(parts)
 
 
 def can_restore_queue(

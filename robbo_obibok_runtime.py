@@ -12,8 +12,8 @@ from collection_catalog import (
 )
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
+    ENTRYPOINT_EXPORT_GRAPH,
     resolve_bound_entrypoint_module_attr,
-    resolve_compat_entrypoint_module_attr,
 )
 import entrypoint_executable_assembly
 from entrypoint_app import run_bot_entrypoint
@@ -92,10 +92,6 @@ def _assembly_compat_bindings():
     return _ensure_executable_assembly().compat_bindings
 
 
-def _assembly_surface():
-    return _ensure_executable_assembly().surface
-
-
 def _stable_runtime_surface():
     return build_runtime_surface(
         _assembly_bindings(),
@@ -112,34 +108,47 @@ def initialize_runtime():
 
 
 def __getattr__(name: str):
-    _stable_attrs = {
-        "_ASSEMBLY": lambda: _RUNTIME_HOLDER.assembly,
-        "_BINDINGS": _assembly_bindings,
-        "_COMPAT_BINDINGS": _assembly_compat_bindings,
-    }
-    if name in _stable_attrs:
-        return _stable_attrs[name]()
+    # 1. Internal stable attrs — cached assembly views
+    if name == "_ASSEMBLY":
+        return _RUNTIME_HOLDER.assembly
+    if name == "_BINDINGS":
+        return _assembly_bindings()
+    if name == "_COMPAT_BINDINGS":
+        return _assembly_compat_bindings()
+
+    # 2. Deprecated internal names — blocked with clear error
     if name in ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES:
         raise AttributeError(name)
+
+    # 3. Module-level globals
     if name in globals():
         return globals()[name]
+
+    # 4. Stable runtime surface (bot, single_guild_check, get/set_guild_id_override)
     stable_surface = _stable_runtime_surface()
     try:
         return stable_surface.resolve(name)
     except AttributeError:
-        try:
-            return stable_surface.resolve_alias(name)
-        except AttributeError:
-            try:
-                return resolve_bound_entrypoint_module_attr(
-                    name,
-                    bindings=_assembly_bindings(),
-                )
-            except AttributeError:
-                return resolve_compat_entrypoint_module_attr(
-                    name,
-                    fallback_resolver=_assembly_surface().resolve,
-                )
+        pass
+
+    # 5. Stable alias surface (state, app_config, archive_runtime_config, flip_order, flip_seq)
+    try:
+        return stable_surface.resolve_alias(name)
+    except AttributeError:
+        pass
+
+    # 6. Direct export bindings (public + stable names only — private names blocked)
+    assembly = _ensure_executable_assembly()
+    try:
+        return resolve_bound_entrypoint_module_attr(name, bindings=assembly.bindings)
+    except AttributeError:
+        pass
+
+    # 7. Runtime compat names — resolved directly through loader (no deprecated surface fallback)
+    if name in ENTRYPOINT_EXPORT_GRAPH.compat_names:
+        return assembly.launcher.loader.resolve(name)
+
+    raise AttributeError(name)
 
 
 async def graceful_shutdown():

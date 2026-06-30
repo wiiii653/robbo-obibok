@@ -55,7 +55,7 @@ class RunnerSmokeTests(unittest.TestCase):
         assembly = types.SimpleNamespace(
             providers=types.SimpleNamespace(),
             deps=object(),
-            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None), runtime=runtime),
+            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: compat_calls.append(name) or f"resolved:{name}"), runtime=runtime),
             legacy_resolve=lambda name: compat_calls.append(name) or f"resolved:{name}",
             surface=types.SimpleNamespace(resolve=lambda name: compat_calls.append(name) or f"resolved:{name}"),
             bindings={
@@ -115,7 +115,7 @@ class RunnerSmokeTests(unittest.TestCase):
         assembly = types.SimpleNamespace(
             providers=types.SimpleNamespace(),
             deps=object(),
-            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None), runtime=runtime),
+            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: f"resolved:{name}"), runtime=runtime),
             legacy_resolve=lambda name: f"resolved:{name}",
             surface=types.SimpleNamespace(resolve=lambda name: f"resolved:{name}"),
             bindings={
@@ -175,7 +175,7 @@ class RunnerSmokeTests(unittest.TestCase):
         assembly = types.SimpleNamespace(
             providers=types.SimpleNamespace(),
             deps=object(),
-            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None), runtime=runtime),
+            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: compat_calls.append(name) or f"resolved:{name}"), runtime=runtime),
             legacy_resolve=lambda name: compat_calls.append(name) or f"resolved:{name}",
             surface=types.SimpleNamespace(resolve=lambda name: compat_calls.append(name) or f"resolved:{name}"),
             bindings={
@@ -234,7 +234,7 @@ class RunnerSmokeTests(unittest.TestCase):
             providers=types.SimpleNamespace(),
             deps=object(),
             launcher=types.SimpleNamespace(
-                loader=types.SimpleNamespace(ensure_module=lambda: None),
+                loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: f"resolved:{name}"),
                 runtime=types.SimpleNamespace(
                     initialize_runtime=lambda: types.SimpleNamespace(
                         startup_env=types.SimpleNamespace(bot_token="runtime-token")
@@ -303,7 +303,7 @@ class RunnerSmokeTests(unittest.TestCase):
         assembly = types.SimpleNamespace(
             providers=types.SimpleNamespace(),
             deps=object(),
-            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None), runtime=runtime),
+            launcher=types.SimpleNamespace(loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: f"resolved:{name}"), runtime=runtime),
             legacy_resolve=lambda name: f"resolved:{name}",
             surface=types.SimpleNamespace(resolve=lambda name: f"resolved:{name}"),
             bindings={
@@ -365,7 +365,7 @@ assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
     deps=object(),
     launcher=types.SimpleNamespace(
-        loader=types.SimpleNamespace(ensure_module=lambda: None),
+        loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: f"resolved:{name}"),
         runtime=types.SimpleNamespace(
             initialize_runtime=lambda: types.SimpleNamespace(startup_env=types.SimpleNamespace(bot_token="runtime-token")),
             bot_token=lambda: "runtime-token",
@@ -443,7 +443,7 @@ assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
     deps=object(),
     launcher=types.SimpleNamespace(
-        loader=types.SimpleNamespace(ensure_module=lambda: None),
+        loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: f"resolved:{name}"),
         runtime=types.SimpleNamespace(
             initialize_runtime=lambda: types.SimpleNamespace(startup_env=types.SimpleNamespace(bot_token="runtime-token")),
             bot_token=lambda: "runtime-token",
@@ -542,7 +542,7 @@ assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
     deps=object(),
     launcher=types.SimpleNamespace(
-        loader=types.SimpleNamespace(ensure_module=lambda: None),
+        loader=types.SimpleNamespace(ensure_module=lambda: None, resolve=lambda name: f"resolved:{name}"),
         runtime=types.SimpleNamespace(
             initialize_runtime=lambda: types.SimpleNamespace(startup_env=types.SimpleNamespace(bot_token="runtime-token")),
             bot_token=lambda: "runtime-token",

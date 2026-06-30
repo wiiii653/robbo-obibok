@@ -39,6 +39,8 @@ class BotRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("audacious", calls)
         self.assertIn("session", calls)
         self.assertIn("temp", calls)
+        self.assertIn("lock", calls)
+        self.assertIn("flag", calls)
 
     def test_handle_signal_schedules_shutdown_and_close(self):
         calls = []
