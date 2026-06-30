@@ -9,7 +9,7 @@ from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from runtime_bootstrap import StartupEnvironment
 from bot_runtime import BotRuntime
-from entrypoint_state_protocols import EntrypointRuntimeStateProtocol
+from entrypoint_state import EntrypointRuntimeStateProtocol
 
 if TYPE_CHECKING:
     from entrypoint_runtime import AppAssembly

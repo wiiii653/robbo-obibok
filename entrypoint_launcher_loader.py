@@ -41,7 +41,7 @@ from archive_runtime import ArchiveRuntimeConfig
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
 from entrypoint_launcher_support import GuildScope
 from entrypoint_resources import EntrypointResources
-from entrypoint_state_protocols import EntrypointStateProtocol
+from entrypoint_state import EntrypointStateProtocol
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession

@@ -15,7 +15,7 @@ import entrypoint_app
 import entrypoint_components
 import entrypoint_resources
 import entrypoint_runtime_surface
-from entrypoint_state_protocols import (
+from entrypoint_state import (
     EntrypointComponentAccessStateProtocol,
     EntrypointComponentAssemblyStateProtocol,
 )

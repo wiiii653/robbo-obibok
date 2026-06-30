@@ -11,7 +11,7 @@ from typing import Callable
 from entrypoint_bootstrap import EntrypointBootstrapBuilder, build_entrypoint_bootstrap
 
 from entrypoint_resources import EntrypointResources
-from entrypoint_state_protocols import EntrypointStateProtocol
+from entrypoint_state import EntrypointStateProtocol
 from runtime_io import SharedSessionRuntime
 
 

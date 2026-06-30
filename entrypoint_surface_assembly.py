@@ -36,7 +36,7 @@ class EntrypointModuleSurface:
 
 if TYPE_CHECKING:
     from entrypoint_launcher_runtime import LazyEntrypointLauncher
-    from entrypoint_state_protocols import EntrypointCompatStateProtocol
+    from entrypoint_state import EntrypointCompatStateProtocol
 
 
 class LazyCallableExport:

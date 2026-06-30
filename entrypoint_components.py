@@ -17,7 +17,7 @@ from app_bootstrap import ArchiveRegistryViews
 from collection_catalog import build_collections
 from collection_specs import CollectionSpec
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
-import entrypoint_state_protocols as state_protocols
+import entrypoint_state as state_protocols
 from legacy_runtime_bindings import LegacyRuntimeBindings
 from playback_assets import PlaybackAssetRuntime
 from playback_helpers import NowPlayingDependencies

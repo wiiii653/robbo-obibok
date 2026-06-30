@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from discord import Colour
     from entrypoint_app import EntrypointComponentAccess
     from entrypoint_resources import EntrypointResources
-    from entrypoint_state_protocols import EntrypointGlueStateProtocol
+    from entrypoint_state import EntrypointGlueStateProtocol
 
 
 @dataclass(slots=True)

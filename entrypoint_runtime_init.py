@@ -11,7 +11,7 @@ from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
 from entrypoint_callback_groups import AppEntrypointCallbacks
 from entrypoint_resources import EntrypointResources
-from entrypoint_state_protocols import EntrypointRuntimeInitializerStateProtocol
+from entrypoint_state import EntrypointRuntimeInitializerStateProtocol
 
 if TYPE_CHECKING:
     from discord.ext import commands

@@ -7,7 +7,7 @@ from typing import Callable, Mapping, cast
 
 from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
-import entrypoint_state_protocols as state_protocols
+import entrypoint_state as state_protocols
 
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,

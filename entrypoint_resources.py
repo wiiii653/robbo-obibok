@@ -10,7 +10,7 @@ from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
 from entrypoint_helpers import build_temp_path as build_entry_temp_path
-import entrypoint_state_protocols as state_protocols
+import entrypoint_state as state_protocols
 from runtime_io import AudioProcessRuntime
 from subsong_runtime import SubsongRuntime
 
