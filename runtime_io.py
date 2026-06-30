@@ -65,8 +65,8 @@ class AudioProcessRuntime:
     def move_playback_to_sink(self) -> None:
         runtime_move_playback_to_sink(self.sink_name)
 
-    def audacious_play(self, filepath: str) -> None:
-        runtime_audacious_play(filepath, self.sink_name, self.logger)
+    def audacious_play(self, filepath: str) -> bool:
+        return runtime_audacious_play(filepath, self.sink_name, self.logger)
 
     def audacious_stop(self) -> None:
         runtime_audacious_stop()

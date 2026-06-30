@@ -240,8 +240,11 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
             return False
 
         first_spc = os.path.join(game_dir, spc_files[0])
-        await asyncio.get_event_loop().run_in_executor(None, deps.audacious_stop)
-        await asyncio.get_event_loop().run_in_executor(None, deps.audacious_play, first_spc)
+        await asyncio.to_thread(deps.audacious_stop)
+        started = await asyncio.to_thread(deps.audacious_play, first_spc)
+        if not started:
+            await ctx.send(f"❌ Failed to start playback for `{game_name}`")
+            return False
 
         state.set_current_path(first_spc)
         deps.setup_monitor_source(state)

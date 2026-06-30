@@ -91,7 +91,8 @@ def move_playback_to_sink(sink_name: str) -> None:
             )
 
 
-def audacious_play(filepath: str, sink_name: str, logger) -> None:
+def audacious_play(filepath: str, sink_name: str, logger) -> bool:
+    """Start Audacious playback. Returns True if playback started."""
     ensure_audacious(logger)
     subprocess.run(["audtool", "playlist-clear"], capture_output=True)
     subprocess.run(["audtool", "playlist-addurl", filepath], capture_output=True)
@@ -102,7 +103,12 @@ def audacious_play(filepath: str, sink_name: str, logger) -> None:
         if result.returncode == 0:
             break
         logger.warning("audacious_play: attempt %d failed, retrying...", attempt + 1)
+    else:
+        logger.error("audacious_play: all 3 attempts failed for %s, clearing playlist", filepath)
+        subprocess.run(["audtool", "playlist-clear"], capture_output=True)
+        return False
     move_playback_to_sink(sink_name)
+    return True
 
 
 def audacious_stop() -> None:

@@ -64,8 +64,8 @@ class EntrypointResources:
     def move_playback_to_sink(self) -> None:
         self.get_audio_runtime().move_playback_to_sink()
 
-    def audacious_play(self, filepath: str) -> None:
-        self.get_audio_runtime().audacious_play(filepath)
+    def audacious_play(self, filepath: str) -> bool:
+        return self.get_audio_runtime().audacious_play(filepath)
 
     def audacious_stop(self) -> None:
         self.get_audio_runtime().audacious_stop()

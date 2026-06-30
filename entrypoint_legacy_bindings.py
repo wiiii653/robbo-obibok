@@ -49,7 +49,7 @@ class LegacyAudioResourcesProtocol(Protocol):
     def move_playback_to_sink(self) -> None:
         ...
 
-    def audacious_play(self, filepath: str) -> None:
+    def audacious_play(self, filepath: str) -> bool:
         ...
 
     def audacious_stop(self) -> None:
@@ -114,7 +114,7 @@ class EntrypointLegacyControlBindings:
     setup_audacious_sid_config: Callable[[], None]
     set_volume_for_collection: Callable[[str], None]
     move_playback_to_sink: Callable[[], None]
-    audacious_play: Callable[[str], None]
+    audacious_play: Callable[[str], bool]
     audacious_stop: Callable[[], None]
     audacious_song: Callable[[], str]
     is_playing: Callable[[], bool]

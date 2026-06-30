@@ -31,8 +31,10 @@ async def play_via_audacious(
     current_path: str | None = None,
 ) -> None:
     """Stop current playback, play a new path via Audacious, and refresh the monitor source."""
-    await asyncio.get_event_loop().run_in_executor(None, deps.audacious_stop)
-    await asyncio.get_event_loop().run_in_executor(None, deps.audacious_play, playback_path)
+    await asyncio.to_thread(deps.audacious_stop)
+    started = await asyncio.to_thread(deps.audacious_play, playback_path)
+    if not started:
+        return
     if current_path is not None:
         state.set_current_path(current_path)
     deps.setup_monitor_source(state)
