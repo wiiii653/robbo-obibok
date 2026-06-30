@@ -21,6 +21,7 @@ class PlaybackCommandDependencies:
     PLAYBACK_LOOP: bool
     PLAYBACK_SHUFFLE: bool
     PLAYLIST_DIR: str
+    SINK_NAME: str
     apply_queue_state: Callable[[PlaylistState, dict[str, object]], bool]
     audacious_song: Callable[[], str]
     audacious_stop: Callable[[], None]

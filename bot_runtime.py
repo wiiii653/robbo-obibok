@@ -391,6 +391,7 @@ class BotRuntime:
             PLAYBACK_LOOP=self.config.PLAYBACK_LOOP,
             PLAYBACK_SHUFFLE=self.config.PLAYBACK_SHUFFLE,
             PLAYLIST_DIR=self.config.PLAYLIST_DIR,
+            SINK_NAME=self.config.SINK_NAME,
             apply_queue_state=self.playback.command.apply_queue_state,
             audacious_song=self.playback.command.audacious_song,
             audacious_stop=self.playback.command.audacious_stop,

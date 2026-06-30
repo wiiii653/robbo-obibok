@@ -23,7 +23,7 @@ logging.basicConfig(
 log = logging.getLogger("modarchive-dl")
 
 BASE = "http://modarchive.textfiles.com"
-OUTDIR = "/home/boruta/robbo-obibot/archiwum/modarchive_textfiles"
+OUTDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archiwum", "modarchive_textfiles")
 CONCURRENT = 8  # downloads at a time
 
 # Directories to download (from the main page)
