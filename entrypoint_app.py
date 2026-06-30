@@ -13,17 +13,34 @@ from entrypoint_bridge import EntrypointComponentAccess, EntrypointFacade
 from entrypoint_callback_groups import EntrypointRawCallbacks
 from entrypoint_components import EntrypointComponentDeps, apply_entrypoint_components, build_entrypoint_components
 from entrypoint_glue import EntrypointGlue
-from entrypoint_legacy_surface import EntrypointCompat
 from entrypoint_runtime_callback_builders import (
     build_entrypoint_runtime_callbacks,
     build_entrypoint_runtime_initializer,
 )
 from entrypoint_runtime_init import EntrypointRuntimeInitializer
 from entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
+from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 
 if TYPE_CHECKING:
     from discord.ext import commands
     from entrypoint_launcher_support import EntrypointSupport
+    from entrypoint_state_protocols import EntrypointCompatStateProtocol
+
+
+@dataclass(slots=True)
+class EntrypointCompat:
+    state: EntrypointCompatStateProtocol
+    ensure_components: Callable[[], None]
+    guild_id_getter: Callable[[], int | None]
+
+    def resolve(self, name: str) -> object:
+        attrs = build_entrypoint_compat_registry_attrs(
+            state=self.state,
+            guild_id_getter=self.guild_id_getter,
+        )
+        if name in attrs:
+            return attrs[name]()
+        raise AttributeError(name)
 
 
 @dataclass(slots=True)

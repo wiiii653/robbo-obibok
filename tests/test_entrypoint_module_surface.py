@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_legacy_surface import EntrypointCompat, build_entrypoint_exports
+from entrypoint_app import EntrypointCompat
+from entrypoint_module import build_entrypoint_exports
 from tests.test_support import install_discord_stubs
 
 
@@ -31,14 +32,13 @@ class EntrypointModuleSurfaceTests(unittest.TestCase):
         bootstrap = build_fake_module_bootstrap(support=support)
         fake_app = types.SimpleNamespace()
         exports = {"monitor_playback": object()}
-        fake_exports = types.SimpleNamespace(module_exports=lambda: exports)
 
         with (
             patch("entrypoint_module.build_entrypoint_module_bootstrap", return_value=bootstrap),
             patch("entrypoint_module.build_module_component_deps", return_value=lambda: object()),
             patch("entrypoint_module.build_module_raw_callbacks", return_value=object()),
             patch("entrypoint_module.build_entrypoint_app", return_value=fake_app),
-            patch("entrypoint_module.build_entrypoint_exports", return_value=fake_exports),
+            patch("entrypoint_module.build_entrypoint_exports", return_value=exports),
         ):
             module = build_entrypoint_module(
                 module_path="/tmp/robbo-obibok.py",
@@ -77,7 +77,7 @@ class EntrypointModuleSurfaceTests(unittest.TestCase):
                 health_watchdog=lambda: None,
             ),
         )
-        exports = build_entrypoint_exports(app).module_exports()
+        exports = build_entrypoint_exports(app)
         self.assertIn("_after_stream_end", exports)
         self.assertIn("monitor_playback", exports)
 
