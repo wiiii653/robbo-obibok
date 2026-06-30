@@ -11,13 +11,12 @@ from collection_catalog import (
     FLIP_SEQ as COLLECTION_FLIP_SEQ,
 )
 from entrypoint_module_bindings import (
-    ALLOW_DEPRECATED,
+    ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
     resolve_bound_entrypoint_module_attr,
     resolve_compat_entrypoint_module_attr,
 )
 import entrypoint_executable_assembly
 import entrypoint_runner
-import entrypoint_runtime_compat
 from entrypoint_runtime_surface import (
     build_compat_runtime_surface,
     build_stable_runtime_surface,
@@ -94,14 +93,6 @@ def _assembly_compat_bindings():
     return _ensure_executable_assembly().compat_bindings
 
 
-def _assembly_compat_policy():
-    return ALLOW_DEPRECATED
-
-
-def _assembly_launcher():
-    return _ensure_executable_assembly().launcher
-
-
 def _assembly_surface():
     return _ensure_executable_assembly().surface
 
@@ -126,21 +117,15 @@ def initialize_runtime():
 
 
 def __getattr__(name: str):
-    try:
-        return entrypoint_runtime_compat.resolve_runtime_internal_attr(
-            name,
-            assembly_peek=lambda: _RUNTIME_HOLDER.assembly,
-            bindings_getter=_assembly_bindings,
-            compat_bindings_getter=_assembly_compat_bindings,
-            compat_policy_getter=_assembly_compat_policy,
-            launcher_getter=_assembly_launcher,
-            deps_getter=lambda: _ensure_executable_assembly().deps,
-            legacy_resolve_getter=lambda: _ensure_executable_assembly().legacy_resolve,
-            surface_getter=_assembly_surface,
-        )
-    except AttributeError:
-        if entrypoint_runtime_compat.is_runtime_internal_attr(name):
-            raise
+    _stable_attrs = {
+        "_ASSEMBLY": lambda: _RUNTIME_HOLDER.assembly,
+        "_BINDINGS": _assembly_bindings,
+        "_COMPAT_BINDINGS": _assembly_compat_bindings,
+    }
+    if name in _stable_attrs:
+        return _stable_attrs[name]()
+    if name in ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES:
+        raise AttributeError(name)
     if name in globals():
         return globals()[name]
     stable_surface = _stable_runtime_surface()
