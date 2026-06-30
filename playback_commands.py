@@ -351,7 +351,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             "`!hvsc` / `!c64` / `!sid` — 🟣 C64 SID (~60 500)\n"
             "`!mod` / `!modarchive` / `!tracker` / `!modules` — 🟠 Tracker Modules (~175 000)\n"
             "`!ay` / `!zx` / `!zxspectrum` / `!spectrum` — 🔵 ZX Spectrum AY (~4 500)\n"
-            "`!ym` / `!atarist` / `!ym2149` — 🎹 **Atari ST YM (~7 200)**\n"
+            "`!ym` / `!atarist` / `!ym2149` — 🎹 Atari ST YM (~7 200)\n"
             "`!tiny` / `!tm` / `!demoscene` — 🎵 Demoscene Modules (~418)\n"
             "`!snes` / `!spc` / `!supernintendo` / `!nintendo` — 🔴 SNES SPC (~60 000)"
         ), inline=False)
