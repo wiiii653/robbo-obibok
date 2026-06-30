@@ -64,7 +64,7 @@ if [ "$SCRIPT_DIR" != "$REPO_DIR" ]; then
         warn "Directory $REPO_DIR already exists, using it"
     else
         info "Cloning repository..."
-        git clone https://github.com/wiiii653/robbo-obibok-ulimate-chiptune-bot.git "$REPO_DIR"
+        git clone git@github.com:wiiii653/robbo-obibok.git "$REPO_DIR"
     fi
     cd "$REPO_DIR"
 else

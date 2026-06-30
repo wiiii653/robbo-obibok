@@ -177,8 +177,9 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
     @bot.command()
     async def volume(ctx: PlaybackContext, *, level: str = ""):
         if not level:
+            sink = deps.SINK_NAME
             r = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: subprocess.run(["pactl", "get-sink-volume", "asma_bot"], capture_output=True, text=True)
+                None, lambda: subprocess.run(["pactl", "get-sink-volume", sink], capture_output=True, text=True)
             )
             m = re.search(r"(\d+)%", r.stdout)
             if m:
@@ -191,8 +192,9 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             if vol < 0 or vol > 200:
                 await ctx.send("Volume must be between 0 and 200.")
                 return
+            sink = deps.SINK_NAME
             await asyncio.get_event_loop().run_in_executor(
-                None, lambda: subprocess.run(["pactl", "set-sink-volume", "asma_bot", f"{vol}%"], capture_output=True)
+                None, lambda: subprocess.run(["pactl", "set-sink-volume", sink, f"{vol}%"], capture_output=True)
             )
             await ctx.send(embed=discord.Embed(title=f"🔊 Volume set to **{vol}%**", color=discord.Color.green()))
         except ValueError:

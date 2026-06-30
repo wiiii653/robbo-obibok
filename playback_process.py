@@ -64,6 +64,11 @@ def setup_audacious_sid_config(logger) -> None:
     subprocess.run(["audtool", "config-set", "SID Player:playMaxTimeUnknown", "TRUE"], capture_output=True)
     logger.info("Audacious SID plugin config set")
 
+    # Enable the Compressor effect plugin for consistent loudness across collections.
+    # Defaults come from ~/.config/audacious/config (center=0.4, range=0.35).
+    subprocess.run(["audtool", "plugin-enable", "compressor", "TRUE"], capture_output=True)
+    logger.info("Audacious Compressor plugin enabled")
+
 
 def set_volume_for_collection(mode: str, sink_name: str, logger) -> None:
     vol = COLLECTION_VOLUMES.get(mode, 100)

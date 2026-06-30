@@ -214,6 +214,20 @@ python build_snes_index.py   # indexes all .spc files in archiwum/snes_spc/
 
 These generate `*_cache_local.json` files for instant startup — no crawling at runtime.
 
+## Audio Effects
+
+The bot enables Audacious's **Compressor** effect plugin at startup for consistent loudness across collections (particularly important when switching between SID, SAP, MOD, and other formats with differing volume levels).
+
+The compressor is configured via Audacious's user config (`~/.config/audacious/config`):
+```ini
+[compressor]
+center=0.4
+range=0.35
+```
+
+To verify the compressor is active: `audtool plugin-is-enabled compressor`
+To adjust the settings: edit `~/.config/audacious/config` and restart the bot.
+
 ## Troubleshooting
 
 | Symptom | Likely Fix |
@@ -228,7 +242,8 @@ These generate `*_cache_local.json` files for instant startup — no crawling at
 | Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
 | SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
 | GME formats skip too early | Updated in latest code — GME formats use 600s timeout with song-loaded check |
-| Temp dir cleanup errors | Temp dir moved under `tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
+|| Temp dir cleanup errors | Temp dir moved under `tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
+|| Audio is too quiet or uneven | Compressor plugin is enabled at startup — verify with `audtool plugin-is-enabled compressor` |
 
 ## Configuration
 
