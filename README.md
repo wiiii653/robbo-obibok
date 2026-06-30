@@ -7,7 +7,7 @@ __________      ___.  ___.            ________ ___.   ._____.           __
         \/           \/    \/                 \/    \/        \/              
 ```
 
-# Robbo Obibot — The Ultimate Chiptune Bot
+# Robbo Obibok — The Ultimate Chiptune Bot
 
 Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Blending intricate technical grooves with retro charm, Robbo plays from **seven collections** spanning Atari, C64, ZX Spectrum, Amiga, SNES, and beyond.
 
