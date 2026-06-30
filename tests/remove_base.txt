@@ -1,1 +1,0 @@
-        self.assertIsNot(compat_bindings["_FLIP_SEQ"], flip_seq)
