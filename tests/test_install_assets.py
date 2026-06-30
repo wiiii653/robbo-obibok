@@ -29,10 +29,10 @@ class InstallAssetsTests(unittest.TestCase):
             position = next_position
 
     def test_launch_helper_declares_canonical_entry_scripts(self):
-        launch_text = (ROOT / "robbo_obibok_launch.py").read_text(encoding="utf-8")
+        launcher_text = (ROOT / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
 
-        self.assertIn('DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"', launch_text)
-        self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launch_text)
+        self.assertIn('DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"', launcher_text)
+        self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launcher_text)
 
     def test_strict_service_uses_explicit_strict_entrypoint(self):
         service_text = (ROOT / "robbo-obibok-strict.service").read_text(encoding="utf-8")
