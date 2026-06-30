@@ -6,7 +6,7 @@ import os
 import random
 import shutil
 import json
-from typing import Callable, Iterable
+from typing import Callable, Iterable, MutableMapping
 
 
 REQUIRED_EXTERNAL_TOOLS: dict[str, str] = {
@@ -20,8 +20,13 @@ REQUIRED_EXTERNAL_TOOLS: dict[str, str] = {
 }
 
 
-def load_dotenv_file(dotenv_path: str) -> bool:
+def load_dotenv_file(
+    dotenv_path: str,
+    *,
+    env: MutableMapping[str, str] | None = None,
+) -> bool:
     """Load simple KEY=VALUE pairs from .env into the process environment."""
+    target_env = os.environ if env is None else env
     if not os.path.exists(dotenv_path):
         return False
     with open(dotenv_path, encoding="utf-8") as handle:
@@ -33,7 +38,7 @@ def load_dotenv_file(dotenv_path: str) -> bool:
             key = key.strip()
             value = value.strip().strip("\"'")
             if key:
-                os.environ.setdefault(key, value)
+                target_env.setdefault(key, value)
     return True
 
 
@@ -72,14 +77,42 @@ def can_restore_queue(
     min_queue_length: int = 1,
 ) -> bool:
     """Return True when a saved queue is compatible with the current track set."""
-    if not saved or not tracks:
+    if not isinstance(saved, dict) or not tracks:
         return False
     queue = saved.get("queue")
-    if not isinstance(queue, list) or len(queue) < min_queue_length:
+    if not isinstance(queue, list) or not all(isinstance(item, str) for item in queue):
+        return False
+    if len(queue) < min_queue_length:
         return False
     if saved.get("collection_mode") != collection_mode:
         return False
     return queue[0] in tracks
+
+
+def normalize_queue_record(data: object) -> dict[str, object] | None:
+    """Validate persisted queue data before it reaches playback state."""
+    if not isinstance(data, dict):
+        return None
+    queue = data.get("queue")
+    index = data.get("index")
+    loop = data.get("loop")
+    collection_mode = data.get("collection_mode")
+    if not isinstance(queue, list) or not all(isinstance(item, str) for item in queue):
+        return None
+    if not isinstance(index, int) or isinstance(index, bool):
+        return None
+    if not isinstance(loop, bool) or not isinstance(collection_mode, str):
+        return None
+    if queue and not 0 <= index < len(queue):
+        return None
+    if not queue and index != -1:
+        return None
+    return {
+        "queue": list(queue),
+        "index": index,
+        "loop": loop,
+        "collection_mode": collection_mode,
+    }
 
 
 def format_flip_sequence(flip_seq: list[str], current_tag: str) -> str:
@@ -99,14 +132,15 @@ def prepare_playback_queue(
     shuffle_func: Callable[[list[str]], None] | None = None,
 ) -> dict[str, object]:
     """Build queue/index/loop state from saved data or a fresh track list."""
-    if can_restore_queue(saved, tracks, collection_mode, min_queue_length=min_queue_length):
-        assert saved is not None
-        saved_queue = saved["queue"]
+    normalized_saved = normalize_queue_record(saved)
+    if can_restore_queue(normalized_saved, tracks, collection_mode, min_queue_length=min_queue_length):
+        assert normalized_saved is not None
+        saved_queue = normalized_saved["queue"]
         assert isinstance(saved_queue, list)
         return {
             "queue": list(saved_queue),
-            "index": saved.get("index", 0),
-            "loop": saved.get("loop", default_loop),
+            "index": normalized_saved["index"],
+            "loop": normalized_saved["loop"],
             "restored": True,
         }
 
@@ -252,6 +286,8 @@ def load_cached_json_file(path: str, cache_state: dict[str, object]) -> dict:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
     except Exception:
+        return {}
+    if not isinstance(data, dict):
         return {}
     cache_state["data"] = data
     cache_state["mtime"] = mtime

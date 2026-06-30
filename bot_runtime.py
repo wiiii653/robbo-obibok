@@ -52,6 +52,7 @@ class RuntimeConfig:
     TEMP_DIR: str
     TINY_DIR: str
     YM_DIR: str
+    GUILD_ID: int | None = None
 
 
 @dataclass(slots=True)
@@ -365,6 +366,7 @@ class BotRuntime:
     def build_event_deps(self) -> CoreEventDependencies:
         return CoreEventDependencies(
             AUTO_START_CHANNEL=self.config.AUTO_START_CHANNEL,
+            GUILD_ID=self.config.GUILD_ID,
             PLAYBACK_LOOP=self.config.PLAYBACK_LOOP,
             PLAYBACK_SHUFFLE=self.config.PLAYBACK_SHUFFLE,
             apply_queue_state=self.playback.session.apply_queue_state,

@@ -31,12 +31,13 @@ def run_logged_bot(
     root: Path = ROOT,
     env: dict[str, str] | None = None,
 ) -> int:
-    _runtime_env, command = build_logged_launch_command(root=root, env=env)
+    runtime_env, command = build_logged_launch_command(root=root, env=env)
     log_path = root / "bot_output.log"
     with log_path.open("a", encoding="utf-8") as log:
         proc = subprocess.Popen(
             command,
             cwd=root,
+            env=runtime_env,
             stdout=log,
             stderr=subprocess.STDOUT,
             close_fds=True,

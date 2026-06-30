@@ -77,12 +77,18 @@ def set_volume_for_collection(mode: str, sink_name: str, logger) -> None:
 
 
 def move_playback_to_sink(sink_name: str) -> None:
-    subprocess.run(
-        f"pactl list sink-inputs short | cut -d' ' -f1 | "
-        f"while read id; do pactl move-sink-input \"$id\" {sink_name}; done",
-        shell=True,
+    result = subprocess.run(
+        ["pactl", "list", "sink-inputs", "short"],
         capture_output=True,
+        text=True,
     )
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if fields and fields[0].isdigit():
+            subprocess.run(
+                ["pactl", "move-sink-input", fields[0], sink_name],
+                capture_output=True,
+            )
 
 
 def audacious_play(filepath: str, sink_name: str, logger) -> None:

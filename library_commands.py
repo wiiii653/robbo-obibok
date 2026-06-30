@@ -16,24 +16,39 @@ from bot_dependencies import LibraryCommandDependencies
 
 
 def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
+    favorites_lock = asyncio.Lock()
+    blacklist_lock = asyncio.Lock()
+
+    async def persist(ctx, label, operation, *args):
+        try:
+            return True, await asyncio.to_thread(operation, *args)
+        except OSError as exc:
+            deps.log.error("%s persistence failed: %s", label, exc)
+            if ctx is not None:
+                await ctx.send(f"❌ {label} could not be saved. Check bot storage permissions.")
+            return False, None
+
     @bot.event
     async def on_raw_reaction_add(payload):
         track = deps.get_message_track(payload.message_id)
         if track is None:
             return
-        favs = deps.load_favorites()
-        url = track["url"]
-        if not isinstance(url, str):
+        async with favorites_lock:
+            favs = await asyncio.to_thread(deps.load_favorites)
+            url = track["url"]
+            if not isinstance(url, str):
+                return
+            entry = {
+                "url": url,
+                "name": track.get("name", url.split("/")[-1].replace(".sap", "")),
+                "author": track.get("author", ""),
+                "added_at": time.time(),
+                "emoji": str(payload.emoji),
+            }
+            favs, added = deps.toggle_user_track_entry(favs, payload.user_id, entry)
+            saved, _ = await persist(None, "Favorites", deps.save_favorites, favs)
+        if not saved:
             return
-        entry = {
-            "url": url,
-            "name": track.get("name", url.split("/")[-1].replace(".sap", "")),
-            "author": track.get("author", ""),
-            "added_at": time.time(),
-            "emoji": str(payload.emoji),
-        }
-        favs, added = deps.toggle_user_track_entry(favs, payload.user_id, entry)
-        deps.save_favorites(favs)
         if not added:
             deps.log.info("❤️ Removed from favorites: %s", url)
         else:
@@ -47,11 +62,14 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
         url = track["url"]
         if not isinstance(url, str):
             return
-        favs = deps.load_favorites()
-        favs, removed = deps.remove_user_track(favs, payload.user_id, url)
-        if not removed:
+        async with favorites_lock:
+            favs = await asyncio.to_thread(deps.load_favorites)
+            favs, removed = deps.remove_user_track(favs, payload.user_id, url)
+            if not removed:
+                return
+            saved, _ = await persist(None, "Favorites", deps.save_favorites, favs)
+        if not saved:
             return
-        deps.save_favorites(favs)
         deps.log.info("❤️ Removed from favorites via reaction removal: %s", url)
 
     async def _play_track_list(ctx, tracks: list[dict], label: str) -> bool:
@@ -78,7 +96,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
         state.set_queue_state([track["url"] for track in tracks], 0)
         await ctx.send(f"🎵 **Playing {len(tracks)} {label}!**")
         if await deps.play_current_track(ctx):
-            deps.save_queue(state)
+            await persist(ctx, "Queue", deps.save_queue, state)
             if state.monitor_task and not state.monitor_task.done():
                 state.monitor_task.cancel()
             state.set_monitor_task(bot.loop.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
@@ -86,7 +104,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["favs", "playlist"])
     async def favorites(ctx: commands.Context):
-        user_favs = deps.load_user_tracks(deps.load_favorites(), ctx.author.id)
+        favorites_data = await asyncio.to_thread(deps.load_favorites)
+        user_favs = deps.load_user_tracks(favorites_data, ctx.author.id)
         if not user_favs:
             return await ctx.send("📭 **No favorites yet.** React to a Now Playing embed with any emoji to save tracks here!")
         lines = [f"🎵 **Your Favorites ({len(user_favs)} tracks)**"]
@@ -98,7 +117,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["fp"])
     async def favplay(ctx: commands.Context, *, number: str = ""):
-        user_favs = deps.load_user_tracks(deps.load_favorites(), ctx.author.id)
+        favorites_data = await asyncio.to_thread(deps.load_favorites)
+        user_favs = deps.load_user_tracks(favorites_data, ctx.author.id)
         if not user_favs:
             return await ctx.send("📭 **No favorites yet.** React to any Now Playing embed with an emoji to save tracks!")
         author = cast(discord.Member, ctx.author)
@@ -113,7 +133,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             except ValueError:
                 return await ctx.send("Usage: `!favplay <number>` or `!favplay` to play all.")
         else:
-            tracks_to_play = deps.filter_blacklisted_track_entries(list(user_favs), deps.load_blacklist(), ctx.author.id)
+            blacklist = await asyncio.to_thread(deps.load_blacklist)
+            tracks_to_play = deps.filter_blacklisted_track_entries(list(user_favs), blacklist, ctx.author.id)
             random.shuffle(tracks_to_play)
         if not tracks_to_play:
             return await ctx.send("⛔ All your favorites are blacklisted. Nothing to play!")
@@ -121,16 +142,27 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["pls"])
     async def favsave(ctx: commands.Context, *, name: str):
-        user_favs = deps.load_user_tracks(deps.load_favorites(), ctx.author.id)
+        favorites_data = await asyncio.to_thread(deps.load_favorites)
+        user_favs = deps.load_user_tracks(favorites_data, ctx.author.id)
         if not user_favs:
             return await ctx.send("📭 **No favorites to save.** React to a Now Playing embed with any emoji to add tracks first!")
-        safe_name = deps.save_playlist(name.strip(), user_favs, ctx.author.id, str(ctx.author))
+        saved, safe_name = await persist(
+            ctx,
+            "Playlist",
+            deps.save_playlist,
+            name.strip(),
+            user_favs,
+            ctx.author.id,
+            str(ctx.author),
+        )
+        if not saved:
+            return
         await ctx.send(f"💾 **Saved!** `{safe_name}` — {len(user_favs)} tracks from your favorites.")
 
     @bot.command(aliases=["fpl"])
     async def favload(ctx: commands.Context, *, name: str):
         if name.strip().lower() == "list":
-            playlists = deps.list_playlists()
+            playlists = await asyncio.to_thread(deps.list_playlists)
             if not playlists:
                 return await ctx.send("📂 **No playlists saved yet.** Use `!favsave <name>` to create one!")
             lines = ["📂 **Saved Playlists**"]
@@ -141,7 +173,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
         author = cast(discord.Member, ctx.author)
         if not author.voice:
             return await ctx.send("Join a voice channel first!")
-        loaded_playlist = deps.load_playlist(name.strip())
+        loaded_playlist = await asyncio.to_thread(deps.load_playlist, name.strip())
         if not loaded_playlist:
             return await ctx.send(f"❌ Playlist `{name.strip()}` not found. Use `!favload list` to see saved playlists.")
         tracks = loaded_playlist.get("tracks", [])
@@ -151,8 +183,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["plist", "list-playlists", "playlist-dir"])
     async def playlists(ctx: commands.Context):
-        deps.ensure_playlist_dir()
-        files = sorted(os.listdir(deps.PLAYLIST_DIR))
+        await asyncio.to_thread(deps.ensure_playlist_dir)
+        files = await asyncio.to_thread(lambda: sorted(os.listdir(deps.PLAYLIST_DIR)))
         json_files = [fname for fname in files if fname.endswith(".json")]
         if not json_files:
             return await ctx.send("📂 **No playlists saved yet.** Use `!favsave <name>` to create one!")
@@ -197,9 +229,12 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
                 return await ctx.send("Nothing is playing right now.")
             url = state.queue[state.index]
             name = (await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)) or url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
-        blk = deps.load_blacklist()
-        blk, added = deps.toggle_user_track_entry(blk, ctx.author.id, {"url": url, "name": name, "added_at": time.time()})
-        deps.save_blacklist(blk)
+        async with blacklist_lock:
+            blk = await asyncio.to_thread(deps.load_blacklist)
+            blk, added = deps.toggle_user_track_entry(blk, ctx.author.id, {"url": url, "name": name, "added_at": time.time()})
+            saved, _ = await persist(ctx, "Blacklist", deps.save_blacklist, blk)
+        if not saved:
+            return
         if not added:
             await ctx.send(f"✅ **Un-blacklisted** — `{name}`")
             deps.log.info("⛔ Removed from blacklist by %s: %s", ctx.author, url)
@@ -214,7 +249,8 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["blks", "blklist"])
     async def blacklist_list(ctx: commands.Context):
-        user_blk = deps.load_user_tracks(deps.load_blacklist(), ctx.author.id)
+        blacklist = await asyncio.to_thread(deps.load_blacklist)
+        user_blk = deps.load_user_tracks(blacklist, ctx.author.id)
         if not user_blk:
             return await ctx.send("📭 **No blacklisted tracks.** Use `!blk` on a playing track to add it here.")
         lines = [f"⛔ **Your Blacklist ({len(user_blk)} tracks)**"]
@@ -225,18 +261,21 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["blkrm"])
     async def blacklist_remove(ctx: commands.Context, *, number: str):
-        blk = deps.load_blacklist()
-        uid = str(ctx.author.id)
-        user_blk = deps.load_user_tracks(blk, uid)
-        if not user_blk:
-            return await ctx.send("📭 Your blacklist is empty.")
-        try:
-            idx = int(number) - 1
-            if idx < 0 or idx >= len(user_blk):
-                return await ctx.send(f"Number must be between 1 and {len(user_blk)}.")
-        except ValueError:
-            return await ctx.send("Usage: `!blkrm <number>`")
-        removed = user_blk.pop(idx)
-        blk[uid]["tracks"] = user_blk
-        deps.save_blacklist(blk)
+        async with blacklist_lock:
+            blk = await asyncio.to_thread(deps.load_blacklist)
+            uid = str(ctx.author.id)
+            user_blk = deps.load_user_tracks(blk, uid)
+            if not user_blk:
+                return await ctx.send("📭 Your blacklist is empty.")
+            try:
+                idx = int(number) - 1
+                if idx < 0 or idx >= len(user_blk):
+                    return await ctx.send(f"Number must be between 1 and {len(user_blk)}.")
+            except ValueError:
+                return await ctx.send("Usage: `!blkrm <number>`")
+            removed = user_blk.pop(idx)
+            blk[uid]["tracks"] = user_blk
+            saved, _ = await persist(ctx, "Blacklist", deps.save_blacklist, blk)
+        if not saved:
+            return
         await ctx.send(f"✅ **Removed from blacklist** — `{removed.get('name', 'Unknown')}`")

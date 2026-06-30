@@ -191,6 +191,7 @@ class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
         calls = []
         deps = bot_events.CoreEventDependencies(
             AUTO_START_CHANNEL="radio",
+            GUILD_ID=123,
             PLAYBACK_LOOP=True,
             PLAYBACK_SHUFFLE=True,
             apply_queue_state=lambda *_args, **_kwargs: False,
@@ -223,6 +224,7 @@ class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         deps = bot_events.CoreEventDependencies(
             AUTO_START_CHANNEL="radio",
+            GUILD_ID=123,
             PLAYBACK_LOOP=True,
             PLAYBACK_SHUFFLE=True,
             apply_queue_state=lambda *_args, **_kwargs: False,
@@ -284,10 +286,22 @@ class SingleGuildCheckTests(unittest.TestCase):
         ctx.guild.id = 12345
         self.assertTrue(single_guild_check(ctx))
 
-    def test_allows_when_unset(self):
+    def test_unset_scope_binds_to_first_guild(self):
         single_guild_check = build_single_guild_check(
             guild_id_getter=lambda: None
         )
         ctx = MagicMock()
         ctx.guild.id = 99999
         self.assertTrue(single_guild_check(ctx))
+
+        other_ctx = MagicMock()
+        other_ctx.guild.id = 12345
+        self.assertFalse(single_guild_check(other_ctx))
+
+    def test_rejects_direct_messages(self):
+        single_guild_check = build_single_guild_check(
+            guild_id_getter=lambda: None
+        )
+        ctx = MagicMock()
+        ctx.guild = None
+        self.assertFalse(single_guild_check(ctx))

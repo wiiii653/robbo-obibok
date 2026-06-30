@@ -72,6 +72,7 @@ class RunBotLoggedTests(unittest.TestCase):
             ["/tmp/robbo/venv/bin/python3", "-u", "robbo-obibok.py"],
         )
         self.assertEqual(popen_calls[0][1]["cwd"], Path("/tmp/robbo"))
+        self.assertEqual(popen_calls[0][1]["env"], {"DISCORD_BOT_TOKEN": "token"})
 
     def test_run_logged_bot_terminates_on_keyboard_interrupt(self):
         proc = types.SimpleNamespace(pid=11, terminate_called=False)

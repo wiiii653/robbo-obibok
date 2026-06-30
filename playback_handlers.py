@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import os
+from pathlib import Path
 
 import discord
 
 from bot_dependencies import PlaybackHandlerDependencies
+from download_safety import read_response_limited
+
+
+MAX_SID_DOWNLOAD_BYTES = 16 * 1024 * 1024
 
 
 def build_playback_handlers(deps: PlaybackHandlerDependencies):
@@ -17,23 +22,20 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
             if not os.path.exists(sid_path):
                 await ctx.send(f"❌ File not found: `{url}`")
                 return False
-            with open(sid_path, "rb") as handle:
-                data = handle.read()
+            data = await asyncio.to_thread(Path(sid_path).read_bytes)
         else:
             local_path = deps.resolve_local_path(url)
             if local_path:
                 sid_path = local_path
-                with open(sid_path, "rb") as handle:
-                    data = handle.read()
+                data = await asyncio.to_thread(Path(sid_path).read_bytes)
             else:
                 sid_path = deps.build_temp_path(url)
                 try:
                     session = await deps.get_shared_session()
                     async with session.get(url) as resp:
                         resp.raise_for_status()
-                        data = await resp.read()
-                    with open(sid_path, "wb") as handle:
-                        handle.write(data)
+                        data = await read_response_limited(resp, max_bytes=MAX_SID_DOWNLOAD_BYTES)
+                    await asyncio.to_thread(Path(sid_path).write_bytes, data)
                 except Exception as exc:
                     deps.log.error("SID download failed: %s", exc)
                     await ctx.send(f"❌ Download failed: {exc}")

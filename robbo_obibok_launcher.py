@@ -20,7 +20,7 @@ def load_runtime_environment(
     env: MutableMapping[str, str] | None = None,
 ) -> MutableMapping[str, str]:
     runtime_env = os.environ if env is None else env
-    load_dotenv_file(str(root / ".env"))
+    load_dotenv_file(str(root / ".env"), env=runtime_env)
     if not runtime_env.get("DISCORD_BOT_TOKEN"):
         raise SystemExit("Set DISCORD_BOT_TOKEN in the environment or .env before starting the bot.")
     return runtime_env

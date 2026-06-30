@@ -48,8 +48,9 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn('SERVICE_FILES=("robbo-obibok.service" "robbo-obibok-strict.service")', install_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
             self.assertIn(script_name, install_text)
-        self.assertIn("sudo systemctl enable --now robbo-obibok.service", install_text)
-        self.assertIn("sudo systemctl enable --now robbo-obibok-strict.service", install_text)
+        self.assertIn("systemctl --user enable --now robbo-obibok.service", install_text)
+        self.assertIn("systemctl --user enable --now robbo-obibok-strict.service", install_text)
+        self.assertIn('SERVICE_DIR="$HOME/.config/systemd/user"', install_text)
         self.assertIn("make run-strict", install_text)
 
     def test_cli_entrypoints_delegate_to_shared_bootstrap(self):
@@ -111,8 +112,8 @@ class InstallAssetsTests(unittest.TestCase):
             self.assertIn(script_name, make_text)
         self.assertIn("./run_bot.sh", readme_text)
         self.assertIn("ROBBO_STRICT_COMPAT=1 ./run_bot.sh", readme_text)
-        self.assertIn("robbo-obibok-ulimate-chiptune-bot", readme_text)
-        self.assertNotIn("robbo-obibot-ulimate-chiptune-bot", readme_text)
+        self.assertIn("git@github.com:wiiii653/robbo-obibok.git", readme_text)
+        self.assertNotIn("robbo-obibok-ulimate-chiptune-bot", readme_text)
         self.assertIn("make build-indexes", readme_text)
         self.assertIn("# Canonical logged launcher module", readme_text)
         self.assertIn("run_bot_logged.py", readme_text)
@@ -124,6 +125,10 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make run-strict", install_text)
         self.assertIn("robbo-obibok-strict.py", strict_service_text)
         self.assertIn("robbo-obibok.py", default_service_text)
+        self.assertIn("WorkingDirectory=%h/robbo-obibok", default_service_text)
+        self.assertIn("WantedBy=default.target", default_service_text)
+        self.assertNotIn("User=boruta", default_service_text)
+        self.assertNotIn("ExecStartPre=", default_service_text)
         self.assertIn("Run launcher smoke suite", workflow_text)
         self.assertIn("./test_launchers.sh", workflow_text)
         self.assertIn("Run entrypoint/runtime regression suite", runtime_workflow_text)

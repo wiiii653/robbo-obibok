@@ -36,6 +36,15 @@ def _collection_color(color_name: str) -> discord.Color:
 
 
 def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependencies) -> None:
+    async def persist_queue(ctx: PlaybackContext, state) -> bool:
+        try:
+            await asyncio.to_thread(deps.save_queue, state)
+            return True
+        except OSError as exc:
+            deps.log.error("Queue persistence failed: %s", exc)
+            await ctx.send("❌ Queue state could not be saved. Check bot storage permissions.")
+            return False
+
     @bot.command(aliases=["radio", "start", "pl"])
     async def play(ctx: PlaybackContext, *, query: str = ""):
         if not ctx.author.voice:
@@ -85,9 +94,10 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         track_count = len(state.tracks) if state.tracks else 0
         await ctx.send(f"📀 Ready with **{track_count}** tracks!")
 
+        saved_queue = await asyncio.to_thread(deps.load_queue, ctx.guild.id)
         queue_state = deps.prepare_playback_queue(
             state.tracks,
-            deps.load_queue(ctx.guild.id),
+            saved_queue,
             state.collection_mode,
             deps.PLAYBACK_LOOP,
             shuffle_enabled=deps.PLAYBACK_SHUFFLE,
@@ -97,7 +107,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await ctx.send("📋 Restored previous queue.")
 
         if await deps.play_current_track(ctx):
-            deps.save_queue(state)
+            await persist_queue(ctx, state)
             if state.monitor_task and not state.monitor_task.done():
                 state.monitor_task.cancel()
             state.set_monitor_task(bot.loop.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
@@ -112,7 +122,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await ctx.voice_client.disconnect()
         state.clear_voice_client()
         state.clear_queue_state()
-        deps.save_queue(state)
+        await persist_queue(ctx, state)
         await ctx.send("⏹️ Stopped.")
 
     @bot.command(aliases=["next", "nt"])
@@ -125,7 +135,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
     @bot.command()
     async def np(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
-        if not deps.is_playing():
+        if not await asyncio.to_thread(deps.is_playing):
             return await ctx.send("Nothing playing right now.")
         track = await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)
         position = state.current_queue_position()
@@ -254,7 +264,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
     async def loop(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         state.set_loop_enabled(not state.loop)
-        deps.save_queue(state)
+        await persist_queue(ctx, state)
         status = "🔁 On" if state.loop else "➡️ Off"
         await ctx.send(embed=discord.Embed(title=f"Loop {status}", color=discord.Color.blue()))
 
@@ -288,7 +298,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await asyncio.get_event_loop().run_in_executor(None, deps.audacious_stop)
             state.set_queue_state(state.queue, idx, loop=state.loop)
             if await deps.play_current_track(ctx):
-                deps.save_queue(state)
+                await persist_queue(ctx, state)
         except ValueError:
             await ctx.send("Usage: `!jump <number>` — e.g. `!jump 5`")
 
@@ -297,7 +307,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
     async def clear(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         state.clear_queue_state()
-        deps.save_queue(state)
+        await persist_queue(ctx, state)
         if ctx.voice_client and ctx.voice_client.is_connected():
             await deps.stop_state_streams(state)
             await asyncio.get_event_loop().run_in_executor(None, deps.stop_all_players)
@@ -425,7 +435,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         state = deps.get_state(ctx.guild.id)
         total = len(state.tracks)
         queue_len = state.queue_length()
-        playing = "🎵 Yes" if deps.is_playing() else "⏸️ No"
+        playing = "🎵 Yes" if await asyncio.to_thread(deps.is_playing) else "⏸️ No"
         loop_status = "🔁 On" if state.loop else "➡️ Off"
         await ctx.send(
             f"📊 **ASMA Radio Stats**\n"
@@ -536,7 +546,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         current_label = mode_labels.get(state.collection_mode, "Unknown")
         total = len(state.tracks) if state.tracks else 0
         qlen = state.queue_length()
-        playing = "🎵 Yes" if deps.is_playing() else "⏸️ No"
+        playing = "🎵 Yes" if await asyncio.to_thread(deps.is_playing) else "⏸️ No"
         lines = ["🌲 **Robbo — wszystkie kolekcje**", ""]
         for label, (icon, count) in cache_counts.items():
             hl = "◀" if label == current_label else ""

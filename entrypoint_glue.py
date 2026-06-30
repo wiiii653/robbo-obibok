@@ -106,12 +106,19 @@ class EntrypointGlue:
 
 
 def build_single_guild_check(*, guild_id_getter: Callable[[], int | None]):
+    active_guild_id: int | None = None
+
     def single_guild_check(ctx: commands.Context) -> bool:
-        """If a guild id is configured, only allow commands from that guild."""
-        guild_id = guild_id_getter()
-        if guild_id and ctx.guild and ctx.guild.id != guild_id:
+        """Keep the process-global audio backend scoped to one guild."""
+        nonlocal active_guild_id
+        if ctx.guild is None:
             return False
-        return True
+        configured_guild_id = guild_id_getter()
+        if configured_guild_id is not None:
+            return ctx.guild.id == configured_guild_id
+        if active_guild_id is None:
+            active_guild_id = ctx.guild.id
+        return ctx.guild.id == active_guild_id
 
     return single_guild_check
 

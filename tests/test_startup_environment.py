@@ -8,10 +8,20 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from runtime_bootstrap import initialize_startup_environment
+from runtime_bootstrap import acquire_process_lock, initialize_startup_environment, release_process_lock
 
 
 class StartupEnvironmentTests(unittest.TestCase):
+    def test_process_lock_rejects_matching_live_owner(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            lock_file = str(Path(temp_dir) / "bot.pid")
+            acquire_process_lock(lock_file, "python")
+            try:
+                with self.assertRaises(SystemExit):
+                    acquire_process_lock(lock_file, "python")
+            finally:
+                release_process_lock(lock_file)
+
     def test_initialize_startup_environment_builds_lock_and_shutdown_flag(self):
         calls = []
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -9,10 +9,9 @@ from typing import TYPE_CHECKING, Callable
 from app_config import AppConfig
 from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
 
-from entrypoint_bridge import EntrypointComponentAccess
+from entrypoint_bridge import EntrypointComponentAccess, EntrypointFacade
 from entrypoint_callback_groups import EntrypointRawCallbacks
 from entrypoint_components import EntrypointComponentDeps, apply_entrypoint_components, build_entrypoint_components
-from entrypoint_facade import EntrypointFacade
 from entrypoint_glue import EntrypointGlue
 from entrypoint_legacy_surface import EntrypointCompat
 from entrypoint_runtime_callback_builders import (
@@ -20,8 +19,7 @@ from entrypoint_runtime_callback_builders import (
     build_entrypoint_runtime_initializer,
 )
 from entrypoint_runtime_init import EntrypointRuntimeInitializer
-from entrypoint_runtime_task_builders import build_entrypoint_runtime_tasks
-from entrypoint_runtime_tasks import EntrypointRuntimeTasks
+from entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
 
 if TYPE_CHECKING:
     from discord.ext import commands

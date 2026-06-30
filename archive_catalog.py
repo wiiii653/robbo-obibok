@@ -167,7 +167,7 @@ class ArchiveCatalog:
             if results:
                 self.store_metadata_entries(results)
         if self.metadata_index:
-            self.save_metadata_cache(self.metadata_index)
+            await asyncio.to_thread(self.save_metadata_cache, self.metadata_index)
         return results
 
     def search_tracks(self, query: str, tracks: list[str], limit: int = 10) -> list[str]:
@@ -351,10 +351,10 @@ class ArchiveCatalog:
 
     async def load_tracks_for_mode(self, mode: str) -> list[str] | None:
         info = self.get_collection_info(mode)
-        result = info.load_tracks()
+        result = await asyncio.to_thread(info.load_tracks)
         tracks = await result if isinstance(result, Awaitable) else result
         if not tracks and mode == "hvsc" and info.fallback_load:
             self.logger.info("HVSC: cache empty, downloading index...")
-            fallback = info.fallback_load()
+            fallback = await asyncio.to_thread(info.fallback_load)
             tracks = await fallback if isinstance(fallback, Awaitable) else fallback
         return tracks

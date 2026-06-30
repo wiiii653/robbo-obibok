@@ -61,8 +61,7 @@ test-launchers: $(VENV)/bin/activate
 
 test: $(VENV)/bin/activate
 	@echo "🧪 Running tests..."
-	@cd $(CURDIR) && if [ -f .env ]; then set -a; source .env; set +a; fi; $(PYTHON) -m pytest tests/ -v --tb=short 2>/dev/null \
-		|| $(PYTHON) -m unittest discover -s tests/ -v
+	@cd $(CURDIR) && $(PYTHON) -m unittest discover -s tests/ -v
 
 typecheck: $(DEV_STAMP)
 	@echo "Running static type checks..."

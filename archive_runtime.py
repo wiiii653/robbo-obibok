@@ -215,7 +215,7 @@ class ArchiveRuntime:
         return tracks
 
     async def refresh_tracklist(self) -> list[str]:
-        cached = self.load_cached_tracklist()
+        cached = await asyncio.to_thread(self.load_cached_tracklist)
         if cached:
             self.logger.info("ASMA: loaded %d tracks from cache", len(cached))
             return cached
@@ -230,11 +230,15 @@ class ArchiveRuntime:
                 self.logger.info("  -> %d tracks found in %s", len(tracks), top_dir)
                 all_tracks.extend(tracks)
         cache_data = {"tracks": all_tracks, "count": len(all_tracks)}
-        try:
-            with open(self.config.cache_file, "w") as handle:
-                json.dump(cache_data, handle, indent=2)
-        except Exception:
-            pass
+
+        def save_cache() -> None:
+            try:
+                with open(self.config.cache_file, "w") as handle:
+                    json.dump(cache_data, handle, indent=2)
+            except Exception as exc:
+                self.logger.warning("ASMA cache write failed: %s", exc)
+
+        await asyncio.to_thread(save_cache)
         return all_tracks
 
     def load_cached_tracklist(self) -> list[str] | None:

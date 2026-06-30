@@ -5,9 +5,15 @@ from __future__ import annotations
 import asyncio
 import os
 import re
-from hashlib import sha1
+from pathlib import Path
 
 import aiohttp
+
+from download_safety import read_response_limited, safe_download_path
+
+
+MAX_RSN_DOWNLOAD_BYTES = 128 * 1024 * 1024
+MAX_MODULE_DOWNLOAD_BYTES = 64 * 1024 * 1024
 
 
 async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_spc_dir: str, get_shared_session, logger) -> str | None:
@@ -24,9 +30,8 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_s
         session = await get_shared_session()
         async with session.get(rsn_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
             resp.raise_for_status()
-            data = await resp.read()
-        with open(rsn_path, "wb") as handle:
-            handle.write(data)
+            data = await read_response_limited(resp, max_bytes=MAX_RSN_DOWNLOAD_BYTES)
+        await asyncio.to_thread(Path(rsn_path).write_bytes, data)
     except Exception as exc:
         logger.error("SNES: RSN download failed for %s: %s", game_name, exc)
         return None
@@ -59,16 +64,14 @@ async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path
             filepath = build_temp_path(url)
             async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
                 resp.raise_for_status()
-                data = await resp.read()
+                data = await read_response_limited(resp, max_bytes=MAX_MODULE_DOWNLOAD_BYTES)
                 content_disposition = resp.headers.get("Content-Disposition", "")
                 match = re.search(r"filename=([^;]+)", content_disposition)
                 if match:
                     fname = match.group(1).strip('" ')
                     if fname:
-                        digest = sha1(url.encode("utf-8")).hexdigest()[:12]
-                        filepath = os.path.join(temp_dir, f"{digest}_{fname}")
-            with open(filepath, "wb") as handle:
-                handle.write(data)
+                        filepath = safe_download_path(temp_dir, fname, source=url)
+            await asyncio.to_thread(Path(filepath).write_bytes, data)
             return filepath
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             last_err = exc

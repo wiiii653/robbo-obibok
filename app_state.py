@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 from types import MappingProxyType
 from typing import Iterable, Mapping
@@ -15,7 +16,7 @@ from bot_persistence import (
     save_json_collection,
     save_named_playlist,
 )
-from runtime_support import ensure_directory, sanitize_playlist_name
+from runtime_support import ensure_directory, normalize_queue_record, sanitize_playlist_name
 
 
 class PlaylistState:
@@ -195,6 +196,7 @@ class AppRuntimeState:
         self._queue_dir = queue_dir
         self._default_collection_mode = default_collection_mode
         self._json_writer = json_writer
+        self._persistence_lock = threading.RLock()
         self.guilds: dict[int, PlaylistState] = {}
         self.message_track_map: dict[int, dict[str, object]] = {}
         self._message_track_map_max = message_track_map_max
@@ -243,23 +245,25 @@ class AppRuntimeState:
             return
         os.makedirs(self._queue_dir, exist_ok=True)
         path = os.path.join(self._queue_dir, f"{state.guild_id}.json")
-        self._json_writer(
-            path,
-            {
-                "queue": state.queue,
-                "index": state.index,
-                "loop": state.loop,
-                "collection_mode": state.collection_mode,
-            },
-        )
+        with self._persistence_lock:
+            self._json_writer(
+                path,
+                {
+                    "queue": state.queue,
+                    "index": state.index,
+                    "loop": state.loop,
+                    "collection_mode": state.collection_mode,
+                },
+            )
 
     def load_queue(self, guild_id: int) -> dict | None:
         path = os.path.join(self._queue_dir, f"{guild_id}.json")
         try:
             if not os.path.exists(path):
                 return None
-            with open(path, encoding="utf-8") as handle:
-                return json.load(handle)
+            with self._persistence_lock:
+                with open(path, encoding="utf-8") as handle:
+                    return normalize_queue_record(json.load(handle))
         except Exception:
             return None
 
@@ -285,17 +289,20 @@ class CachedJsonStore:
         self._path = path
         self._json_writer = json_writer
         self._cache_state: dict[str, object] = {"data": None, "mtime": None}
+        self._lock = threading.RLock()
 
     def load(self) -> dict:
-        return load_json_collection(self._path, self._cache_state)
+        with self._lock:
+            return load_json_collection(self._path, self._cache_state)
 
     def save(self, data: dict) -> None:
-        save_json_collection(
-            self._path,
-            data,
-            self._cache_state,
-            writer=self._json_writer,
-        )
+        with self._lock:
+            save_json_collection(
+                self._path,
+                data,
+                self._cache_state,
+                writer=self._json_writer,
+            )
 
 
 class PlaylistLibraryStore:

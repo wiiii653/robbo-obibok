@@ -112,6 +112,20 @@ class AppRuntimeStateTests(unittest.TestCase):
                 },
             )
 
+    def test_load_queue_rejects_invalid_schema(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            runtime_state = app_state.AppRuntimeState(
+                queue_dir=tmpdir,
+                default_collection_mode="hvsc",
+                json_writer=self._write_json,
+            )
+            Path(tmpdir, "42.json").write_text(
+                '{"queue": ["a.sid"], "index": "bad", "loop": true, "collection_mode": "hvsc"}',
+                encoding="utf-8",
+            )
+
+            self.assertIsNone(runtime_state.load_queue(42))
+
     def test_register_now_playing_message_prunes_old_entries(self):
         runtime_state = app_state.AppRuntimeState(
             queue_dir="/tmp/unused",

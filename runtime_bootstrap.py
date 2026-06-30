@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import os
 import shutil
 import signal
-import sys
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Sequence
+
+
+_LOCK_DESCRIPTORS: dict[str, int] = {}
 
 
 async def run_startup_steps(
@@ -40,45 +43,41 @@ def schedule_background_tasks(
     """
     loop = asyncio.get_event_loop()
     for factory in task_factories:
-        loop.create_task(factory())
+        asyncio.ensure_future(factory(), loop=loop)
 
 
 def acquire_process_lock(lock_file: str, process_name: str) -> int:
-    """Acquire a PID lock for the current process or exit if a matching process exists."""
+    """Acquire and retain an OS-backed process lock."""
     my_pid = os.getpid()
+    descriptor = os.open(lock_file, os.O_RDWR | os.O_CREAT, 0o600)
     try:
-        if os.path.exists(lock_file):
-            with open(lock_file, encoding="utf-8") as handle:
-                old_pid_str = handle.read().strip()
-            if old_pid_str:
-                old_pid = int(old_pid_str)
-                try:
-                    os.kill(old_pid, 0)
-                    with open(f"/proc/{old_pid}/cmdline", "rb") as cmdline_handle:
-                        cmd = cmdline_handle.read().decode("utf-8", errors="replace")
-                    if process_name in cmd:
-                        print(f"PID {old_pid} already running. Stop it first or wait until it exits.")
-                        sys.exit(1)
-                except (OSError, ProcessLookupError):
-                    pass
-    except Exception as exc:
-        print(f"Lock warning ({exc}), continuing startup...")
-
-    with open(lock_file, "w", encoding="utf-8") as handle:
-        handle.write(str(my_pid))
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        try:
+            owner = os.read(descriptor, 64).decode("ascii", errors="replace").strip()
+        finally:
+            os.close(descriptor)
+        owner_message = f"PID {owner}" if owner else process_name
+        raise SystemExit(f"{owner_message} already running. Stop it first or wait until it exits.")
+    os.ftruncate(descriptor, 0)
+    os.write(descriptor, str(my_pid).encode("ascii"))
+    os.fsync(descriptor)
+    _LOCK_DESCRIPTORS[lock_file] = descriptor
     return my_pid
 
 
 def release_process_lock(lock_file: str) -> None:
     """Release the PID lock if owned by the current process."""
+    descriptor = _LOCK_DESCRIPTORS.pop(lock_file, None)
     try:
-        if os.path.exists(lock_file):
-            with open(lock_file, encoding="utf-8") as handle:
-                lock_pid = handle.read().strip()
-            if lock_pid == str(os.getpid()):
-                os.unlink(lock_file)
+        if descriptor is not None:
+            os.unlink(lock_file)
     except Exception:
         pass
+    finally:
+        if descriptor is not None:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
 
 
 def cleanup_temp_dir(temp_dir: str, *, logger) -> None:

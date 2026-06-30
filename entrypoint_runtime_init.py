@@ -73,6 +73,7 @@ class EntrypointRuntimeInitializer:
             temp_dir=app_cfg.temp_dir,
             tiny_dir=app_cfg.tiny_dir,
             ym_dir=app_cfg.ym_dir,
+            guild_id=app_cfg.guild_id,
         )
 
     def build_runtime_state_bundle(self, shutdown_flag) -> RuntimeState:

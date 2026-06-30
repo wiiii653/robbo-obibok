@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
@@ -9,6 +10,7 @@ from typing import Any, Awaitable, Callable
 @dataclass(slots=True)
 class CoreEventDependencies:
     AUTO_START_CHANNEL: str | None
+    GUILD_ID: int | None
     PLAYBACK_LOOP: bool
     PLAYBACK_SHUFFLE: bool
     apply_queue_state: Callable[[Any, dict[str, object]], bool]
@@ -33,13 +35,19 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
     async def on_ready():
         deps.log.info("Ready: %s", bot.user)
         await deps.run_startup_steps()
-        deps.log_preloaded_cache("ASMA", deps.load_asma_local_cache())
-        deps.log_preloaded_cache("HVSC", deps.load_hvsc_local_cache())
+        asma_cache, hvsc_cache = await asyncio.gather(
+            asyncio.to_thread(deps.load_asma_local_cache),
+            asyncio.to_thread(deps.load_hvsc_local_cache),
+        )
+        deps.log_preloaded_cache("ASMA", asma_cache)
+        deps.log_preloaded_cache("HVSC", hvsc_cache)
         deps.schedule_background_tasks([health_watchdog, fetch_metadata_background])
 
     @bot.event
     async def on_voice_state_update(member, before, after):
         if not deps.AUTO_START_CHANNEL or member.bot:
+            return
+        if deps.GUILD_ID is None or member.guild.id != deps.GUILD_ID:
             return
         if before.channel == after.channel:
             return
@@ -64,7 +72,7 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
                 await vc.disconnect()
                 return
 
-            saved = deps.load_queue(member.guild.id)
+            saved = await asyncio.to_thread(deps.load_queue, member.guild.id)
             queue_state = deps.prepare_playback_queue(
                 state.tracks,
                 saved,
@@ -79,7 +87,7 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
             state.bind_voice_context(guild_id=member.guild.id, ctx=ctx, vc=vc)
 
             if await deps.play_current_track(ctx):
-                deps.save_queue(state)
+                await asyncio.to_thread(deps.save_queue, state)
                 if state.monitor_task and not state.monitor_task.done():
                     state.monitor_task.cancel()
                 state.set_monitor_task(bot.loop.create_task(deps.monitor_playback(ctx, vc, member.guild.id)))

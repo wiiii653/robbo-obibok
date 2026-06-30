@@ -78,8 +78,8 @@ All archives are served from local disk — no external HTTP calls during playba
 sudo apt update
 sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipewire-pulse gstreamer1.0-plugins-good gstreamer1.0-plugins-bad sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibok-ulimate-chiptune-bot.git
-cd robbo-obibok-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/robbo-obibok.git
+cd robbo-obibok
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -90,8 +90,8 @@ pip install -r requirements.txt
 ```bash
 sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpeg pipewire-utils gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibok-ulimate-chiptune-bot.git
-cd robbo-obibok-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/robbo-obibok.git
+cd robbo-obibok
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -102,8 +102,8 @@ pip install -r requirements.txt
 ```bash
 sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipewire gst-plugins-good gst-plugins-bad sidplayfp
 
-git clone git@github.com:wiiii653/robbo-obibok-ulimate-chiptune-bot.git
-cd robbo-obibok-ulimate-chiptune-bot
+git clone git@github.com:wiiii653/robbo-obibok.git
+cd robbo-obibok
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -112,7 +112,7 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
-cd robbo-obibok-ulimate-chiptune-bot
+cd robbo-obibok
 source venv/bin/activate
 
 # Set your bot token
@@ -179,9 +179,9 @@ cp robbo-obibok.service ~/.config/systemd/user/
 # or
 cp robbo-obibok-strict.service ~/.config/systemd/user/
 
-# Store token securely
-echo "YOUR_TOKEN_HERE" > ~/.robbo-token
-chmod 600 ~/.robbo-token
+# Store token in the environment file used by the service
+printf 'DISCORD_BOT_TOKEN="%s"\n' "YOUR_TOKEN_HERE" > ~/robbo-obibok/.env
+chmod 600 ~/robbo-obibok/.env
 
 # Enable and start
 systemctl --user daemon-reload
@@ -242,8 +242,8 @@ To adjust the settings: edit `~/.config/audacious/config` and restart the bot.
 | Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
 | SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
 | GME formats skip too early | Updated in latest code — GME formats use 600s timeout with song-loaded check |
-|| Temp dir cleanup errors | Temp dir moved under `tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
-|| Audio is too quiet or uneven | Compressor plugin is enabled at startup — verify with `audtool plugin-is-enabled compressor` |
+| Temp dir cleanup errors | Temp dir moved under `tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
+| Audio is too quiet or uneven | Compressor plugin is enabled at startup — verify with `audtool plugin-is-enabled compressor` |
 
 ## Configuration
 
@@ -251,6 +251,8 @@ Edit `config.yaml`:
 
 ```yaml
 command_prefix: "!"
+# Recommended: fixes the process-global audio backend to one server.
+guild_id: 123456789012345678
 asma:
   base_url: "https://asma.atari.org/asma/"
   top_dirs:
@@ -291,6 +293,14 @@ auto:
   start_channel: ""
   empty_timeout: 60
 ```
+
+Configuration is validated during startup. Invalid types, negative timeouts, unsafe
+sink names, and malformed YAML stop startup with a field-specific error.
+
+The audio backend uses one Audacious process and one PulseAudio sink. When `guild_id`
+is configured, commands and auto-start are restricted to that server. Without it,
+the first server to issue a command owns the process until restart, and auto-start is
+disabled to prevent multiple servers from sharing the global player.
 
 ## File Structure
 

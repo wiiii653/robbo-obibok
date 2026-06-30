@@ -1,4 +1,5 @@
 import sys
+import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -57,13 +58,28 @@ class RobboObibokLaunchTests(unittest.TestCase):
     def test_load_runtime_environment_accepts_explicit_env_with_token(self):
         env = {"DISCORD_BOT_TOKEN": "token"}
 
-        with patch("robbo_obibok_launcher.load_dotenv_file", lambda _path: None):
+        with patch("robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None):
             resolved = load_runtime_environment(root=Path("/tmp/robbo"), env=env)
 
         self.assertIs(resolved, env)
 
+    def test_load_runtime_environment_loads_dotenv_into_explicit_mapping(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / ".env").write_text(
+                'DISCORD_BOT_TOKEN="dotenv-token"\nROBBO_STRICT_COMPAT=1\n',
+                encoding="utf-8",
+            )
+            env = {}
+
+            resolved = load_runtime_environment(root=root, env=env)
+
+        self.assertIs(resolved, env)
+        self.assertEqual(env["DISCORD_BOT_TOKEN"], "dotenv-token")
+        self.assertEqual(env["ROBBO_STRICT_COMPAT"], "1")
+
     def test_load_runtime_environment_rejects_missing_token(self):
-        with patch("robbo_obibok_launcher.load_dotenv_file", lambda _path: None):
+        with patch("robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None):
             with self.assertRaises(SystemExit) as ctx:
                 load_runtime_environment(root=Path("/tmp/robbo"), env={})
 
@@ -74,7 +90,7 @@ class RobboObibokLaunchTests(unittest.TestCase):
         captured = {}
 
         with (
-            patch("robbo_obibok_launcher.load_dotenv_file", lambda _path: None),
+            patch("robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None),
             patch(
                 "robbo_obibok_launcher.os.execvpe",
                 side_effect=lambda exe, argv, runtime_env: captured.update(

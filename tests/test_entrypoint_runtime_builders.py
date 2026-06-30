@@ -10,7 +10,7 @@ from entrypoint_runtime_callback_builders import (
     build_entrypoint_runtime_callbacks,
     build_entrypoint_runtime_initializer,
 )
-from entrypoint_runtime_task_builders import build_entrypoint_runtime_tasks
+from entrypoint_runtime_tasks import build_entrypoint_runtime_tasks
 from tests.test_entrypoint_runtime_fixtures import (
     build_runtime_callback_inputs,
     build_runtime_task_inputs,

@@ -85,6 +85,7 @@ def build_runtime_config(
     temp_dir: str,
     tiny_dir: str,
     ym_dir: str,
+    guild_id: int | None = None,
 ) -> RuntimeConfig:
     return RuntimeConfig(
         ASMA_BASE=asma_base,
@@ -103,6 +104,7 @@ def build_runtime_config(
         TEMP_DIR=temp_dir,
         TINY_DIR=tiny_dir,
         YM_DIR=ym_dir,
+        GUILD_ID=guild_id,
     )
 
 

@@ -114,7 +114,7 @@ async def start_targeted_playback_session(
     state.set_queue_state(queue, index)
 
     if await play_current_track(ctx, deps):
-        deps.save_queue(state)
+        await asyncio.to_thread(deps.save_queue, state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
         state.set_monitor_task(deps.bot.loop.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
@@ -202,7 +202,7 @@ async def skip_to_next(
                 await cast("discord.VoiceClient", state.vc).disconnect()
             return
 
-    deps.save_queue(state)
+    await asyncio.to_thread(deps.save_queue, state)
     await play_current_track(state.ctx or ctx, deps)
 
 
@@ -235,7 +235,7 @@ async def auto_play_after_switch(
     result = await play_current_track(ctx, deps)
     deps.log.info("auto_play_after_switch: play_current_track returned %s", result)
     if result:
-        deps.save_queue(state)
+        await asyncio.to_thread(deps.save_queue, state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
         state.set_monitor_task(deps.bot.loop.create_task(deps.monitor_playback(ctx, state.vc, ctx.guild.id)))
@@ -244,7 +244,7 @@ async def auto_play_after_switch(
 async def fetch_metadata_background(bot: "commands.Bot", deps: MetadataSessionDependencies) -> None:
     await bot.wait_until_ready()
     await asyncio.sleep(30)
-    cached = deps.load_asma_local_cache()
+    cached = await asyncio.to_thread(deps.load_asma_local_cache)
     if not cached:
         return
     missing = [path for path in cached if not deps.has_metadata_entry(path)]
@@ -259,12 +259,12 @@ async def fetch_metadata_background(bot: "commands.Bot", deps: MetadataSessionDe
         full = os.path.join(deps.asma_dir, path)
         if not os.path.exists(full):
             continue
-        meta = deps.parse_sap_header(full)
+        meta = await asyncio.to_thread(deps.parse_sap_header, full)
         if meta:
             deps.store_metadata_entry(path, meta)
             fetched += 1
         if fetched > 0 and fetched % 100 == 0:
             deps.log.info("Metadata: %d/%d", fetched, len(missing))
-            deps.save_metadata_cache(deps.snapshot_metadata_index())
-    deps.save_metadata_cache(deps.snapshot_metadata_index())
+            await asyncio.to_thread(deps.save_metadata_cache, deps.snapshot_metadata_index())
+    await asyncio.to_thread(deps.save_metadata_cache, deps.snapshot_metadata_index())
     deps.log.info("Metadata index: %d tracks total", deps.metadata_index_size())

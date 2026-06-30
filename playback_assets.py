@@ -9,9 +9,15 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from hashlib import md5
+from pathlib import Path
 from typing import Awaitable, Callable
 
 import aiohttp
+
+from download_safety import read_response_limited, resolve_existing_path
+
+
+MAX_SAP_DOWNLOAD_BYTES = 16 * 1024 * 1024
 
 
 @dataclass(slots=True)
@@ -34,14 +40,14 @@ class PlaybackAssetRuntime:
     def resolve_local_path(self, url: str) -> str | None:
         if url.startswith(self.asma_base):
             rel = url[len(self.asma_base):]
-            local = os.path.join(self.asma_dir, rel)
-            if os.path.exists(local):
+            local = resolve_existing_path(self.asma_dir, rel)
+            if local:
                 self.logger.info("Local ASMA path: %s", local)
                 return local
         if url.startswith(self.hvsc_base):
             rel = url[len(self.hvsc_base):]
-            local = os.path.join(self.hvsc_dir, rel)
-            if os.path.exists(local):
+            local = resolve_existing_path(self.hvsc_dir, rel)
+            if local:
                 self.logger.info("Local HVSC path: %s", local)
                 return local
         return None
@@ -54,9 +60,8 @@ class PlaybackAssetRuntime:
             try:
                 async with session.get(url) as resp:
                     resp.raise_for_status()
-                    data = await resp.read()
-                with open(filepath, "wb") as handle:
-                    handle.write(data)
+                    data = await read_response_limited(resp, max_bytes=MAX_SAP_DOWNLOAD_BYTES)
+                await asyncio.to_thread(Path(filepath).write_bytes, data)
                 return filepath
             except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
                 last_err = exc

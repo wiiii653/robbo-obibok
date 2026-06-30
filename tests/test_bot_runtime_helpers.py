@@ -54,6 +54,22 @@ def build_archive_runtime_fixture(*, hvsc_base="https://hvsc.example/", ym_cache
 
 
 class RuntimeSupportTests(unittest.TestCase):
+    def test_cached_json_state_is_unchanged_when_write_fails(self):
+        cache_state = {"data": {"old": True}, "mtime": 1.0}
+
+        def fail_writer(_path, _data):
+            raise OSError("disk full")
+
+        with self.assertRaises(OSError):
+            runtime_support.save_cached_json_file(
+                "/tmp/unused.json",
+                {"new": True},
+                cache_state,
+                writer=fail_writer,
+            )
+
+        self.assertEqual(cache_state, {"data": {"old": True}, "mtime": 1.0})
+
     def test_can_restore_queue_requires_matching_collection_and_track(self):
         saved = {"queue": ["track-1", "track-2"], "collection_mode": "asma"}
 

@@ -14,7 +14,7 @@ from entrypoint_callback_groups import (
     LibraryEntrypointCallbacks,
     PlaybackEntrypointCallbacks,
 )
-from entrypoint_facade import EntrypointFacade
+from entrypoint_bridge import EntrypointFacade
 from entrypoint_glue import EntrypointGlue
 from entrypoint_runtime_init import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
 from entrypoint_runtime_tasks import EntrypointRuntimeTasks

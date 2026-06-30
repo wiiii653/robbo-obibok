@@ -120,19 +120,23 @@ done
 step 7 "Systemd service..."
 SERVICE_FILES=("robbo-obibok.service" "robbo-obibok-strict.service")
 INSTALLED_SERVICE_NAMES=()
+SERVICE_DIR="$HOME/.config/systemd/user"
+mkdir -p "$SERVICE_DIR"
 for SERVICE_SRC in "${SERVICE_FILES[@]}"; do
     if [ -f "$SERVICE_SRC" ]; then
-        sudo cp "$SERVICE_SRC" /etc/systemd/system/
+        cp "$SERVICE_SRC" "$SERVICE_DIR/"
         INSTALLED_SERVICE_NAMES+=("$SERVICE_SRC")
     fi
 done
 
 if [ "${#INSTALLED_SERVICE_NAMES[@]}" -gt 0 ]; then
-    sudo systemctl daemon-reload
+    if ! systemctl --user daemon-reload; then
+        warn "Could not reload the user systemd manager; run systemctl --user daemon-reload after login"
+    fi
     info "Service files installed: ${INSTALLED_SERVICE_NAMES[*]}"
     info "Enable one of them with:"
-    echo "  sudo systemctl enable --now robbo-obibok.service"
-    echo "  sudo systemctl enable --now robbo-obibok-strict.service"
+    echo "  systemctl --user enable --now robbo-obibok.service"
+    echo "  systemctl --user enable --now robbo-obibok-strict.service"
 else
     warn "No service files found, skipping"
 fi
@@ -145,7 +149,7 @@ echo "  1. Edit .env — set your DISCORD_BOT_TOKEN"
 echo "  2. Edit config.yaml — set guild_id for single-server mode"
 echo "  3. make run        # Start via the shared launcher"
 echo "     make run-strict # Start via the shared launcher in strict compatibility mode"
-echo "  4. sudo systemctl enable --now robbo-obibok.service"
-echo "     sudo systemctl enable --now robbo-obibok-strict.service"
+echo "  4. systemctl --user enable --now robbo-obibok.service"
+echo "     systemctl --user enable --now robbo-obibok-strict.service"
 echo ""
 echo "Join a voice channel and type !play to start!"
