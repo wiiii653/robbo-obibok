@@ -10,7 +10,7 @@ from runtime_bootstrap import StartupEnvironment
 from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
 from entrypoint_callback_groups import AppEntrypointCallbacks
-from entrypoint_resources import EntrypointResources
+from entrypoint_bootstrap import EntrypointResources
 from entrypoint_state import EntrypointRuntimeInitializerStateProtocol
 
 if TYPE_CHECKING:

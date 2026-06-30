@@ -18,7 +18,7 @@ from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from bot_runtime import BotRuntime
 from entrypoint_bootstrap import EntrypointBootstrapBuilder, build_entrypoint_bootstrap
-from entrypoint_resources import EntrypointResources
+from entrypoint_bootstrap import EntrypointResources
 from entrypoint_state import EntrypointRuntimeStateProtocol, EntrypointStateProtocol
 from runtime_bootstrap import StartupEnvironment
 from runtime_io import SharedSessionRuntime

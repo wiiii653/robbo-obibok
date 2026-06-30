@@ -15,7 +15,7 @@ from playback_helpers import play_via_audacious, queue_position, send_now_playin
 if TYPE_CHECKING:
     from discord import Colour
     from entrypoint_app import EntrypointComponentAccess
-    from entrypoint_resources import EntrypointResources
+    from entrypoint_bootstrap import EntrypointResources
     from entrypoint_state import EntrypointGlueStateProtocol
 
 
