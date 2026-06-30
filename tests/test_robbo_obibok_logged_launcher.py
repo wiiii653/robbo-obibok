@@ -9,7 +9,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import robbo_obibok_logged_launcher as logged_launcher
-import run_bot_logged
 
 
 class RunBotLoggedTests(unittest.TestCase):
@@ -110,7 +109,3 @@ class RunBotLoggedTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 130)
         self.assertTrue(proc.terminate_called)
-
-    def test_compat_entrypoint_reexports_logged_launcher_helpers(self):
-        self.assertIs(run_bot_logged.build_logged_launch_command, logged_launcher.build_logged_launch_command)
-        self.assertIs(run_bot_logged.run_logged_bot, logged_launcher.run_logged_bot)

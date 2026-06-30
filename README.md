@@ -153,9 +153,6 @@ Logged launcher path:
 ```bash
 # Canonical logged launcher module
 ./venv/bin/python3 robbo_obibok_logged_launcher.py
-
-# Compatibility entrypoint kept for existing scripts
-./venv/bin/python3 run_bot_logged.py
 ```
 
 > **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`

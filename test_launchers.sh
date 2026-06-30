@@ -10,6 +10,6 @@ fi
 
 exec ./venv/bin/python3 -m unittest -v \
     tests.test_robbo_obibok_launch \
-    tests.test_run_bot_logged \
+    tests.test_robbo_obibok_logged_launcher \
     tests.test_runner_smoke \
     tests.test_install_assets

@@ -36,7 +36,7 @@ collection_*      — collection definitions and specs
 | `runtime_*` | 7 | Service facade, composition, bootstrap, protocols, support. |
 | `archive_*` | 3 | Archive catalog, runtime config, downloads. |
 | `collection_*` | 3 | Collection specs, catalog, service. |
-| launcher | 6 | Process launcher, logged launcher, executable targets, shell shim. |
+| launcher | 5 | Process launcher, logged launcher, executable targets, shell shim. |
 | Build tools | 7 | `build_*_index.py` — index rebuilders for each collection. |
 
 ### File Topology
@@ -47,7 +47,6 @@ robbo-obibok-strict.py           ← executable target (strict mode)
 robbo_obibok_launcher.py         ← process launcher
 robbo_obibok_logged_launcher.py  ← logging supervision launcher
 robbo_obibok_runtime.py          ← launcher runtime wiring
-run_bot_logged.py                ← compat entrypoint for logged launcher
 
 domain_state.py                  ← PlaylistState, AppRuntimeState, stores
 domain_config.py                 ← AppConfig, PlaybackConfig, PathConfig
@@ -129,11 +128,6 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 
 - `robbo_obibok_launcher.py` is the canonical process launcher for local entrypoint scripts.
 - `run_bot.sh` is a minimal shell shim that delegates to `robbo_obibok_launcher.py`.
-- `run_bot_logged.py` may add logging behavior, but it must reuse launcher helpers instead of reimplementing:
-  - `.env` loading
-  - `DISCORD_BOT_TOKEN` validation
-  - strict compatibility mode selection
-  - final entry command construction
 - `robbo_obibok_launcher.py` owns default vs strict executable target selection.
 - `robbo-obibok.py` and `robbo-obibok-strict.py` are the canonical executable targets.
 - Systemd units should point at those executable targets directly, not reconstruct launch logic with env-only switching.
@@ -148,7 +142,6 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 | `robbo_obibok_runtime.py` | Launcher runtime wiring |
 | `robbo-obibok.py` | Default executable target |
 | `robbo-obibok-strict.py` | Strict compat executable target |
-| `run_bot_logged.py` | Compat entrypoint for logged launcher |
 | `run_bot.sh` | Minimal shell shim |
 
 ### Boundary Notes

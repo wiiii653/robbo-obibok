@@ -667,62 +667,6 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
             ["-u", "robbo_obibok_launcher.py"],
         )
 
-    def test_run_bot_logged_fails_fast_without_token(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_root = Path(temp_dir)
-            shutil.copy(ROOT / "run_bot_logged.py", temp_root / "run_bot_logged.py")
-            shutil.copy(ROOT / "robbo_obibok_logged_launcher.py", temp_root / "robbo_obibok_logged_launcher.py")
-
-            env = self._clean_env()
-            env["PYTHONPATH"] = str(ROOT)
-
-            result = subprocess.run(
-                [sys.executable, "run_bot_logged.py"],
-                cwd=temp_root,
-                capture_output=True,
-                text=True,
-                env=env,
-            )
-
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("DISCORD_BOT_TOKEN", result.stderr)
-
-    def test_run_bot_logged_uses_strict_entry_script_when_env_requests_it(self):
-        popen_calls = []
-
-        class FakeProcess:
-            pid = 123
-
-            def wait(self):
-                return 0
-
-            def terminate(self):
-                return None
-
-        env = self._clean_env()
-        env["DISCORD_BOT_TOKEN"] = "runtime-token"
-        env["ROBBO_STRICT_COMPAT"] = "1"
-
-        with (
-            patch.dict(os.environ, env, clear=True),
-            patch(
-                "subprocess.Popen",
-                side_effect=lambda *args, **kwargs: popen_calls.append((args, kwargs)) or FakeProcess(),
-            ),
-            patch("sys.stdout.flush", lambda: None),
-        ):
-            with self.assertRaises(SystemExit) as ctx:
-                runpy.run_path(str(ROOT / "run_bot_logged.py"), run_name="__main__")
-
-        self.assertEqual(ctx.exception.code, 0)
-
-        self.assertEqual(len(popen_calls), 1)
-        args, kwargs = popen_calls[0]
-        self.assertEqual(
-            args[0],
-            [str(ROOT / "venv" / "bin" / "python3"), "-u", "robbo-obibok-strict.py"],
-        )
-        self.assertEqual(kwargs["cwd"], ROOT)
 
     @staticmethod
     def _clean_env() -> dict[str, str]:

@@ -54,14 +54,12 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make run-strict", install_text)
 
     def test_cli_entrypoints_delegate_to_shared_bootstrap(self):
-        logged_entrypoint_text = (ROOT / "run_bot_logged.py").read_text(encoding="utf-8")
         logged_launcher_text = (ROOT / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
         runtime_text = (ROOT / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
         entrypoint_text = (ROOT / "robbo-obibok.py").read_text(encoding="utf-8")
         strict_entrypoint_text = (ROOT / "robbo-obibok-strict.py").read_text(encoding="utf-8")
 
         self.assertIn("def run_runtime_entrypoint(", runtime_text)
-        self.assertIn("from robbo_obibok_logged_launcher import", logged_entrypoint_text)
         self.assertIn("def run_logged_bot(", logged_launcher_text)
         self.assertIn("runtime facade", runtime_text)
         self.assertIn("launcher facade", entrypoint_text)
@@ -71,7 +69,6 @@ class InstallAssetsTests(unittest.TestCase):
         agents_text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         shell_text = (ROOT / "run_bot.sh").read_text(encoding="utf-8")
         launcher_script_text = (ROOT / "test_launchers.sh").read_text(encoding="utf-8")
-        logged_text = (ROOT / "run_bot_logged.py").read_text(encoding="utf-8")
         logged_launcher_text = (ROOT / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
         launcher_text = (ROOT / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
         make_text = (ROOT / "Makefile").read_text(encoding="utf-8")
@@ -90,9 +87,8 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("launcher smoke CI surface is `.github/workflows/test-launchers.yml`", agents_text)
         self.assertIn("broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`", agents_text)
         self.assertIn("exec ./venv/bin/python3 -u robbo_obibok_launcher.py", shell_text)
-        self.assertIn("tests.test_run_bot_logged", launcher_script_text)
+        self.assertIn("tests.test_robbo_obibok_logged_launcher", launcher_script_text)
         self.assertNotIn("ENTRY_SCRIPT=", shell_text)
-        self.assertIn("robbo_obibok_logged_launcher", logged_text)
         self.assertIn("build_logged_launch_command", logged_launcher_text)
         self.assertIn("run_logged_bot", logged_launcher_text)
         self.assertIn("load_runtime_environment(root=root, env=os.environ if env is None else env)", logged_launcher_text)
@@ -109,7 +105,6 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertNotIn("robbo-obibok-ulimate-chiptune-bot", readme_text)
         self.assertIn("make build-indexes", readme_text)
         self.assertIn("# Canonical logged launcher module", readme_text)
-        self.assertIn("run_bot_logged.py", readme_text)
         self.assertIn("./test_launchers.sh", readme_text)
         self.assertIn("make test-launchers", readme_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
