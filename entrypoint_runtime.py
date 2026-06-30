@@ -14,7 +14,7 @@ from app_services import AppServicesProtocol
 from collection_specs import CollectionSpec
 from collection_service import CollectionArchiveProtocol
 from entrypoint_callback_groups import AppEntrypointCallbacks
-from entrypoint_resources import EntrypointResources
+from entrypoint_bootstrap import EntrypointResources
 from entrypoint_state import EntrypointRuntimeInitializerStateProtocol
 from playback_assets import PlaybackAssetRuntime
 from runtime_bootstrap import (
