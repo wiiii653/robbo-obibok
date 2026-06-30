@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_runtime_callback_builders import (
+from entrypoint_app import (
     build_entrypoint_runtime_callbacks,
     build_entrypoint_runtime_initializer,
 )
