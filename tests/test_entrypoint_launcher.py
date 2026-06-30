@@ -12,11 +12,14 @@ if str(ROOT) not in sys.path:
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXPORT_GRAPH,
     ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES,
+    ENTRYPOINT_DIRECT_COLLECTION_BINDINGS,
     is_supported_executable_attr,
     supported_executable_dict_attrs,
 )
 from tests.test_support import install_discord_stubs
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
+from entrypoint_launcher_loader import build_entrypoint_support, build_entrypoint_launcher
+from entrypoint_executable_assembly import build_entrypoint_legacy_resolver
 
 
 install_discord_stubs()
@@ -290,3 +293,113 @@ class EntrypointLauncherTests(unittest.TestCase):
         self.assertIs(module.main_strict, runtime_module.main_strict)
         self.assertIs(module.selected_main, runtime_module.selected_main)
         self.assertNotIn("BOT_TOKEN", module.__dict__)
+
+
+class EntrypointLauncherSupportTests(unittest.TestCase):
+    def test_build_entrypoint_support_uses_injected_logger_builder(self):
+        logger_calls = []
+        boot_calls = []
+        logger = types.SimpleNamespace(name="test-logger")
+
+        with patch(
+            "entrypoint_launcher_loader.build_entrypoint_bootstrap",
+            side_effect=lambda *args, **kwargs: boot_calls.append((args, kwargs)) or types.SimpleNamespace(),
+        ):
+            support = build_entrypoint_support(
+                module_path="/tmp/robbo-obibok.py",
+                logger_name="robbo-obibok",
+                load_last_collection=lambda _path: None,
+                atomic_json_write=lambda _path, _data, _logger: None,
+                configure_logger=lambda root_dir, logger_name: logger_calls.append((root_dir, logger_name)) or logger,
+            )
+
+        self.assertIs(support.logger, logger)
+        self.assertEqual(logger_calls, [("/tmp", "robbo-obibok")])
+        self.assertEqual(len(boot_calls), 1)
+        self.assertEqual(boot_calls[0][0][0], "/tmp")
+        self.assertIs(boot_calls[0][0][1], logger)
+
+
+class EntrypointLauncherConfigTests(unittest.TestCase):
+    @staticmethod
+    def _direct_collection_names() -> set[str]:
+        return {
+            spec.export_name
+            for spec in ENTRYPOINT_DIRECT_COLLECTION_BINDINGS
+            if spec.export_name != "_switch_collection"
+        }
+
+    def test_build_entrypoint_launcher_captures_module_builder(self):
+        build_calls = []
+        create_calls = []
+        built_module = object()
+
+        def fake_builder(**kwargs):
+            build_calls.append(kwargs)
+            return built_module
+
+        fake_launcher = types.SimpleNamespace(
+            loader=types.SimpleNamespace(),
+            runtime=types.SimpleNamespace(),
+        )
+
+        with (
+            patch("entrypoint_module.build_entrypoint_module", side_effect=fake_builder),
+            patch(
+                "entrypoint_launcher_loader.LazyEntrypointLauncher.create",
+                side_effect=lambda **kwargs: create_calls.append(kwargs) or fake_launcher,
+            ),
+        ):
+            launcher = build_entrypoint_launcher(
+                module_path="/tmp/robbo-obibok.py",
+                logger_name="robbo-obibok",
+                load_last_collection=lambda _path: None,
+                save_last_collection=lambda _path, _mode: None,
+                atomic_json_write=lambda _path, _data, _logger: None,
+                command_prefix=lambda _bot, _message: "!",
+                deps="deps",
+                flip_order=["asma"],
+                flip_seq=["ASMA"],
+            )
+
+        self.assertIs(launcher, fake_launcher)
+        self.assertEqual(len(create_calls), 1)
+
+        module_factory = create_calls[0]["module_factory"]
+        self.assertIs(module_factory(), built_module)
+        self.assertEqual(len(build_calls), 1)
+        self.assertEqual(build_calls[0]["module_path"], "/tmp/robbo-obibok.py")
+        self.assertEqual(build_calls[0]["logger_name"], "robbo-obibok")
+        self.assertEqual(build_calls[0]["deps"], "deps")
+
+    def test_build_entrypoint_legacy_resolver_smoke_covers_legacy_and_compat_paths(self):
+        resolved = []
+        legacy_values = {
+            "bot": "bot",
+            "get_guild_id_override": "get-guild",
+            "set_guild_id_override": "set-guild",
+            "_STATE": "state",
+            "_app_cfg": "cfg",
+            "_archive_runtime_config": "archive",
+        }
+        fake_loader = types.SimpleNamespace(
+            resolve_legacy=lambda name: legacy_values[name],
+            resolve=lambda name: resolved.append(name) or f"resolved:{name}",
+        )
+
+        resolve = build_entrypoint_legacy_resolver(loader=fake_loader)
+
+        self.assertEqual(resolve("bot"), "bot")
+        self.assertEqual(resolve("get_guild_id_override"), "get-guild")
+        self.assertEqual(resolve("set_guild_id_override"), "set-guild")
+        self.assertEqual(resolve("_STATE"), "state")
+        self.assertEqual(resolve("_app_cfg"), "cfg")
+        self.assertEqual(resolve("_archive_runtime_config"), "archive")
+        self.assertEqual(resolve("LOCK_FILE"), "resolved:LOCK_FILE")
+        self.assertEqual(resolve("_APP"), "resolved:_APP")
+        self.assertEqual(set(resolved), {"LOCK_FILE", "_APP"})
+        self.assertIn("LOCK_FILE", ENTRYPOINT_EXPORT_GRAPH.compat_names)
+        self.assertIn("_APP", ENTRYPOINT_EXPORT_GRAPH.compat_names)
+        for name in self._direct_collection_names() | {"single_guild_check", "_FLIP_ORDER", "_FLIP_SEQ"}:
+            with self.assertRaises(AttributeError):
+                resolve(name)

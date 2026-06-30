@@ -9,7 +9,19 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_state import EntrypointState
+from tests.test_support import install_discord_stubs
+
+import entrypoint_app
+import entrypoint_bootstrap
+import entrypoint_components
+import entrypoint_runtime_surface
+
+install_discord_stubs()
+from entrypoint_state import (
+    EntrypointComponentAccessStateProtocol,
+    EntrypointComponentAssemblyStateProtocol,
+    EntrypointState,
+)
 from domain_context import ArchiveRegistryViews
 
 
@@ -92,3 +104,14 @@ class EntrypointStateTests(unittest.TestCase):
         self.assertEqual(bundle.active_streams, {7: "source"})
         self.assertEqual(bundle.playback_service, "playback")
         self.assertEqual(bundle.legacy, "legacy")
+
+
+class EntrypointStateProtocolTests(unittest.TestCase):
+    def test_protocols_are_not_reexported_from_consumer_modules(self):
+        self.assertFalse(hasattr(entrypoint_app, "EntrypointComponentStateProtocol"))
+        self.assertFalse(hasattr(entrypoint_components, "EntrypointComponentStateProtocol"))
+        self.assertFalse(hasattr(entrypoint_bootstrap, "EntrypointResourceStateProtocol"))
+        self.assertFalse(hasattr(entrypoint_runtime_surface, "EntrypointRuntimeStateProtocol"))
+
+    def test_component_assembly_and_access_contracts_are_distinct(self):
+        self.assertIsNot(EntrypointComponentAssemblyStateProtocol, EntrypointComponentAccessStateProtocol)

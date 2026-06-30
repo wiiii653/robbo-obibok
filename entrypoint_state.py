@@ -24,7 +24,7 @@ from subsong_runtime import SubsongRuntime
 
 if TYPE_CHECKING:
     from entrypoint_app import EntrypointComponents
-    from legacy_runtime_bindings import LegacyRuntimeBindings
+    from runtime_bindings import LegacyRuntimeBindings
     from stream_runtime import MonitorAudioSource, StreamRuntime
     from runtime_registration import RuntimeRegistration
     from runtime_composition import ComposedRuntime

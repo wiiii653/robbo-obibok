@@ -24,7 +24,7 @@ from entrypoint_callback_groups import (
     PlaybackStaticCallbacks,
 )
 from entrypoint_components import EntrypointComponentDeps
-from legacy_runtime_bindings import LegacyRuntimeBindings
+from runtime_bindings import LegacyRuntimeBindings
 from playback_process import stop_all_players as runtime_stop_all_players
 from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
 from entrypoint_app import create_bot

@@ -32,7 +32,7 @@ from discord.ext import commands
 if TYPE_CHECKING:
     from entrypoint_launcher_loader import EntrypointSupport
     from entrypoint_state import EntrypointCompatStateProtocol
-    from legacy_runtime_bindings import LegacyRuntimeBindings
+    from runtime_bindings import LegacyRuntimeBindings
     from playback_assets import PlaybackAssetRuntime
     from playback_helpers import NowPlayingDependencies
     from runtime_protocols import ArchiveRuntimeProtocol, PlaybackRuntimeProtocol
