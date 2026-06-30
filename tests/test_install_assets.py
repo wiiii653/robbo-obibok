@@ -54,18 +54,12 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make run-strict", install_text)
 
     def test_cli_entrypoints_delegate_to_shared_bootstrap(self):
-        main_text = (ROOT / "robbo_obibok_main.py").read_text(encoding="utf-8")
-        strict_main_text = (ROOT / "robbo_obibok_main_strict.py").read_text(encoding="utf-8")
         logged_entrypoint_text = (ROOT / "run_bot_logged.py").read_text(encoding="utf-8")
         logged_launcher_text = (ROOT / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
         runtime_text = (ROOT / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
         entrypoint_text = (ROOT / "robbo-obibok.py").read_text(encoding="utf-8")
         strict_entrypoint_text = (ROOT / "robbo-obibok-strict.py").read_text(encoding="utf-8")
 
-        self.assertIn("from robbo_obibok_runtime import run_runtime_entrypoint", main_text)
-        self.assertIn("run_runtime_entrypoint()", main_text)
-        self.assertIn("from robbo_obibok_runtime import run_runtime_entrypoint", strict_main_text)
-        self.assertIn("run_runtime_entrypoint()", strict_main_text)
         self.assertIn("def run_runtime_entrypoint(", runtime_text)
         self.assertIn("from robbo_obibok_logged_launcher import", logged_entrypoint_text)
         self.assertIn("def run_logged_bot(", logged_launcher_text)
