@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import Mapping, MutableMapping, Sequence
 
-from robbo_obibok_launch import selected_entry_script_from_env
 from runtime_support import load_dotenv_file
 
 ROOT = Path(__file__).resolve().parent
@@ -55,6 +54,20 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = list(sys.argv[1:] if argv is None else argv)
     entry_script = args[0] if args else None
     exec_runtime_entrypoint(entry_script=entry_script)
+
+
+DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"
+STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"
+
+
+def selected_entry_script(*, strict: bool = False) -> str:
+    if strict:
+        return STRICT_ENTRY_SCRIPT
+    return DEFAULT_ENTRY_SCRIPT
+
+
+def selected_entry_script_from_env(env: Mapping[str, str]) -> str:
+    return selected_entry_script(strict=env.get("ROBBO_STRICT_COMPAT") == "1")
 
 
 if __name__ == "__main__":

@@ -36,6 +36,7 @@ class RunnerSmokeTests(unittest.TestCase):
     def _reset_runtime_modules() -> None:
         sys.modules.pop("robbo_obibok_runtime", None)
         sys.modules.pop("robbo_obibok_main", None)
+        sys.modules.pop("robbo_obibok_main_strict", None)
 
     def test_entrypoint_import_smoke_exposes_assembled_runtime_surface(self):
         module_path = ROOT / "robbo-obibok.py"
@@ -336,7 +337,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             try:
                 runpy.run_path(str(module_path), run_name="__main__")
@@ -358,7 +359,7 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-import robbo_obibok_main
+import robbo_obibok_runtime
 runtime_calls = []
 assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
@@ -402,11 +403,11 @@ def fake_run_bot_entrypoint(**kwargs):
 
 with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
     patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
     patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
-    robbo_obibok_main.main()
+    robbo_obibok_runtime.main()
 
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
@@ -436,7 +437,7 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-import robbo_obibok_main
+import robbo_obibok_runtime
 runtime_calls = []
 assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
@@ -491,11 +492,11 @@ def fake_run_bot_entrypoint(**kwargs):
 
 with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
     patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
     patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
-    robbo_obibok_main.main()
+    robbo_obibok_runtime.main()
 
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
@@ -534,7 +535,7 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-import robbo_obibok_main_strict
+import robbo_obibok_runtime
 
 runtime_calls = []
 assembly = types.SimpleNamespace(
@@ -578,9 +579,9 @@ def fake_run_bot_entrypoint(**kwargs):
 
 with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
 ):
-    robbo_obibok_main_strict.main()
+    robbo_obibok_runtime.main()
 
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """

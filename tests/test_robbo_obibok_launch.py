@@ -8,16 +8,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from robbo_obibok_launch import (
+from robbo_obibok_launcher import (
     DEFAULT_ENTRY_SCRIPT,
     STRICT_ENTRY_SCRIPT,
-    selected_entry_script,
-    selected_entry_script_from_env,
-)
-from robbo_obibok_launcher import (
     exec_runtime_entrypoint,
     load_runtime_environment,
     selected_entry_command,
+    selected_entry_script,
+    selected_entry_script_from_env,
 )
 
 

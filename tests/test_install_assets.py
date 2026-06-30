@@ -29,10 +29,10 @@ class InstallAssetsTests(unittest.TestCase):
             position = next_position
 
     def test_launch_helper_declares_canonical_entry_scripts(self):
-        launch_text = (ROOT / "robbo_obibok_launch.py").read_text(encoding="utf-8")
+        launcher_text = (ROOT / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
 
-        self.assertIn('DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"', launch_text)
-        self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launch_text)
+        self.assertIn('DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"', launcher_text)
+        self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launcher_text)
 
     def test_strict_service_uses_explicit_strict_entrypoint(self):
         service_text = (ROOT / "robbo-obibok-strict.service").read_text(encoding="utf-8")
@@ -54,20 +54,13 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make run-strict", install_text)
 
     def test_cli_entrypoints_delegate_to_shared_bootstrap(self):
-        main_text = (ROOT / "robbo_obibok_main.py").read_text(encoding="utf-8")
-        strict_main_text = (ROOT / "robbo_obibok_main_strict.py").read_text(encoding="utf-8")
-        cli_text = (ROOT / "robbo_obibok_cli.py").read_text(encoding="utf-8")
         logged_entrypoint_text = (ROOT / "run_bot_logged.py").read_text(encoding="utf-8")
         logged_launcher_text = (ROOT / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
         runtime_text = (ROOT / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
         entrypoint_text = (ROOT / "robbo-obibok.py").read_text(encoding="utf-8")
         strict_entrypoint_text = (ROOT / "robbo-obibok-strict.py").read_text(encoding="utf-8")
 
-        self.assertIn("from robbo_obibok_cli import run_runtime_entrypoint", main_text)
-        self.assertIn("run_runtime_entrypoint()", main_text)
-        self.assertIn("from robbo_obibok_cli import run_runtime_entrypoint", strict_main_text)
-        self.assertIn("run_runtime_entrypoint()", strict_main_text)
-        self.assertIn("from robbo_obibok_runtime import main", cli_text)
+        self.assertIn("def run_runtime_entrypoint(", runtime_text)
         self.assertIn("from robbo_obibok_logged_launcher import", logged_entrypoint_text)
         self.assertIn("def run_logged_bot(", logged_launcher_text)
         self.assertIn("runtime facade", runtime_text)

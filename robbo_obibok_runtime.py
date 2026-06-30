@@ -199,3 +199,7 @@ def selected_main():
     if os.environ.get("ROBBO_STRICT_COMPAT") == "1":
         return main_strict
     return main
+
+
+def run_runtime_entrypoint() -> None:
+    main()
