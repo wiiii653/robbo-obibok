@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Protocol
 
 from entrypoint_launcher_runtime import LazyEntrypointLauncher
 from entrypoint_compat_policy import (
@@ -16,8 +16,9 @@ from entrypoint_executable_providers import (
     EntrypointExecutableProviders,
     build_default_entrypoint_providers,
 )
-from entrypoint_legacy_facade import build_entrypoint_legacy_resolver
 from entrypoint_module_bindings import (
+    ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES,
+    ENTRYPOINT_EXPORT_GRAPH,
     build_entrypoint_compat_module_bindings,
     build_entrypoint_stable_module_bindings,
 )
@@ -134,3 +135,27 @@ def build_strict_entrypoint_executable_assembly(
         flip_seq=flip_seq,
         compat_policy=build_strict_compat_policy(),
     )
+
+
+class EntrypointLegacyResolverLoaderProtocol(Protocol):
+    def resolve_legacy(self, name: str) -> object: ...
+
+    def resolve(self, name: str) -> object: ...
+
+
+def build_entrypoint_legacy_resolver(
+    *,
+    loader: EntrypointLegacyResolverLoaderProtocol,
+) -> Callable[[str], object]:
+    def resolve(name: str) -> object:
+        if name in {
+            "bot",
+            "get_guild_id_override",
+            "set_guild_id_override",
+        } | ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES:
+            return loader.resolve_legacy(name)
+        if name not in ENTRYPOINT_EXPORT_GRAPH.compat_names:
+            raise AttributeError(name)
+        return loader.resolve(name)
+
+    return resolve
