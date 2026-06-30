@@ -10,8 +10,8 @@ from collection_catalog import (
     FLIP_ORDER as COLLECTION_FLIP_ORDER,
     FLIP_SEQ as COLLECTION_FLIP_SEQ,
 )
-from entrypoint_compat_policy import build_compat_policy
 from entrypoint_module_bindings import (
+    ALLOW_DEPRECATED,
     resolve_bound_entrypoint_module_attr,
     resolve_compat_entrypoint_module_attr,
 )
@@ -46,7 +46,6 @@ def _build_executable_assembly():
         command_prefix=_command_prefix,
         flip_order=COLLECTION_FLIP_ORDER,
         flip_seq=COLLECTION_FLIP_SEQ,
-        compat_policy=build_compat_policy(),
     )
 
 
@@ -96,7 +95,7 @@ def _assembly_compat_bindings():
 
 
 def _assembly_compat_policy():
-    return _ensure_executable_assembly().compat_policy
+    return ALLOW_DEPRECATED
 
 
 def _assembly_launcher():

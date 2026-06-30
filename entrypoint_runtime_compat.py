@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Callable
 
-from entrypoint_compat_policy import EntrypointCompatPolicy
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
 )
@@ -25,7 +24,7 @@ def resolve_runtime_internal_attr(
     assembly_peek: Callable[[], object],
     bindings_getter: Callable[[], object],
     compat_bindings_getter: Callable[[], object],
-    compat_policy_getter: Callable[[], EntrypointCompatPolicy],
+    compat_policy_getter: Callable[[], bool],
     launcher_getter: Callable[[], object],
     deps_getter: Callable[[], object],
     legacy_resolve_getter: Callable[[], object],
@@ -48,7 +47,7 @@ def resolve_runtime_internal_attr(
     getter = deprecated_getters.get(name)
     if getter is None:
         raise AttributeError(name)
-    if not compat_policy_getter().allows_deprecated_runtime_internal_attr(name):
+    if not compat_policy_getter():
         raise AttributeError(name)
     _warn_deprecated_internal_attr(name)
     return getter()

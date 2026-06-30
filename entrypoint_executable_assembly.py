@@ -6,17 +6,13 @@ from dataclasses import dataclass
 from typing import Callable, Protocol
 
 from entrypoint_launcher_runtime import LazyEntrypointLauncher
-from entrypoint_compat_policy import (
-    EntrypointCompatPolicy,
-    build_compat_policy,
-    build_strict_compat_policy,
-)
 from entrypoint_launcher_config import build_entrypoint_launcher
 from entrypoint_executable_providers import (
     EntrypointExecutableProviders,
     build_default_entrypoint_providers,
 )
 from entrypoint_module_bindings import (
+    ALLOW_DEPRECATED,
     ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
     build_entrypoint_compat_module_bindings,
@@ -40,7 +36,7 @@ class EntrypointExecutableAssembly:
     surface: EntrypointModuleSurface
     bindings: dict[str, object]
     compat_bindings: dict[str, object]
-    compat_policy: EntrypointCompatPolicy
+    compat_policy: bool
 
 
 def build_default_entrypoint_module_deps(
@@ -79,9 +75,7 @@ def build_entrypoint_executable_assembly(
     command_prefix: Callable[[object, object], object],
     flip_order: list[str],
     flip_seq: list[str],
-    compat_policy: EntrypointCompatPolicy | None = None,
 ) -> EntrypointExecutableAssembly:
-    compat_policy = build_compat_policy(template=compat_policy)
     providers, deps = build_entrypoint_executable_dependencies(
         flip_order=flip_order,
         flip_seq=flip_seq,
@@ -115,7 +109,7 @@ def build_entrypoint_executable_assembly(
         surface=surface,
         bindings=bindings,
         compat_bindings=compat_bindings,
-        compat_policy=compat_policy,
+        compat_policy=ALLOW_DEPRECATED,
     )
 
 
@@ -133,7 +127,6 @@ def build_strict_entrypoint_executable_assembly(
         command_prefix=command_prefix,
         flip_order=flip_order,
         flip_seq=flip_seq,
-        compat_policy=build_strict_compat_policy(),
     )
 
 

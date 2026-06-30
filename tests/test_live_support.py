@@ -14,7 +14,6 @@ from tests.test_support import install_discord_stubs
 install_discord_stubs()
 
 from collection_catalog import FLIP_ORDER, FLIP_SEQ
-from entrypoint_compat_policy import build_compat_policy
 from entrypoint_executable_assembly import build_entrypoint_executable_assembly
 
 
@@ -45,7 +44,6 @@ def build_live_runtime_bundle():
             command_prefix=_command_prefix,
             flip_order=FLIP_ORDER,
             flip_seq=FLIP_SEQ,
-            compat_policy=build_compat_policy(),
         )
         assembly.launcher.runtime.initialize_runtime()
     state_surface = assembly.launcher.loader.runtime_state_surface()

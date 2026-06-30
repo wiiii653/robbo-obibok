@@ -13,7 +13,7 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_compat_policy import build_strict_compat_policy
+from entrypoint_module_bindings import ALLOW_DEPRECATED
 from entrypoint_executable_assembly import (
     build_entrypoint_executable_assembly,
     build_entrypoint_executable_dependencies,
@@ -116,7 +116,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
         self.assertIs(assembly.surface, surface)
         self.assertIs(assembly.bindings, bindings)
         self.assertIs(assembly.compat_bindings, compat_bindings)
-        self.assertTrue(assembly.compat_policy.allow_deprecated_runtime_internal_attrs)
+        self.assertIs(assembly.compat_policy, ALLOW_DEPRECATED)
         build_dependencies.assert_called_once_with(
             flip_order=["asma"],
             flip_seq=["ASMA"],
@@ -194,4 +194,4 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
                 flip_seq=["ASMA"],
             )
 
-        self.assertEqual(assembly.compat_policy, build_strict_compat_policy())
+        self.assertIs(assembly.compat_policy, ALLOW_DEPRECATED)

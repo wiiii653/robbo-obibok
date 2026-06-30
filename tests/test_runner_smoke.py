@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_compat_policy import EntrypointCompatPolicy, build_compat_policy, build_strict_compat_policy
 from tests.test_support import install_discord_stubs
 
 
@@ -73,7 +72,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "_FLIP_ORDER": ["asma"],
                 "_FLIP_SEQ": ["ASMA"],
             },
-            compat_policy=build_compat_policy(),
+            compat_policy=False,
         )
 
         spec = importlib.util.spec_from_file_location("robbo_obibok_entrypoint_smoke", module_path)
@@ -133,7 +132,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "_FLIP_ORDER": ["asma"],
                 "_FLIP_SEQ": ["ASMA"],
             },
-            compat_policy=build_compat_policy(),
+            compat_policy=False,
         )
 
         spec = importlib.util.spec_from_file_location("robbo_obibok_entrypoint_legacy_compat", module_path)
@@ -196,7 +195,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "_FLIP_ORDER": ["asma"],
                 "_FLIP_SEQ": ["ASMA"],
             },
-            compat_policy=build_compat_policy(),
+            compat_policy=False,
         )
 
         spec = importlib.util.spec_from_file_location("robbo_obibok_entrypoint_smoke_disabled_shims", module_path)
@@ -209,9 +208,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 return_value=assembly,
             ),
         ):
-            assembly.compat_policy = EntrypointCompatPolicy(
-                allow_deprecated_runtime_internal_attrs=False,
-            )
+            assembly.compat_policy = False
             try:
                 spec.loader.exec_module(module)
                 self.assertEqual(module.initialize_runtime().startup_env.bot_token, "runtime-token")
@@ -264,7 +261,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "_FLIP_ORDER": ["asma"],
                 "_FLIP_SEQ": ["ASMA"],
             },
-            compat_policy=build_compat_policy(),
+            compat_policy=False,
         )
 
         spec = importlib.util.spec_from_file_location("robbo_obibok_entrypoint_legacy_attrs_disabled", module_path)
@@ -323,7 +320,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "_FLIP_ORDER": ["asma"],
                 "_FLIP_SEQ": ["ASMA"],
             },
-            compat_policy=build_compat_policy(),
+            compat_policy=False,
         )
         captured = {}
 
@@ -358,7 +355,6 @@ class RunnerSmokeTests(unittest.TestCase):
 import json
 import types
 from unittest.mock import patch
-from entrypoint_compat_policy import build_compat_policy
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
@@ -394,7 +390,7 @@ assembly = types.SimpleNamespace(
         "_FLIP_ORDER": ["asma"],
         "_FLIP_SEQ": ["ASMA"],
     },
-    compat_policy=build_compat_policy(),
+    compat_policy=False,
 )
 captured = {}
 
@@ -437,7 +433,6 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 import json
 import types
 from unittest.mock import patch
-from entrypoint_compat_policy import EntrypointCompatPolicy, build_compat_policy
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
@@ -476,9 +471,7 @@ assembly = types.SimpleNamespace(
         "_FLIP_ORDER": ["asma"],
         "_FLIP_SEQ": ["ASMA"],
     },
-    compat_policy=EntrypointCompatPolicy(
-        allow_deprecated_runtime_internal_attrs=False,
-    ),
+    compat_policy=False,
 )
 captured = {}
 
@@ -541,7 +534,6 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-from entrypoint_compat_policy import build_strict_compat_policy
 import robbo_obibok_main_strict
 
 runtime_calls = []
@@ -575,7 +567,7 @@ assembly = types.SimpleNamespace(
         "_FLIP_ORDER": ["asma"],
         "_FLIP_SEQ": ["ASMA"],
     },
-    compat_policy=build_strict_compat_policy(),
+    compat_policy=False,
 )
 captured = {}
 
@@ -585,7 +577,7 @@ def fake_run_bot_entrypoint(**kwargs):
     kwargs["handle_signal"](3, "frame")
 
 with (
-    patch("entrypoint_executable_assembly.build_strict_entrypoint_executable_assembly", return_value=assembly),
+    patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
     patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
 ):
     robbo_obibok_main_strict.main()

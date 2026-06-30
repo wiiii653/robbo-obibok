@@ -10,7 +10,6 @@ if str(ROOT) not in sys.path:
 from entrypoint_runtime_compat import (
     resolve_runtime_internal_attr,
 )
-from entrypoint_compat_policy import build_compat_policy
 
 
 class EntrypointRuntimeCompatTests(unittest.TestCase):
@@ -23,7 +22,7 @@ class EntrypointRuntimeCompatTests(unittest.TestCase):
                     assembly_peek=lambda: "assembly",
                     bindings_getter=lambda: "bindings",
                     compat_bindings_getter=lambda: "compat-bindings",
-                    compat_policy_getter=build_compat_policy,
+                    compat_policy_getter=lambda: True,
                     launcher_getter=lambda: "launcher",
                     deps_getter=lambda: "deps",
                     legacy_resolve_getter=lambda: "legacy-resolve",

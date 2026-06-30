@@ -15,12 +15,10 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_compat_policy import (
-    EntrypointCompatPolicy,
-    build_compat_policy,
-    build_strict_compat_policy,
+from entrypoint_module_bindings import (
+    ALLOW_DEPRECATED,
+    ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES,
 )
-from entrypoint_module_bindings import ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES
 
 
 class RobboObibokRuntimeTests(unittest.TestCase):
@@ -66,7 +64,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
                 "_FLIP_ORDER": ["asma"],
                 "_FLIP_SEQ": ["ASMA"],
             },
-            compat_policy=build_compat_policy(),
+            compat_policy=ALLOW_DEPRECATED,
         )
 
     def test_import_keeps_runtime_wiring_lazy(self):
@@ -138,12 +136,9 @@ class RobboObibokRuntimeTests(unittest.TestCase):
             module = self._load_runtime_module()
             self.assertIs(module._BINDINGS, assembly.bindings)
             self.assertIs(module._COMPAT_BINDINGS, assembly.compat_bindings)
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                self.assertIs(module._LAUNCHER, assembly.launcher)
-                self.assertIs(module._MODULE_DEPS, assembly.deps)
-                self.assertIs(module._SURFACE, assembly.surface)
-                self.assertIs(module._LEGACY_RESOLVE, assembly.legacy_resolve)
+            for name in ("_LAUNCHER", "_MODULE_DEPS", "_SURFACE", "_LEGACY_RESOLVE"):
+                with self.assertRaises(AttributeError):
+                    getattr(module, name)
 
         self.assertNotIn("_BINDINGS", module.__dict__)
         self.assertNotIn("_COMPAT_BINDINGS", module.__dict__)
@@ -151,7 +146,6 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         self.assertNotIn("_MODULE_DEPS", module.__dict__)
         self.assertNotIn("_SURFACE", module.__dict__)
         self.assertNotIn("_LEGACY_RESOLVE", module.__dict__)
-        self.assertEqual([str(item.message).split(" ", 1)[0] for item in caught], ["_LAUNCHER", "_MODULE_DEPS", "_SURFACE", "_LEGACY_RESOLVE"])
         self.assertEqual(module.bot.ping(), "pong")
         self.assertEqual(module._skip_to_next(), "skip")
         self.assertEqual(module.LOCK_FILE, "resolved:LOCK_FILE")
@@ -183,9 +177,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
                 return_value=assembly,
             ),
         ):
-            assembly.compat_policy = EntrypointCompatPolicy(
-                allow_deprecated_runtime_internal_attrs=False,
-            )
+            assembly.compat_policy = ALLOW_DEPRECATED
             module = self._load_runtime_module()
             for name in ("_LAUNCHER", "_SURFACE", "_MODULE_DEPS", "_LEGACY_RESOLVE"):
                 with self.assertRaises(AttributeError):
@@ -211,7 +203,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
     def test_runtime_strict_policy_keeps_stable_aliases_while_removing_legacy_names(self):
         assembly = self._build_fake_assembly()
-        assembly.compat_policy = build_strict_compat_policy()
+        assembly.compat_policy = ALLOW_DEPRECATED
 
         with patch(
             "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
@@ -240,9 +232,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
                 return_value=assembly,
             ),
         ):
-            assembly.compat_policy = EntrypointCompatPolicy(
-                allow_deprecated_runtime_internal_attrs=False,
-            )
+            assembly.compat_policy = ALLOW_DEPRECATED
             module = self._load_runtime_module()
             self.assertEqual(module.initialize_runtime().startup_env.bot_token, "runtime-token")
             self.assertEqual(module.bot.ping(), "pong")
@@ -311,7 +301,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
     def test_main_strict_uses_strict_assembly_builder(self):
         signal_calls = []
         assembly = self._build_fake_assembly(signal_calls=signal_calls)
-        assembly.compat_policy = build_strict_compat_policy()
+        assembly.compat_policy = ALLOW_DEPRECATED
         captured = {}
 
         def fake_run_bot_entrypoint(**kwargs):

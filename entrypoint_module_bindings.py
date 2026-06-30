@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping, Protocol, cast
 
+ALLOW_DEPRECATED = False
+
 
 @dataclass(frozen=True, slots=True)
 class EntrypointCompatBindingSpec:
