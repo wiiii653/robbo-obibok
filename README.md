@@ -7,6 +7,10 @@ __________      ___.  ___.            ________ ___.   ._____.           __
         ╲╱           ╲╱    ╲╱                 ╲╱    ╲╱        ╲╱            ╲╱
 ```
 
+<p align="center">
+  <img src="extras/robbo-banner.png" alt="Robbo Obibok Banner" width="600">
+</p>
+
 # Robbo Obibok — The Ultimate Chiptune Bot
 
 Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Blending intricate technical grooves with retro charm, Robbo plays from **seven collections** spanning Atari, C64, ZX Spectrum, Amiga, SNES, and beyond.
@@ -318,6 +322,8 @@ robbo-obibok/
 ├── build_tiny_index.py        # Tiny local index builder
 ├── build_snes_index.py        # SNES local index builder
 ├── download_modarchive_bulk.py # ModArchive bulk downloader
+├── extras/
+│   └── robbo-banner.png        # Projekt Robbo banner (see README intro)
 ├── tmp/                       # Temp directory for subsong WAVs (generated)
 ├── archiwum/                  # Local archives (see Collections table)
 │   ├── asma/                  # Atari SAP files
