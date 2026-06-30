@@ -23,6 +23,7 @@ snes_cache.json
 ym_cache.json
 blacklist.json
 .hermes/plans/
+playlists/
 tmp/
 *_cache_local.json
 *_cache_old_urls.json
