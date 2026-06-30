@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_launcher_state import EntrypointRuntimeController, EntrypointRuntimeStateAccess
+from entrypoint_launcher_loader import EntrypointRuntimeController, EntrypointRuntimeStateAccess
 
 
 class EntrypointLauncherStateTests(unittest.TestCase):

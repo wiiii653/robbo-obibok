@@ -15,7 +15,7 @@ from entrypoint_app import (
     build_entrypoint_app,
 )
 from entrypoint_glue import build_single_guild_check
-from entrypoint_launcher_support import EntrypointSupport, build_entrypoint_support
+from entrypoint_launcher_loader import EntrypointSupport, build_entrypoint_support
 from entrypoint_callback_groups import (
     BootstrapStaticCallbacks,
     CollectionStaticCallbacks,

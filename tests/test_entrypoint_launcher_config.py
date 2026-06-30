@@ -13,7 +13,7 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_launcher_config import build_entrypoint_launcher
+from entrypoint_launcher_loader import build_entrypoint_launcher
 from entrypoint_executable_assembly import build_entrypoint_legacy_resolver
 from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH
 from entrypoint_module_bindings import ENTRYPOINT_DIRECT_COLLECTION_BINDINGS
@@ -43,9 +43,9 @@ class EntrypointLauncherConfigTests(unittest.TestCase):
         )
 
         with (
-            patch("entrypoint_launcher_config.build_entrypoint_module", side_effect=fake_builder),
+            patch("entrypoint_module.build_entrypoint_module", side_effect=fake_builder),
             patch(
-                "entrypoint_launcher_config.LazyEntrypointLauncher.create",
+                "entrypoint_launcher_loader.LazyEntrypointLauncher.create",
                 side_effect=lambda **kwargs: create_calls.append(kwargs) or fake_launcher,
             ),
         ):

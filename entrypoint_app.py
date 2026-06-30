@@ -26,7 +26,7 @@ from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 
 if TYPE_CHECKING:
     from discord.ext import commands
-    from entrypoint_launcher_support import EntrypointSupport
+    from entrypoint_launcher_loader import EntrypointSupport
     from entrypoint_state import EntrypointCompatStateProtocol
     from legacy_runtime_bindings import LegacyRuntimeBindings
     from playback_assets import PlaybackAssetRuntime

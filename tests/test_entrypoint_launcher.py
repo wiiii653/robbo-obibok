@@ -42,7 +42,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module) as build_module:
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module) as build_module:
             module = self._load_entrypoint_module("robbo_obibok_test_lazy_import")
             self.assertIsNone(module._ASSEMBLY)
             self.assertNotIn("_LAUNCHER", module.__dict__)
@@ -64,7 +64,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_module")
             first_app = module.initialize_runtime()
             second_app = module.initialize_runtime()
@@ -89,7 +89,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_unknown_attr")
 
         with self.assertRaises(AttributeError):
@@ -108,7 +108,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_bound_names")
             bindings = module._BINDINGS
             for name in ENTRYPOINT_EXPORT_GRAPH.dynamic_names():
@@ -142,7 +142,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_binding_map")
             self.assertEqual(
                 set(module._BINDINGS),
@@ -164,7 +164,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_export_surface")
 
             managed_attrs = supported_executable_dict_attrs(module.__dict__)
@@ -202,7 +202,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_startup_smoke")
             app = module.initialize_runtime()
 
@@ -232,7 +232,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_legacy_compat_exports")
 
         for name in ("_STATE", "_app_cfg", "_archive_runtime_config", "_FLIP_ORDER", "_FLIP_SEQ"):
@@ -252,7 +252,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_unmanaged_globals")
 
         binding_value_ids = {id(value) for value in module._BINDINGS.values()}

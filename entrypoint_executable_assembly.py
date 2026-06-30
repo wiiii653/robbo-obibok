@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Protocol
 
-from entrypoint_launcher_runtime import LazyEntrypointLauncher
-from entrypoint_launcher_config import build_entrypoint_launcher
+from entrypoint_launcher_loader import LazyEntrypointLauncher, build_entrypoint_launcher
 from entrypoint_executable_providers import (
     EntrypointExecutableProviders,
     build_default_entrypoint_providers,

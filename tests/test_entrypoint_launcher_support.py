@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_launcher_support import build_entrypoint_support
+from entrypoint_launcher_loader import build_entrypoint_support
 
 
 class EntrypointLauncherSupportTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class EntrypointLauncherSupportTests(unittest.TestCase):
         logger = types.SimpleNamespace(name="test-logger")
 
         with patch(
-            "entrypoint_launcher_support.build_entrypoint_bootstrap",
+            "entrypoint_launcher_loader.build_entrypoint_bootstrap",
             side_effect=lambda *args, **kwargs: boot_calls.append((args, kwargs)) or types.SimpleNamespace(),
         ):
             support = build_entrypoint_support(

@@ -145,7 +145,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             assembly = build_entrypoint_executable_assembly(
                 module_path=str(ROOT / "robbo-obibok.py"),
                 logger_name="robbo-obibok",
@@ -185,7 +185,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_launcher_config.build_entrypoint_module", return_value=fake_module):
+        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
             assembly = build_strict_entrypoint_executable_assembly(
                 module_path=str(ROOT / "robbo-obibok.py"),
                 logger_name="robbo-obibok",

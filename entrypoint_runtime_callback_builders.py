@@ -21,7 +21,7 @@ from entrypoint_runtime_tasks import EntrypointRuntimeTasks
 if TYPE_CHECKING:
     from discord.ext import commands
     from entrypoint_app import EntrypointComponentAccess, EntrypointFacade
-    from entrypoint_launcher_support import EntrypointSupport
+    from entrypoint_launcher_loader import EntrypointSupport
 
 
 def build_entrypoint_runtime_callbacks(
