@@ -27,7 +27,7 @@ from entrypoint_components import EntrypointComponentDeps
 from legacy_runtime_bindings import LegacyRuntimeBindings
 from playback_process import stop_all_players as runtime_stop_all_players
 from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
-from entrypoint_runner import create_bot
+from entrypoint_app import create_bot
 
 if TYPE_CHECKING:
     from discord import Colour

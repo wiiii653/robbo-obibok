@@ -336,7 +336,7 @@ class RunnerSmokeTests(unittest.TestCase):
                 "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             try:
                 runpy.run_path(str(module_path), run_name="__main__")
@@ -402,7 +402,7 @@ def fake_run_bot_entrypoint(**kwargs):
 
 with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
     patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
     patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
@@ -491,7 +491,7 @@ def fake_run_bot_entrypoint(**kwargs):
 
 with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
     patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
     patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
@@ -578,7 +578,7 @@ def fake_run_bot_entrypoint(**kwargs):
 
 with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
 ):
     robbo_obibok_main_strict.main()
 

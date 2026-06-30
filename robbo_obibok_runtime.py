@@ -16,7 +16,7 @@ from entrypoint_module_bindings import (
     resolve_compat_entrypoint_module_attr,
 )
 import entrypoint_executable_assembly
-import entrypoint_runner
+from entrypoint_app import run_bot_entrypoint
 from entrypoint_runtime_surface import (
     build_runtime_surface,
 )
@@ -152,7 +152,7 @@ def handle_signal(signum, frame):
 
 def main():
     assembly = _ensure_executable_assembly()
-    entrypoint_runner.run_bot_entrypoint(
+    run_bot_entrypoint(
         initialize_runtime=initialize_runtime,
         install_runtime_hooks=runtime_bootstrap.install_runtime_hooks,
         handle_signal=handle_signal,
@@ -184,7 +184,7 @@ def main_strict():
         assembly.bindings,
         alias_source=assembly.compat_bindings,
     )
-    entrypoint_runner.run_bot_entrypoint(
+    run_bot_entrypoint(
         initialize_runtime=initialize_runtime_strict,
         install_runtime_hooks=runtime_bootstrap.install_runtime_hooks,
         handle_signal=handle_signal_strict,

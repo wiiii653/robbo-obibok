@@ -288,7 +288,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
                 "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             module = self._load_runtime_module()
             module.main()
@@ -313,7 +313,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
                 "entrypoint_executable_assembly.build_strict_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             module = self._load_runtime_module()
             module.main_strict()

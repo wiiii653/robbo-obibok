@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
+import discord
 from app_config import AppConfig
 from app_services import AppServicesProtocol
 from app_state import PlaylistState
@@ -26,9 +27,9 @@ from entrypoint_glue import EntrypointGlue
 from entrypoint_runtime_init import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
 from entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
 from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
+from discord.ext import commands
 
 if TYPE_CHECKING:
-    from discord.ext import commands
     from entrypoint_launcher_loader import EntrypointSupport
     from entrypoint_state import EntrypointCompatStateProtocol
     from legacy_runtime_bindings import LegacyRuntimeBindings
@@ -397,3 +398,36 @@ def build_entrypoint_component_access(
         state=support.state,
         ensure_components=ensure_components,
     )
+
+
+def build_default_intents() -> discord.Intents:
+    intents = discord.Intents.default()
+    intents.message_content = True
+    return intents
+
+
+def create_bot(command_prefix: Any) -> commands.Bot:
+    bot = commands.Bot(command_prefix=command_prefix, intents=build_default_intents())
+    bot.remove_command("help")
+    return bot
+
+
+def run_bot_entrypoint(
+    *,
+    initialize_runtime: Callable[[], object],
+    install_runtime_hooks: Callable[..., None],
+    handle_signal: Callable[[int, object], None],
+    release_process_lock: Callable[[str], None],
+    bot: commands.Bot,
+    lock_file_getter: Callable[[], str],
+    token_getter: Callable[[], str],
+) -> None:
+    initialize_runtime()
+    install_runtime_hooks(
+        handle_signal=handle_signal,
+        release_lock=lambda: release_process_lock(lock_file_getter()),
+    )
+    try:
+        bot.run(token_getter())
+    finally:
+        release_process_lock(lock_file_getter())
