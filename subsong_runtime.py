@@ -86,7 +86,18 @@ class SubsongRuntime:
 
         orig_path = state.subsong_path
         wav_path = self.subsong_temp_path(orig_path, subsong)
-        ok = await asyncio.get_event_loop().run_in_executor(None, self.convert_subsong, orig_path, subsong, wav_path)
+        try:
+            ok = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(
+                    None, self.convert_subsong, orig_path, subsong, wav_path
+                ),
+                timeout=90,
+            )
+        except asyncio.TimeoutError:
+            self.logger.error(
+                "Subsong %d conversion timed out (90s) for %s", subsong, orig_path
+            )
+            return False
         if not ok:
             self.logger.error("Subsong %d conversion failed for %s", subsong, orig_path)
             return False
@@ -94,8 +105,8 @@ class SubsongRuntime:
         state.set_subsong_wav(subsong, wav_path)
         state.set_current_subsong(subsong)
 
-        await asyncio.get_event_loop().run_in_executor(None, audacious_stop)
-        await asyncio.get_event_loop().run_in_executor(None, audacious_play, wav_path)
+        await asyncio.to_thread(audacious_stop)
+        await asyncio.to_thread(audacious_play, wav_path)
         state.set_current_path(wav_path)
         setup_monitor_source(state)
         return True

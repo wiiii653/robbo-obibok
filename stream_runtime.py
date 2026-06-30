@@ -129,6 +129,11 @@ class StreamRuntime:
             state.vc.stop()
             old_source = self.active_streams.pop(state.guild_id, None)
             if old_source:
+                self.logger.debug(
+                    "setup_monitor_source: cleaning up old source %s for guild %s",
+                    old_source.source_id,
+                    state.guild_id,
+                )
                 old_source.cleanup()
             source = MonitorAudioSource(
                 sink_name=self.sink_name,
