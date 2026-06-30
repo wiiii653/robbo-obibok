@@ -18,10 +18,7 @@ from entrypoint_module_bindings import (
     build_entrypoint_compat_module_bindings,
     build_entrypoint_stable_module_bindings,
 )
-from entrypoint_module_config import (
-    build_entrypoint_module_deps,
-)
-from entrypoint_module import EntrypointModuleDeps
+from entrypoint_module import EntrypointModuleDeps, build_entrypoint_module_deps
 from entrypoint_startup import atomic_json_write, load_last_collection, save_last_collection
 from entrypoint_surface_assembly import EntrypointModuleSurface
 from entrypoint_surface_assembly import build_entrypoint_module_surface

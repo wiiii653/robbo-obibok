@@ -12,7 +12,7 @@ from bot_persistence import (
     toggle_user_track_entry,
 )
 from entrypoint_glue import mod_only
-from entrypoint_module_config import (
+from entrypoint_module import (
     EntrypointModuleCollectionConfig,
     EntrypointModulePlaybackPolicyConfig,
     EntrypointModuleRegistrationConfig,

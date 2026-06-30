@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, TYPE_CHECKING
 
+from app_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
 
 from entrypoint_app import (
@@ -13,17 +14,17 @@ from entrypoint_app import (
     EntrypointRuntimePolicyDeps,
     build_entrypoint_app,
 )
+from entrypoint_glue import build_single_guild_check
+from entrypoint_launcher_support import EntrypointSupport, build_entrypoint_support
 from entrypoint_module_builders import (
     build_module_component_deps,
     build_module_raw_callbacks,
 )
-from entrypoint_module_support import build_entrypoint_module_bootstrap
+from entrypoint_runner import create_bot
 
 if TYPE_CHECKING:
     from discord import Colour
     from discord.ext import commands
-    from app_state import PlaylistState
-    from entrypoint_launcher_support import EntrypointSupport
 
 
 @dataclass(slots=True)
@@ -179,6 +180,142 @@ class EntrypointModuleCollectionDeps:
 class EntrypointModuleDeps:
     runtime: EntrypointModuleRuntimeDeps
     collection: EntrypointModuleCollectionDeps
+
+
+@dataclass(slots=True)
+class EntrypointModuleRegistrationConfig:
+    build_playback_handlers: Callable[[PlaybackHandlerDependencies], PlaybackHandlerMap]
+    register_core_events: Callable[..., None]
+    register_playback_commands: Callable[..., None]
+    register_library_commands: Callable[..., None]
+    validate_runtime_dependencies: Callable[[], None]
+
+
+@dataclass(slots=True)
+class EntrypointModulePlaybackPolicyConfig:
+    classify_track_route: Callable[..., dict[str, str]]
+    compute_timeout_seconds: Callable[..., int]
+    is_gme_format_path: Callable[[str | None], bool]
+    should_advance_after_stop: Callable[..., tuple[bool, float | None]]
+    should_confirm_output_drop: Callable[..., tuple[bool, float | None]]
+    should_disconnect_for_empty_channel: Callable[..., tuple[bool, float | None]]
+    should_force_timeout_stop: Callable[[int, int], bool]
+    should_start_predownload: Callable[..., bool]
+    mod_only: CommandDecoratorFactory
+
+
+@dataclass(slots=True)
+class EntrypointModuleCollectionConfig:
+    build_collection_state_update: Callable[[str, list[str]], dict[str, object]]
+    format_flip_sequence: Callable[[list[str], str], str]
+    prepare_playback_queue: Callable[..., dict[str, object]]
+    remove_user_track: Callable[[dict[str, object], int | str, str], tuple[dict[str, object], bool]]
+    filter_blacklisted_track_entries: Callable[
+        [list[dict[str, object]], dict[str, object], int],
+        list[dict[str, object]],
+    ]
+    filter_blacklisted_track_urls: Callable[
+        [list[str], dict[object, object], int | str],
+        list[str],
+    ]
+    load_user_tracks: Callable[[dict[str, object], int | str], list[dict[str, object]]]
+    toggle_user_track_entry: Callable[
+        [dict[str, object], int | str, dict[str, object]],
+        tuple[dict[str, object], bool],
+    ]
+    flip_order: list[str]
+    flip_seq: list[str]
+
+
+def build_entrypoint_module_deps(
+    *,
+    registration: EntrypointModuleRegistrationConfig,
+    playback_policy: EntrypointModulePlaybackPolicyConfig,
+    collection: EntrypointModuleCollectionConfig,
+) -> EntrypointModuleDeps:
+    return EntrypointModuleDeps(
+        runtime=EntrypointModuleRuntimeDeps(
+            build_playback_handlers=registration.build_playback_handlers,
+            register_core_events=registration.register_core_events,
+            register_playback_commands=registration.register_playback_commands,
+            register_library_commands=registration.register_library_commands,
+            validate_runtime_dependencies=registration.validate_runtime_dependencies,
+            classify_track_route=playback_policy.classify_track_route,
+            compute_timeout_seconds=playback_policy.compute_timeout_seconds,
+            is_gme_format_path=playback_policy.is_gme_format_path,
+            should_advance_after_stop=playback_policy.should_advance_after_stop,
+            should_confirm_output_drop=playback_policy.should_confirm_output_drop,
+            should_disconnect_for_empty_channel=playback_policy.should_disconnect_for_empty_channel,
+            should_force_timeout_stop=playback_policy.should_force_timeout_stop,
+            should_start_predownload=playback_policy.should_start_predownload,
+            mod_only=playback_policy.mod_only,
+        ),
+        collection=EntrypointModuleCollectionDeps(
+            build_collection_state_update=collection.build_collection_state_update,
+            format_flip_sequence=collection.format_flip_sequence,
+            prepare_playback_queue=collection.prepare_playback_queue,
+            remove_user_track=collection.remove_user_track,
+            filter_blacklisted_track_entries=collection.filter_blacklisted_track_entries,
+            filter_blacklisted_track_urls=collection.filter_blacklisted_track_urls,
+            load_user_tracks=collection.load_user_tracks,
+            toggle_user_track_entry=collection.toggle_user_track_entry,
+            flip_order=collection.flip_order,
+            flip_seq=collection.flip_seq,
+        ),
+    )
+
+
+@dataclass(slots=True)
+class EntrypointModuleBootstrap:
+    support: EntrypointSupport
+    bot: commands.Bot
+    single_guild_check: Callable[[object], bool]
+    guild_id_getter: Callable[[], int | None]
+    guild_id_setter: Callable[[int | None], None]
+    status_count_cache: dict[str, tuple[float, int | str]]
+    clear_predownload_state: Callable[[PlaylistState], None]
+
+
+def build_entrypoint_module_bootstrap(
+    *,
+    module_path: str,
+    logger_name: str,
+    load_last_collection: Callable[[str], str | None],
+    atomic_json_write: Callable[[str, object, object], None],
+    command_prefix: Callable[[object, object], object],
+) -> EntrypointModuleBootstrap:
+    support = build_entrypoint_support(
+        module_path=module_path,
+        logger_name=logger_name,
+        load_last_collection=load_last_collection,
+        atomic_json_write=atomic_json_write,
+    )
+    bot = create_bot(command_prefix)
+    single_guild_check = build_single_guild_check(
+        guild_id_getter=lambda: support.guild_scope.resolve(support.resources.app_cfg().guild_id),
+    )
+    bot.check(single_guild_check)
+
+    def set_guild_id_override(guild_id: int | None) -> None:
+        support.guild_scope.set_override(guild_id)
+
+    def get_guild_id_override() -> int | None:
+        return support.guild_scope.get_override()
+
+    def clear_predownload_state(state: PlaylistState, *, keep_file: bool = False) -> None:
+        from entrypoint_helpers import clear_predownload_state as clear_state
+
+        clear_state(state, keep_file=keep_file)
+
+    return EntrypointModuleBootstrap(
+        support=support,
+        bot=bot,
+        single_guild_check=single_guild_check,
+        guild_id_getter=get_guild_id_override,
+        guild_id_setter=set_guild_id_override,
+        status_count_cache={},
+        clear_predownload_state=clear_predownload_state,
+    )
 
 
 def build_entrypoint_module(
