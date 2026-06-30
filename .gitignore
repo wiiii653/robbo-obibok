@@ -25,6 +25,7 @@ blacklist.json
 .hermes/plans/
 playlists/
 AGENTS.md
+.vscode/
 tmp/
 *_cache_local.json
 *_cache_old_urls.json
