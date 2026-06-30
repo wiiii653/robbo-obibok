@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import random
-import re
 import subprocess
 from typing import TYPE_CHECKING, Protocol, cast
 
@@ -186,26 +185,25 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
 
     @bot.command()
     async def volume(ctx: PlaybackContext, *, level: str = ""):
+        from playback_volume import PactlVolumeController, VolumePolicy
+
+        ctrl = PactlVolumeController()
+        policy = VolumePolicy()
+
         if not level:
-            sink = deps.SINK_NAME
-            r = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: subprocess.run(["pactl", "get-sink-volume", sink], capture_output=True, text=True)
-            )
-            m = re.search(r"(\d+)%", r.stdout)
-            if m:
-                await ctx.send(embed=discord.Embed(title=f"🔊 Current volume: **{m.group(1)}%**", color=discord.Color.green()))
+            vol = ctrl.get_volume(deps.SINK_NAME)
+            if vol is not None:
+                await ctx.send(embed=discord.Embed(title=f"🔊 Current volume: **{vol}%**", color=discord.Color.green()))
             else:
                 await ctx.send("Could not read volume.")
             return
+
         try:
             vol = int(level)
-            if vol < 0 or vol > 200:
-                await ctx.send("Volume must be between 0 and 200.")
+            if not policy.is_valid(vol):
+                await ctx.send(f"Volume must be between {policy.describe_range()}.")
                 return
-            sink = deps.SINK_NAME
-            await asyncio.get_event_loop().run_in_executor(
-                None, lambda: subprocess.run(["pactl", "set-sink-volume", sink, f"{vol}%"], capture_output=True)
-            )
+            ctrl.set_volume(deps.SINK_NAME, vol)
             await ctx.send(embed=discord.Embed(title=f"🔊 Volume set to **{vol}%**", color=discord.Color.green()))
         except ValueError:
             await ctx.send("Usage: `!volume <0-200>` or `!volume` to show current.")
