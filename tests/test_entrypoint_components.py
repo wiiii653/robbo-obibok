@@ -13,7 +13,7 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from app_bootstrap import ArchiveRegistryViews
+from app_context import ArchiveRegistryViews
 from entrypoint_components import (
     EntrypointBootstrapBundle,
     EntrypointComponents,

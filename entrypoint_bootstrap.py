@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from app_bootstrap import ArchiveRegistryViews, BootstrappedApp, bootstrap_app
+from app_context import ArchiveRegistryViews, BootstrappedApp, bootstrap_app
 from app_config import AppConfig
 from app_config import build_app_config
 from app_context import AppContext

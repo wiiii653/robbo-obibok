@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from entrypoint_state import EntrypointState
-from app_bootstrap import ArchiveRegistryViews
+from app_context import ArchiveRegistryViews
 
 
 class EntrypointStateTests(unittest.TestCase):
