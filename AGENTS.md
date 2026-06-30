@@ -8,8 +8,8 @@ Key facts:
 - **Language**: Python 3.11+
 - **Runtime deps**: `discord.py[voice]`, `PyNaCl`, `aiohttp`, `PyYAML`
 - **Playback backend**: Audacious + virtual sink (pulseaudio)
-- **Collections**: 7 local archives — ASMA (6.3k), HVSC (60.8k), ModArchive (120k+), AY (4.5k), YM (7.2k), Tiny Music (418), SNES SPC (60k)
-- **Test suite**: 186/200 passing (12 fails = flock conflict with live bot). On CI all 200 pass.
+- **Collections**: 7 local archives — ASMA, HVSC (60.8k), ModArchive (120k+), AY (4.5k), YM (7.2k), Tiny Music (418), SNES SPC (60k)
+- **Test suite**: 219/219 passing (2 skipped = integration tests requiring live services).
 - **CI**: 4 workflows (test, integration, launchers, entrypoint-runtime)
 - **Build**: `make install` sets up venv + indexes
 
@@ -31,12 +31,12 @@ collection_*      — collection definitions and specs
 |---|---|---|
 | `domain_*` | 4 | Config, state, stores, services. Zero dependencies on Discord or asyncio. |
 | `entrypoint_*` | 15 | Lazy assembly, DI, mutable state hub, callback groups. |
-| `playback_*` | 8 | Audacious control, queue management, monitoring, asset runtime. |
+| `playback_*` | 9 | Audacious control, queue management, monitoring, volume, asset runtime. |
 | `bot_*` | 4 | Discord events, bot runtime, command decorator factory. |
-| `runtime_*` | 7 | Service facade, composition, bootstrap, protocols, support. |
+| `runtime_*` | 8 | Service facade, composition, bootstrap, protocols, support, io. |
 | `archive_*` | 3 | Archive catalog, runtime config, downloads. |
 | `collection_*` | 3 | Collection specs, catalog, service. |
-| launcher | 5 | Process launcher, logged launcher, executable targets, shell shim. |
+| launcher | 6 | Process launcher, logged launcher, executable targets, shell shim. |
 | Build tools | 7 | `build_*_index.py` — index rebuilders for each collection. |
 
 ### File Topology
@@ -79,7 +79,7 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 - Use `Protocol` for interface contracts. Prefer Protocols over ABCs.
 - Use `TYPE_CHECKING` for import guards on type-only imports. No circular imports.
 - Use `Mapping` / `Iterable` (read-only views) in public interfaces, `dict` / `list` internally.
-- Only 1 `# type: ignore` / `# noqa` across the whole codebase (~12.8k lines).
+- Only 1 `# type: ignore` / `# noqa` across the whole codebase (~12.2k lines).
 
 ### Patterns
 
@@ -165,7 +165,7 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 
 ## CI/CD
 
-5 GitHub Actions workflows:
+4 GitHub Actions workflows:
 | Workflow | Trigger | Scope |
 |---|---|---|
 | `test.yml` | push, PR | All unit tests |

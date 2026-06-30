@@ -18,7 +18,7 @@ the default and strict launchers usable and the relevant test surfaces green.
 | 3 — State lifecycle | Complete |
 | 4 — Compatibility indirection | Complete |
 | 5 — Operational diagnostics | Complete |
-| 6 — Dependencies and documentation | Not started |
+| 6 — Dependencies and documentation | Complete |
 
 Change a phase to `In progress` only when its implementation begins. Mark it
 `Complete` only after its gate has passed and the validation commands have been
