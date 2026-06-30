@@ -47,7 +47,7 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
     async def on_voice_state_update(member, before, after):
         if not deps.AUTO_START_CHANNEL or member.bot:
             return
-        if deps.GUILD_ID is None or member.guild.id != deps.GUILD_ID:
+        if deps.GUILD_ID is not None and member.guild.id != deps.GUILD_ID:
             return
         if before.channel == after.channel:
             return
