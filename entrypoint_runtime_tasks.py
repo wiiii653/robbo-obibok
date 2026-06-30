@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 from app_config import AppConfig
 from app_state import PlaylistState
-from entrypoint_bridge import EntrypointComponentAccess, EntrypointFacade
 from entrypoint_callback_groups import EntrypointRawCallbacks
 from entrypoint_glue import EntrypointGlue
 from entrypoint_state_protocols import EntrypointRuntimeStateProtocol
@@ -17,6 +16,7 @@ from entrypoint_tasks import health_watchdog_entry, monitor_playback_entry
 
 if TYPE_CHECKING:
     from discord.ext import commands
+    from entrypoint_app import EntrypointComponentAccess, EntrypointFacade
 
 
 @dataclass(slots=True)

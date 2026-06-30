@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from bot_runtime import BotRuntime
     from runtime_bootstrap import StartupEnvironment
     from collection_specs import CollectionSpec
-    from entrypoint_bridge import EntrypointComponents as EntrypointAccessComponents
+    from entrypoint_app import EntrypointComponents as EntrypointAccessComponents
     from entrypoint_runtime import AppAssembly
     from legacy_runtime_bindings import LegacyRuntimeBindings
     from playback_assets import PlaybackAssetRuntime

@@ -14,14 +14,13 @@ from entrypoint_callback_groups import (
     LibraryEntrypointCallbacks,
     PlaybackEntrypointCallbacks,
 )
-from entrypoint_bridge import EntrypointFacade
 from entrypoint_glue import EntrypointGlue
 from entrypoint_runtime_init import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
 from entrypoint_runtime_tasks import EntrypointRuntimeTasks
 
 if TYPE_CHECKING:
     from discord.ext import commands
-    from entrypoint_bridge import EntrypointComponentAccess
+    from entrypoint_app import EntrypointComponentAccess, EntrypointFacade
     from entrypoint_launcher_support import EntrypointSupport
 
 

@@ -25,7 +25,7 @@ from subsong_runtime import SubsongRuntime
 if TYPE_CHECKING:
     import entrypoint_state_protocols as state_protocols
 
-    from entrypoint_bridge import EntrypointComponents
+    from entrypoint_app import EntrypointComponents
     from legacy_runtime_bindings import LegacyRuntimeBindings
     from stream_runtime import MonitorAudioSource, StreamRuntime
     from runtime_registration import RuntimeRegistration
@@ -401,7 +401,7 @@ class EntrypointState:
         return app
 
     def component_bundle(self) -> "EntrypointComponents":
-        from entrypoint_bridge import EntrypointComponents
+        from entrypoint_app import EntrypointComponents
 
         assert self.app_services is not None
         assert self.service_facade is not None

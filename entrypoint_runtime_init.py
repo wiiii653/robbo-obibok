@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING, Awaitable, Callable
 from runtime_bootstrap import StartupEnvironment
 from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
-from entrypoint_bridge import EntrypointComponentAccess
 from entrypoint_callback_groups import AppEntrypointCallbacks
 from entrypoint_resources import EntrypointResources
 from entrypoint_state_protocols import EntrypointRuntimeInitializerStateProtocol
 
 if TYPE_CHECKING:
     from discord.ext import commands
+    from entrypoint_app import EntrypointComponentAccess
     from entrypoint_runtime import AppAssembly
 
 
