@@ -24,7 +24,6 @@ ym_cache.json
 blacklist.json
 .hermes/plans/
 playlists/
-AGENTS.md
 .vscode/
 tmp/
 *_cache_local.json
