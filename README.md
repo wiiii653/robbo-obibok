@@ -139,11 +139,10 @@ Development checks:
 
 ```bash
 make test
-make typecheck
 make test-integration
 ```
 
-The type-check target installs development-only dependencies from `requirements-dev.txt`.
+The logged launcher, strict mode, and entrypoint smoke targets are also available — see `make help`.
 Integration tests use the real Discord SDK and FFmpeg. Set `DISCORD_INTEGRATION_TOKEN`
 to enable API authentication and `RUN_LIVE_AUDIO_INTEGRATION=1` to check local
 PulseAudio/Audacious services.

@@ -9,8 +9,8 @@ Key facts:
 - **Runtime deps**: `discord.py[voice]`, `PyNaCl`, `aiohttp`, `PyYAML`
 - **Playback backend**: Audacious + virtual sink (pulseaudio)
 - **Collections**: 7 local archives — ASMA (6.3k), HVSC (60.8k), ModArchive (120k+), AY (4.5k), YM (7.2k), Tiny Music (418), SNES SPC (60k)
-- **Test suite**: 186/198 passing (12 fails = flock conflict with live bot). On CI all 198 pass.
-- **CI**: 5 workflows (test, integration, launchers, entrypoint-runtime, typecheck)
+- **Test suite**: 186/200 passing (12 fails = flock conflict with live bot). On CI all 200 pass.
+- **CI**: 4 workflows (test, integration, launchers, entrypoint-runtime)
 - **Build**: `make install` sets up venv + indexes
 
 ## Architecture
