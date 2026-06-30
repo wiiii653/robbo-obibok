@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Callable, Protocol
 from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from entrypoint_bootstrap import EntrypointBootstrapBuilder
-from entrypoint_guild import GuildScope
+from entrypoint_launcher_support import GuildScope
 from entrypoint_resources import EntrypointResources
 from entrypoint_state_protocols import EntrypointStateProtocol
 

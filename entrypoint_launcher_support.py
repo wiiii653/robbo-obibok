@@ -9,7 +9,7 @@ from logging.handlers import RotatingFileHandler
 from typing import Callable
 
 from entrypoint_bootstrap import EntrypointBootstrapBuilder, build_entrypoint_bootstrap
-from entrypoint_guild import GuildScope
+
 from entrypoint_resources import EntrypointResources
 from entrypoint_state_protocols import EntrypointStateProtocol
 from runtime_io import SharedSessionRuntime
@@ -83,3 +83,19 @@ def build_entrypoint_support(
         resources=resources,
         guild_scope=guild_scope,
     )
+
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class GuildScope:
+    override_guild_id: int | None = None
+
+    def resolve(self, configured_guild_id: int | None) -> int | None:
+        return configured_guild_id if self.override_guild_id is None else self.override_guild_id
+
+    def set_override(self, guild_id: int | None) -> None:
+        self.override_guild_id = guild_id
+
+    def get_override(self) -> int | None:
+        return self.override_guild_id
