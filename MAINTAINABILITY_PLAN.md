@@ -17,7 +17,7 @@ the default and strict launchers usable and the relevant test surfaces green.
 | 2 — Command boundary | Complete |
 | 3 — State lifecycle | Complete |
 | 4 — Compatibility indirection | Complete |
-| 5 — Operational diagnostics | Not started |
+| 5 — Operational diagnostics | Complete |
 | 6 — Dependencies and documentation | Not started |
 
 Change a phase to `In progress` only when its implementation begins. Mark it

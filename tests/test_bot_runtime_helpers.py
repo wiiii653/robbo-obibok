@@ -96,6 +96,47 @@ class RuntimeSupportTests(unittest.TestCase):
         self.assertIn("ffmpeg", message)
         self.assertIn("Install the missing packages", message)
 
+    def test_startup_required_tools_are_subset_of_all(self):
+        for binary in runtime_support.STARTUP_REQUIRED_TOOLS:
+            self.assertIn(binary, runtime_support.REQUIRED_EXTERNAL_TOOLS)
+
+    def test_format_specific_tools_are_disjoint_from_startup(self):
+        startup = set(runtime_support.STARTUP_REQUIRED_TOOLS)
+        fmt = set(runtime_support.FORMAT_SPECIFIC_TOOLS)
+        self.assertFalse(startup & fmt)
+
+    def test_get_missing_dependencies_with_startup_tools(self):
+        missing = runtime_support.get_missing_dependencies(
+            runtime_support.STARTUP_REQUIRED_TOOLS
+        )
+        self.assertIsInstance(missing, list)
+        for binary, _ in missing:
+            self.assertIn(binary, runtime_support.STARTUP_REQUIRED_TOOLS)
+
+    def test_format_subprocess_error_basic(self):
+        msg = runtime_support.format_subprocess_error(
+            component="Audacious",
+            command=["audtool", "version"],
+            exit_code=1,
+        )
+        self.assertIn("[Audacious]", msg)
+        self.assertIn("exit 1", msg)
+        self.assertIn("audtool version", msg)
+        self.assertNotIn("stderr:", msg)
+        self.assertNotIn("remedy:", msg)
+
+    def test_format_subprocess_error_with_stderr_and_remedy(self):
+        msg = runtime_support.format_subprocess_error(
+            component="PipeWire",
+            command=["pactl", "set-sink-volume", "ASMA_Bot", "100%"],
+            exit_code=255,
+            stderr_text="Connection refused",
+            remedy="Is PipeWire/PulseAudio running?",
+        )
+        self.assertIn("[PipeWire]", msg)
+        self.assertIn("stderr: Connection refused", msg)
+        self.assertIn("remedy: Is PipeWire/PulseAudio running?", msg)
+
     def test_prepare_playback_queue_restores_saved_queue(self):
         saved = {"queue": ["track-1", "track-2"], "collection_mode": "asma", "index": 1, "loop": False}
 
