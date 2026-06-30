@@ -17,26 +17,18 @@ class EntrypointCompatBindingSpec:
 
 ENTRYPOINT_COMPAT_GUILD_ID = EntrypointCompatBindingSpec("GUILD_ID", "guild_id")
 ENTRYPOINT_COMPAT_STREAM_RUNTIME = EntrypointCompatBindingSpec(
-    "_STREAM_RUNTIME",
-    "stream_runtime",
-    "stream_runtime",
+    "_STREAM_RUNTIME", "stream_runtime", "stream_runtime",
 )
 ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS = EntrypointCompatBindingSpec(
-    "_NOW_PLAYING_DEPS",
-    "now_playing_deps",
-    "now_playing_deps",
+    "_NOW_PLAYING_DEPS", "now_playing_deps", "now_playing_deps",
 )
 ENTRYPOINT_COMPAT_APP = EntrypointCompatBindingSpec("_APP", "app_instance", "app")
 ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION = EntrypointCompatBindingSpec(
-    "_RUNTIME_REGISTRATION",
-    "runtime_registration",
-    "runtime_registration",
+    "_RUNTIME_REGISTRATION", "runtime_registration", "runtime_registration",
 )
 ENTRYPOINT_COMPAT_LOCK_FILE = EntrypointCompatBindingSpec("LOCK_FILE", "lock_file", "lock_file")
 ENTRYPOINT_COMPAT_SHUTDOWN_FLAG = EntrypointCompatBindingSpec(
-    "_shutdown_flag",
-    "shutdown_flag",
-    "shutdown_flag",
+    "_shutdown_flag", "shutdown_flag", "shutdown_flag",
 )
 
 ENTRYPOINT_COMPAT_RUNTIME_BINDINGS = (
@@ -64,28 +56,12 @@ class EntrypointDirectExportSpec:
 
 ENTRYPOINT_DIRECT_COLLECTION_BINDINGS = (
     EntrypointDirectExportSpec("_skip_to_next", "collection", ("legacy", "skip_to_next")),
-    EntrypointDirectExportSpec(
-        "_cleanup_orphan_players",
-        "collection",
-        ("legacy", "cleanup_orphan_players"),
-    ),
+    EntrypointDirectExportSpec("_cleanup_orphan_players", "collection", ("legacy", "cleanup_orphan_players")),
     EntrypointDirectExportSpec("_stop_all_players", "collection", ("legacy", "stop_all_players")),
-    EntrypointDirectExportSpec(
-        "_auto_play_after_switch",
-        "collection",
-        ("legacy", "auto_play_after_switch"),
-    ),
+    EntrypointDirectExportSpec("_auto_play_after_switch", "collection", ("legacy", "auto_play_after_switch")),
     EntrypointDirectExportSpec("_play_subsong", "collection", ("legacy", "play_subsong")),
-    EntrypointDirectExportSpec(
-        "_cleanup_subsong_temp_wavs",
-        "collection",
-        ("service_facade", "cleanup_subsong_temp_wavs"),
-    ),
-    EntrypointDirectExportSpec(
-        "_switch_collection",
-        "collection",
-        ("service_facade", "switch_collection"),
-    ),
+    EntrypointDirectExportSpec("_cleanup_subsong_temp_wavs", "collection", ("service_facade", "cleanup_subsong_temp_wavs")),
+    EntrypointDirectExportSpec("_switch_collection", "collection", ("service_facade", "switch_collection")),
 )
 
 ENTRYPOINT_DIRECT_RUNTIME_BINDINGS = (
@@ -123,9 +99,7 @@ ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS = tuple(
 
 class SurfaceExportResolver(Protocol):
     def resolve_legacy(self, name: str) -> Any: ...
-
     def resolve_collection(self, spec: EntrypointDirectExportSpec) -> Callable[..., Any]: ...
-
     def resolve_runtime(self, spec: EntrypointDirectExportSpec) -> Callable[..., Any]: ...
 
 
@@ -194,57 +168,33 @@ ENTRYPOINT_EXPORT_GRAPH = EntrypointExportGraph(
     compat_names=frozenset(spec.export_name for spec in ENTRYPOINT_COMPAT_RUNTIME_BINDINGS),
 )
 
-ENTRYPOINT_EXECUTABLE_HELPER_ATTR_NAMES = frozenset(
-    {
-        "BOT_TOKEN",
-        "initialize_runtime",
-        "graceful_shutdown",
-        "handle_signal",
-        "main",
-        "__getattr__",
-        "_BINDINGS",
-        "_COMPAT_BINDINGS",
-    }
-)
+ENTRYPOINT_EXECUTABLE_HELPER_ATTR_NAMES = frozenset({
+    "BOT_TOKEN", "initialize_runtime", "graceful_shutdown", "handle_signal",
+    "main", "__getattr__", "_BINDINGS", "_COMPAT_BINDINGS",
+})
 
 ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_ATTR_NAMES = frozenset(
     spec.alias_name for spec in ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS
 )
 
-ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES = frozenset(
-    {
-        "_FLIP_ORDER",
-        "_FLIP_SEQ",
-    }
-)
+ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES = frozenset({
+    "_STATE", "_app_cfg", "_archive_runtime_config",
+})
 
-ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES = frozenset(
-    {
-        "_STATE",
-        "_app_cfg",
-        "_archive_runtime_config",
-    }
-)
+ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES = frozenset({
+    "_FLIP_ORDER", "_FLIP_SEQ",
+})
 
 ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES = frozenset(
     ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES
     | ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES
 )
 
-ENTRYPOINT_EXECUTABLE_STABLE_INTERNAL_ATTR_NAMES = frozenset(
-    {
-        "_ASSEMBLY",
-    }
-)
+ENTRYPOINT_EXECUTABLE_STABLE_INTERNAL_ATTR_NAMES = frozenset({"_ASSEMBLY"})
 
-ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES = frozenset(
-    {
-        "_LAUNCHER",
-        "_LEGACY_RESOLVE",
-        "_SURFACE",
-        "_MODULE_DEPS",
-    }
-)
+ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES = frozenset({
+    "_LAUNCHER", "_LEGACY_RESOLVE", "_SURFACE", "_MODULE_DEPS",
+})
 
 ENTRYPOINT_EXECUTABLE_PUBLIC_DIRECT_COMPAT_ATTR_NAMES = frozenset(
     spec.export_name for spec in ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS
@@ -256,20 +206,14 @@ ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES = (
 
 ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES = ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES
 
-ENTRYPOINT_EXECUTABLE_PRIVATE_DIRECT_ATTR_NAMES = (
-    frozenset(spec.export_name for spec in ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS)
+ENTRYPOINT_EXECUTABLE_PRIVATE_DIRECT_ATTR_NAMES = frozenset(
+    spec.export_name for spec in ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS
 )
 
-ENTRYPOINT_EXECUTABLE_PRIVATE_ATTR_NAMES = frozenset(
-    {
-        "_RUNTIME_HOLDER",
-        "_build_executable_assembly",
-        "_ensure_executable_assembly",
-        "_command_prefix",
-        "COLLECTION_FLIP_ORDER",
-        "COLLECTION_FLIP_SEQ",
-    }
-)
+ENTRYPOINT_EXECUTABLE_PRIVATE_ATTR_NAMES = frozenset({
+    "_RUNTIME_HOLDER", "_build_executable_assembly", "_ensure_executable_assembly",
+    "_command_prefix", "COLLECTION_FLIP_ORDER", "COLLECTION_FLIP_SEQ",
+})
 
 ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES = (
     ENTRYPOINT_MODULE_STABLE_NAMES
@@ -302,7 +246,6 @@ ENTRYPOINT_EXECUTABLE_SUPPORTED_ATTR_NAMES = (
 
 class EntrypointModuleBindingSurface(Protocol):
     def export_map(self) -> Mapping[str, object]: ...
-
     def resolve(self, name: str) -> object: ...
 
 
