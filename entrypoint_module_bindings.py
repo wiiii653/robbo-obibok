@@ -26,7 +26,6 @@ ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS = EntrypointCompatBindingSpec(
     "now_playing_deps",
     "now_playing_deps",
 )
-ENTRYPOINT_COMPAT_LEGACY = EntrypointCompatBindingSpec("_LEGACY", "legacy_runtime", "legacy")
 ENTRYPOINT_COMPAT_APP = EntrypointCompatBindingSpec("_APP", "app_instance", "app")
 ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION = EntrypointCompatBindingSpec(
     "_RUNTIME_REGISTRATION",
@@ -44,7 +43,6 @@ ENTRYPOINT_COMPAT_RUNTIME_BINDINGS = (
     ENTRYPOINT_COMPAT_GUILD_ID,
     ENTRYPOINT_COMPAT_STREAM_RUNTIME,
     ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS,
-    ENTRYPOINT_COMPAT_LEGACY,
     ENTRYPOINT_COMPAT_APP,
     ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION,
     ENTRYPOINT_COMPAT_LOCK_FILE,
@@ -146,7 +144,6 @@ class EntrypointSurfaceAliasSpec:
 @dataclass(frozen=True, slots=True)
 class EntrypointExportGraph:
     stable_binding_names: frozenset[str]
-    legacy_compat_binding_names: frozenset[str]
     direct_names: frozenset[str]
     compat_names: frozenset[str]
 
@@ -193,7 +190,6 @@ ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS = (
 
 ENTRYPOINT_EXPORT_GRAPH = EntrypointExportGraph(
     stable_binding_names=ENTRYPOINT_MODULE_STABLE_NAMES,
-    legacy_compat_binding_names=ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
     direct_names=frozenset(spec.export_name for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS),
     compat_names=frozenset(spec.export_name for spec in ENTRYPOINT_COMPAT_RUNTIME_BINDINGS),
 )

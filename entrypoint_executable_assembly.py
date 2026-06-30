@@ -98,7 +98,7 @@ def build_entrypoint_executable_assembly(
     )
     bindings = build_entrypoint_stable_module_bindings(surface)
     compat_bindings = build_entrypoint_compat_module_bindings(
-        launcher.loader.legacy_bindings(),
+        launcher.loader,
         resolver=launcher.loader.resolve_legacy,
     )
     return EntrypointExecutableAssembly(

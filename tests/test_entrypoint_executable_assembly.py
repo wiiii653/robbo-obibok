@@ -19,7 +19,7 @@ from entrypoint_executable_assembly import (
     build_entrypoint_executable_dependencies,
     build_strict_entrypoint_executable_assembly,
 )
-from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH
+from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH, ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
 
 
@@ -130,7 +130,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
         )
         build_bindings.assert_called_once_with(surface)
         build_compat_bindings.assert_called_once_with(
-            legacy_source,
+            loader,
             resolver=loader.resolve_legacy,
         )
 
@@ -157,7 +157,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
         self.assertEqual(set(assembly.bindings), ENTRYPOINT_EXPORT_GRAPH.bound_names())
         self.assertEqual(
             set(assembly.compat_bindings),
-            ENTRYPOINT_EXPORT_GRAPH.legacy_compat_binding_names,
+            ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
         )
         self.assertIs(assembly.bindings["bot"], assembly.surface.resolve("bot"))
         self.assertEqual(assembly.surface.resolve("_skip_to_next")(), "skip")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import TYPE_CHECKING, Callable, Mapping, Protocol, cast
 from entrypoint_runtime_surface import (
     EntrypointCompatRuntimeSurface,
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
 from entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_APP,
     ENTRYPOINT_COMPAT_GUILD_ID,
-    ENTRYPOINT_COMPAT_LEGACY,
     ENTRYPOINT_COMPAT_LOCK_FILE,
     ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS,
     ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION,
@@ -32,12 +32,156 @@ from entrypoint_module_bindings import (
     EntrypointDirectExportSpec,
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
 )
-from entrypoint_legacy_bindings import (
-    EntrypointLegacyBindings,
-    EntrypointModuleProtocol,
-    build_entrypoint_legacy_bindings,
-)
 from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH
+
+
+# ─── Inlined from entrypoint_legacy_bindings.py ─────────────────────────────
+
+from app_config import AppConfig
+from archive_runtime import ArchiveRuntimeConfig
+from entrypoint_bootstrap import EntrypointBootstrapBuilder
+from entrypoint_launcher_support import GuildScope
+from entrypoint_resources import EntrypointResources
+from entrypoint_state_protocols import EntrypointStateProtocol
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
+    from discord.ext import commands
+    from entrypoint_app import EntrypointApp
+
+
+class SessionRuntimeProtocol(Protocol):
+    async def get_shared_session(self) -> ClientSession: ...
+    async def close_shared_session(self) -> None: ...
+
+
+class LegacyAudioResourcesProtocol(Protocol):
+    def app_cfg(self) -> AppConfig: ...
+    def archive_runtime_config(self) -> ArchiveRuntimeConfig: ...
+    def setup_virtual_sink(self) -> None: ...
+    def ensure_audacious(self) -> None: ...
+    def setup_audacious_sid_config(self) -> None: ...
+    def set_volume_for_collection(self, mode: str) -> None: ...
+    def move_playback_to_sink(self) -> None: ...
+    def audacious_play(self, filepath: str) -> bool: ...
+    def audacious_stop(self) -> None: ...
+    def audacious_song(self) -> str: ...
+    def is_playing(self) -> bool: ...
+
+
+class EntrypointSupportProtocol(Protocol):
+    root_dir: str
+    logger: logging.Logger
+    session_runtime: SessionRuntimeProtocol
+    boot: EntrypointBootstrapBuilder
+    state: EntrypointStateProtocol
+    resources: LegacyAudioResourcesProtocol
+    guild_scope: GuildScope
+
+
+class EntrypointModuleProtocol(Protocol):
+    support: EntrypointSupportProtocol
+    bot: commands.Bot
+    app: EntrypointApp
+    single_guild_check: Callable[[object], bool]
+    guild_id_getter: Callable[[], int | None]
+    guild_id_setter: Callable[[int | None], None]
+    status_count_cache: dict[str, tuple[float, int | str]]
+    exports: dict[str, object]
+
+
+class EntrypointLegacyStateBindings:
+    __slots__ = (
+        "_SUPPORT", "_ROOT", "log", "_SESSION_RUNTIME", "BOOT",
+        "_STATE", "_RESOURCES", "_GUILD_SCOPE",
+        "modarchive_name_map", "snes_metadata",
+        "_app_cfg", "_archive_runtime_config", "_status_count_cache",
+        "_APP", "_FLIP_ORDER", "_FLIP_SEQ",
+    )
+
+
+class EntrypointLegacyControlBindings:
+    __slots__ = (
+        "bot", "single_guild_check",
+        "get_shared_session", "close_shared_session",
+        "setup_virtual_sink", "ensure_audacious", "setup_audacious_sid_config",
+        "set_volume_for_collection", "move_playback_to_sink",
+        "audacious_play", "audacious_stop", "audacious_song", "is_playing",
+        "set_guild_id_override", "get_guild_id_override",
+    )
+
+
+class EntrypointLegacyBindings:
+    __slots__ = ("state", "control", "exports")
+
+    def __init__(self, state, control, exports):
+        self.state = state
+        self.control = control
+        self.exports = exports
+
+    def resolve(self, name: str) -> object:
+        if hasattr(self.state, name):
+            return getattr(self.state, name)
+        if hasattr(self.control, name):
+            return getattr(self.control, name)
+        if name in self.exports:
+            return self.exports[name]
+        raise AttributeError(name)
+
+    def get(self, key: str, default: object = None) -> object:
+        try:
+            return self.resolve(key)
+        except AttributeError:
+            return default
+
+
+def build_entrypoint_legacy_bindings(
+    *,
+    entrypoint_module: EntrypointModuleProtocol,
+    flip_order: list[str],
+    flip_seq: list[str],
+) -> EntrypointLegacyBindings:
+    support = entrypoint_module.support
+    resources = support.resources
+    session_runtime = support.session_runtime
+    state = EntrypointLegacyStateBindings()
+    state._SUPPORT = support
+    state._ROOT = support.root_dir
+    state.log = support.logger
+    state._SESSION_RUNTIME = session_runtime
+    state.BOOT = support.boot
+    state._STATE = support.state
+    state._RESOURCES = resources
+    state._GUILD_SCOPE = support.guild_scope
+    state.modarchive_name_map = {}
+    state.snes_metadata = {}
+    state._app_cfg = resources.app_cfg
+    state._archive_runtime_config = resources.archive_runtime_config
+    state._status_count_cache = entrypoint_module.status_count_cache
+    state._APP = entrypoint_module.app
+    state._FLIP_ORDER = flip_order
+    state._FLIP_SEQ = flip_seq
+    control = EntrypointLegacyControlBindings()
+    control.bot = entrypoint_module.bot
+    control.single_guild_check = entrypoint_module.single_guild_check
+    control.get_shared_session = session_runtime.get_shared_session
+    control.close_shared_session = session_runtime.close_shared_session
+    control.setup_virtual_sink = resources.setup_virtual_sink
+    control.ensure_audacious = resources.ensure_audacious
+    control.setup_audacious_sid_config = resources.setup_audacious_sid_config
+    control.set_volume_for_collection = resources.set_volume_for_collection
+    control.move_playback_to_sink = resources.move_playback_to_sink
+    control.audacious_play = resources.audacious_play
+    control.audacious_stop = resources.audacious_stop
+    control.audacious_song = resources.audacious_song
+    control.is_playing = resources.is_playing
+    control.set_guild_id_override = entrypoint_module.guild_id_setter
+    control.get_guild_id_override = entrypoint_module.guild_id_getter
+    return EntrypointLegacyBindings(
+        state=state,
+        control=control,
+        exports=entrypoint_module.exports,
+    )
 
 
 class CollectionLegacyProtocol(Protocol):
@@ -220,7 +364,6 @@ for _compat_spec in (
     ENTRYPOINT_COMPAT_GUILD_ID,
     ENTRYPOINT_COMPAT_STREAM_RUNTIME,
     ENTRYPOINT_COMPAT_NOW_PLAYING_DEPS,
-    ENTRYPOINT_COMPAT_LEGACY,
     ENTRYPOINT_COMPAT_APP,
     ENTRYPOINT_COMPAT_RUNTIME_REGISTRATION,
     ENTRYPOINT_COMPAT_LOCK_FILE,

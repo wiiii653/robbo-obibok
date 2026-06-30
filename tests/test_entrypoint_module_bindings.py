@@ -221,10 +221,6 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
         )
         self.assertEqual(ENTRYPOINT_EXPORT_GRAPH.stable_binding_names, ENTRYPOINT_MODULE_STABLE_NAMES)
         self.assertEqual(
-            ENTRYPOINT_EXPORT_GRAPH.legacy_compat_binding_names,
-            ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
-        )
-        self.assertEqual(
             ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
             (
                 EntrypointSurfaceAliasSpec("state", "_STATE"),
@@ -459,7 +455,6 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
                 "GUILD_ID",
                 "LOCK_FILE",
                 "_APP",
-                "_LEGACY",
                 "_NOW_PLAYING_DEPS",
                 "_RUNTIME_REGISTRATION",
                 "_STREAM_RUNTIME",
@@ -492,7 +487,6 @@ class EntrypointModuleBindingsTests(unittest.TestCase):
                 "GUILD_ID",
                 "LOCK_FILE",
                 "_APP",
-                "_LEGACY",
                 "_LAUNCHER",
                 "_LEGACY_RESOLVE",
                 "_MODULE_DEPS",
