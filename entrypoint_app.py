@@ -7,9 +7,9 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable
 
 import discord
-from app_config import AppConfig
-from app_services import AppServicesProtocol
-from app_state import PlaylistState
+from domain_config import AppConfig
+from domain_services import AppServicesProtocol
+from domain_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
 from collection_specs import CollectionSpec
 import entrypoint_state as state_protocols

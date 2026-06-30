@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Protocol, TypeVar, cast
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from playback_monitor_policy import (
     disconnect_for_empty_channel,
     handle_idle_state,

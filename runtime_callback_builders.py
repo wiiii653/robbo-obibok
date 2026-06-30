@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
-from app_services import AppServicesProtocol
-from app_state import PlaylistState
+from domain_services import AppServicesProtocol
+from domain_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory, SearchTracksProtocol
 from collection_service import CollectionArchiveProtocol
 from runtime_composition import (

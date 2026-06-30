@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, cast
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from collection_specs import CollectionSpec
 
 if TYPE_CHECKING:

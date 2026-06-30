@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol
 
 from archive_catalog import CollectionInfo
-from app_state import PlaylistState
+from domain_state import PlaylistState
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession

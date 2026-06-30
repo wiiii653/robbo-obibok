@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, TYPE_CHECKING
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
 
 from entrypoint_app import (

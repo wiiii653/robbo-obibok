@@ -10,7 +10,7 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from collection_catalog import FLIP_SEQ as COLLECTION_FLIP_SEQ
 from test_support import FakeContext, RegistrationBot, patch, unittest
 from test_runtime_context import command_test_context

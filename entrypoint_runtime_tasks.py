@@ -7,8 +7,8 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
-from app_config import AppConfig
-from app_state import PlaylistState
+from domain_config import AppConfig
+from domain_state import PlaylistState
 from entrypoint_callback_groups import EntrypointRawCallbacks
 from entrypoint_glue import EntrypointGlue
 from entrypoint_state import EntrypointRuntimeStateProtocol

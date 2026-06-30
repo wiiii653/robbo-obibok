@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Protocol, cast
 
 from archive_catalog import CollectionInfo
-from app_state import PlaylistState
+from domain_state import PlaylistState
 
 if TYPE_CHECKING:
     import discord

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import app_state
+import domain_state
 import bot_runtime
 
 
@@ -81,7 +81,7 @@ class BotRuntimeTests(unittest.IsolatedAsyncioTestCase):
         async def true_async(*_args, **_kwargs):
             return True
 
-        runtime_state = app_state.AppRuntimeState(
+        runtime_state = domain_state.AppRuntimeState(
             queue_dir="/tmp/unused",
             default_collection_mode="asma",
             json_writer=lambda *_args, **_kwargs: None,

@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 import discord
 
 from archive_catalog import CollectionInfo
-from app_services import AppServicesProtocol
-from app_state import PlaylistState
+from domain_services import AppServicesProtocol
+from domain_state import PlaylistState
 from bot_runtime import (
     BootstrapCallbacks,
     BotRuntime,

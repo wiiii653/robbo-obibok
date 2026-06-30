@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory
 from collection_specs import CollectionSpec
 

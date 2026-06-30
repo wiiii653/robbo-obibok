@@ -6,12 +6,12 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from app_context import ArchiveRegistryViews, BootstrappedApp, bootstrap_app
-from app_config import AppConfig
-from app_config import build_app_config
-from app_context import AppContext
-from app_services import AppServicesProtocol
-from app_state import AppRuntimeState
+from domain_context import ArchiveRegistryViews, BootstrappedApp, bootstrap_app
+from domain_config import AppConfig
+from domain_config import build_app_config
+from domain_context import AppContext
+from domain_services import AppServicesProtocol
+from domain_state import AppRuntimeState
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntimeConfig
 from entrypoint_glue import build_temp_path as build_entry_temp_path

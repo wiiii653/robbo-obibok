@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 
 
 @dataclass(slots=True)

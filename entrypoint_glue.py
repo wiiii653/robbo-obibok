@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 
 from discord.ext import commands
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from playback_helpers import play_via_audacious, queue_position, send_now_playing_embed
 
 if TYPE_CHECKING:

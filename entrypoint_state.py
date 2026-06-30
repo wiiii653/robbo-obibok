@@ -6,10 +6,10 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterable, Mapping, Protocol
 
-from app_context import ArchiveRegistryViews, BootstrappedApp
-from app_context import AppContext
-from app_services import AppServicesProtocol
-from app_state import AppRuntimeState
+from domain_context import ArchiveRegistryViews, BootstrappedApp
+from domain_context import AppContext
+from domain_services import AppServicesProtocol
+from domain_state import AppRuntimeState
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntime
 from bot_runtime import BotRuntime

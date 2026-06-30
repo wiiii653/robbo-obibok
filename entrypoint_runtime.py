@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Mapping
 from runtime_bootstrap import StartupEnvironment, initialize_startup_environment
 from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
-from app_services import AppServicesProtocol
+from domain_services import AppServicesProtocol
 from collection_specs import CollectionSpec
 from collection_service import CollectionArchiveProtocol
 from entrypoint_callback_groups import AppEntrypointCallbacks

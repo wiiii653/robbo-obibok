@@ -14,7 +14,7 @@ from entrypoint_runtime_surface import (
     build_runtime_surface,
 )
 
-from app_config import AppConfig
+from domain_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 from bot_runtime import BotRuntime
 from entrypoint_bootstrap import EntrypointBootstrapBuilder, build_entrypoint_bootstrap

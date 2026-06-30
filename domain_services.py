@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Protocol
 
-from app_state import AppRuntimeState, CachedJsonStore, PlaylistLibraryStore, PlaylistState
+from domain_state import AppRuntimeState, CachedJsonStore, PlaylistLibraryStore, PlaylistState
 
 
 class AppServicesProtocol(Protocol):

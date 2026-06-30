@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, TypeVar
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 
 if TYPE_CHECKING:
     from stream_runtime import MonitorAudioSource

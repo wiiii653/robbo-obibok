@@ -6,7 +6,7 @@ import subprocess
 import time
 from typing import Callable, Iterable
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 
 
 COLLECTION_VOLUMES = {

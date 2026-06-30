@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app_services import AppServices
-from app_state import AppRuntimeState
+from domain_services import AppServices
+from domain_state import AppRuntimeState
 
 
 class AppServicesTests(unittest.TestCase):

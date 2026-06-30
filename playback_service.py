@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable
 
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from session_runtime import (
     auto_play_after_switch,
     fetch_metadata_background,

@@ -7,8 +7,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable, Mapping, cast
 
-from app_services import AppServicesProtocol
-from app_state import PlaylistState
+from domain_services import AppServicesProtocol
+from domain_state import PlaylistState
 from bot_dependencies import (
     CommandDecoratorFactory,
     LibraryCommandDependencies,

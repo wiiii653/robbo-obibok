@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, cast
 
-from app_config import AppConfig
+from domain_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
 import entrypoint_state as state_protocols
 

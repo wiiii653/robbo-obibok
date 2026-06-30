@@ -9,17 +9,17 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import app_state
+import domain_state
 
 
 class AppRuntimeStateTests(unittest.TestCase):
     def test_registry_helpers_and_views_route_state_changes(self):
-        runtime_state = app_state.AppRuntimeState(
+        runtime_state = domain_state.AppRuntimeState(
             queue_dir="/tmp/unused",
             default_collection_mode="asma",
             json_writer=self._write_json,
         )
-        playlist = app_state.PlaylistState()
+        playlist = domain_state.PlaylistState()
 
         runtime_state.register_guild_state(7, playlist)
         runtime_state.replace_message_track_map({11: {"url": "track.sap"}})
@@ -30,7 +30,7 @@ class AppRuntimeStateTests(unittest.TestCase):
         self.assertEqual(dict(runtime_state.message_track_map_view), {11: {"url": "track.sap"}})
 
     def test_playlist_state_helpers_update_related_fields(self):
-        state = app_state.PlaylistState()
+        state = domain_state.PlaylistState()
 
         state.bind_voice_context(guild_id=5, ctx="ctx", vc="vc")
         state.set_collection_mode("hvsc")
@@ -59,7 +59,7 @@ class AppRuntimeStateTests(unittest.TestCase):
         self.assertIsNone(state.subsong_path)
 
     def test_playlist_queue_position_history_and_upcoming_helpers(self):
-        state = app_state.PlaylistState()
+        state = domain_state.PlaylistState()
         state.set_queue_state(["a.sid", "b.sid", "c.sid", "d.sid"], 2, loop=True)
 
         self.assertEqual(state.queue_length(), 4)
@@ -90,7 +90,7 @@ class AppRuntimeStateTests(unittest.TestCase):
 
     def test_save_and_load_queue_roundtrip(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            runtime_state = app_state.AppRuntimeState(
+            runtime_state = domain_state.AppRuntimeState(
                 queue_dir=tmpdir,
                 default_collection_mode="hvsc",
                 json_writer=self._write_json,
@@ -114,7 +114,7 @@ class AppRuntimeStateTests(unittest.TestCase):
 
     def test_load_queue_rejects_invalid_schema(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            runtime_state = app_state.AppRuntimeState(
+            runtime_state = domain_state.AppRuntimeState(
                 queue_dir=tmpdir,
                 default_collection_mode="hvsc",
                 json_writer=self._write_json,
@@ -127,14 +127,14 @@ class AppRuntimeStateTests(unittest.TestCase):
             self.assertIsNone(runtime_state.load_queue(42))
 
     def test_register_now_playing_message_prunes_old_entries(self):
-        runtime_state = app_state.AppRuntimeState(
+        runtime_state = domain_state.AppRuntimeState(
             queue_dir="/tmp/unused",
             default_collection_mode="asma",
             json_writer=self._write_json,
             message_track_map_max=2,
         )
 
-        with patch.object(app_state.time, "time", side_effect=[1.0, 2.0, 3.0]):
+        with patch.object(domain_state.time, "time", side_effect=[1.0, 2.0, 3.0]):
             runtime_state.register_now_playing_message(1, "a.sap", "A", "Auth A")
             runtime_state.register_now_playing_message(2, "b.sap", "B", "Auth B")
             runtime_state.register_now_playing_message(3, "c.sap", "C", "Auth C")

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
 from archive_catalog import CollectionInfo
-from app_state import PlaylistState
+from domain_state import PlaylistState
 from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
 
 if TYPE_CHECKING:
