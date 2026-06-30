@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from archive_catalog import ArchiveCatalog
     from archive_runtime import ArchiveRuntime
     from bot_runtime import BotRuntime
-    from boot_runtime import StartupEnvironment
+    from runtime_bootstrap import StartupEnvironment
     from collection_specs import CollectionSpec
     from entrypoint_bridge import EntrypointComponents as EntrypointAccessComponents
     from entrypoint_runtime import AppAssembly

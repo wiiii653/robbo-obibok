@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Awaitable, Callable
 
-from boot_runtime import StartupEnvironment
+from runtime_bootstrap import StartupEnvironment
 from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
 from entrypoint_bridge import EntrypointComponentAccess

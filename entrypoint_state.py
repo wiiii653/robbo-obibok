@@ -13,7 +13,7 @@ from app_state import AppRuntimeState
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntime
 from bot_runtime import BotRuntime
-from boot_runtime import StartupEnvironment
+from runtime_bootstrap import StartupEnvironment
 from runtime_io import AudioProcessRuntime
 from collection_specs import CollectionSpec
 from playback_assets import PlaybackAssetRuntime

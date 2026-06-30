@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from app_config import AppConfig
 from archive_runtime import ArchiveRuntimeConfig
-from boot_runtime import StartupEnvironment
+from runtime_bootstrap import StartupEnvironment
 from bot_runtime import BotRuntime
 from entrypoint_state_protocols import EntrypointRuntimeStateProtocol
 

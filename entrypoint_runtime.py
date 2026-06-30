@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Mapping
 
-from boot_runtime import StartupEnvironment, initialize_startup_environment
+from runtime_bootstrap import StartupEnvironment, initialize_startup_environment
 from bot_dependencies import PlaybackHandlerDependencies
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
 from app_services import AppServicesProtocol
