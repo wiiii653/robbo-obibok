@@ -404,7 +404,7 @@ with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
     patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
     patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
-    patch("entrypoint_executable_providers.validate_runtime_dependencies", lambda required_tools=None: None),
+    patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
     robbo_obibok_main.main()
 
@@ -493,7 +493,7 @@ with (
     patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
     patch("entrypoint_runner.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
     patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
-    patch("entrypoint_executable_providers.validate_runtime_dependencies", lambda required_tools=None: None),
+    patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
     robbo_obibok_main.main()
 

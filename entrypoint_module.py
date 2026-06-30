@@ -310,7 +310,7 @@ def build_entrypoint_module_bootstrap(
         return support.guild_scope.get_override()
 
     def clear_predownload_state(state: PlaylistState, *, keep_file: bool = False) -> None:
-        from entrypoint_helpers import clear_predownload_state as clear_state
+        from entrypoint_glue import clear_predownload_state as clear_state
 
         clear_state(state, keep_file=keep_file)
 

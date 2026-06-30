@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 from app_state import PlaylistState
 import playback_runtime
-from entrypoint_helpers import clear_predownload_state
+from entrypoint_glue import clear_predownload_state
 from test_support import FakeVoiceClient, patch, unittest
 
 

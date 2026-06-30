@@ -36,7 +36,7 @@ def build_live_runtime_bundle():
     install_discord_stubs()
     with (
         patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
-        patch("entrypoint_executable_providers.validate_runtime_dependencies", lambda required_tools=None: None),
+        patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
     ):
         assembly = build_entrypoint_executable_assembly(
             module_path=str(ROOT / "robbo-obibok.py"),

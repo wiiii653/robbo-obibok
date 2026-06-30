@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, cast
+from hashlib import sha1
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from discord.ext import commands
 
 from app_state import PlaylistState
-from entrypoint_helpers import build_temp_path as build_entry_temp_path
 from playback_helpers import play_via_audacious, queue_position, send_now_playing_embed
 
 if TYPE_CHECKING:
@@ -16,6 +17,38 @@ if TYPE_CHECKING:
     from entrypoint_app import EntrypointComponentAccess
     from entrypoint_resources import EntrypointResources
     from entrypoint_state import EntrypointGlueStateProtocol
+
+
+def clear_predownload_state(state: Any, *, keep_file: bool = False) -> None:
+    """Reset pre-download bookkeeping and cancel in-flight work when needed."""
+    task = state.pre_download_task
+    state.set_predownload_task(None)
+    if task and not task.done():
+        task.cancel()
+    if not keep_file and state.pre_downloaded and os.path.exists(state.pre_downloaded):
+        try:
+            os.remove(state.pre_downloaded)
+        except OSError:
+            pass
+    state.clear_predownload()
+
+
+def place_track_in_queue(queue: list[str], url: str) -> tuple[list[str], int]:
+    """Return queue/index with the target track selected, inserting if needed."""
+    positioned_queue = list(queue)
+    try:
+        index = positioned_queue.index(url)
+    except ValueError:
+        positioned_queue.insert(0, url)
+        index = 0
+    return positioned_queue, index
+
+
+def build_temp_path(temp_dir: str, url: str) -> str:
+    """Create a collision-resistant temp path for a downloaded track."""
+    filename = url.split("/")[-1] or "track.bin"
+    digest = sha1(url.encode("utf-8")).hexdigest()[:12]
+    return os.path.join(temp_dir, f"{digest}_{filename}")
 
 
 @dataclass(slots=True)
@@ -33,15 +66,13 @@ class EntrypointGlue:
         return bool(queue_state.get("restored"))
 
     def place_track_in_queue(self, queue: list[str], url: str) -> tuple[list[str], int]:
-        from entrypoint_helpers import place_track_in_queue
-
         return place_track_in_queue(queue, url)
 
     def queue_position(self, state: PlaylistState) -> tuple[int, int]:
         return queue_position(state)
 
     def build_temp_path(self, url: str) -> str:
-        return build_entry_temp_path(self.resources.app_cfg().temp_dir, url)
+        return build_temp_path(self.resources.app_cfg().temp_dir, url)
 
     def after_stream_end(self, guild_id: int | None, error: Exception | None, source_id: int = 0) -> None:
         self.components.require().stream_runtime.after_stream_end(guild_id, error, source_id)

@@ -16,7 +16,7 @@ from test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_helpers import build_temp_path, place_track_in_queue
+from entrypoint_glue import build_temp_path, place_track_in_queue
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
 from stream_runtime import StreamRuntime
