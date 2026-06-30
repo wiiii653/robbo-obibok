@@ -9,7 +9,7 @@ Key facts:
 - **Runtime deps**: `discord.py[voice]`, `PyNaCl`, `aiohttp`, `PyYAML`
 - **Playback backend**: Audacious + virtual sink (pulseaudio)
 - **Collections**: 7 local archives — ASMA (6.3k), HVSC (60.8k), ModArchive (120k+), AY (4.5k), YM (7.2k), Tiny Music (418), SNES SPC (60k)
-- **Test suite**: 186/198 passing (12 fails = flock conflict with live bot)
+- **Test suite**: 186/198 passing (12 fails = flock conflict with live bot). On CI all 198 pass.
 - **CI**: 5 workflows (test, integration, launchers, entrypoint-runtime, typecheck)
 - **Build**: `make install` sets up venv + indexes
 
@@ -17,11 +17,11 @@ Key facts:
 
 ```
 domain_*          — pure data models (no IO, no Discord, no asyncio)
-entrypoint_*      — DI / IoC / composition root (wires everything together)
+entrypoint_*      — DI / IoC / composition root
 playback_*        — playback domain logic (Audacious, queue, monitoring)
 runtime_*         — runtime wiring and service facades
 bot_*             — Discord bot event loop and runtime
-archive_*         — archive abstraction layer (catalog, paths, downloads)
+archive_*         — archive abstraction layer
 collection_*      — collection definitions and specs
 ```
 
@@ -30,13 +30,13 @@ collection_*      — collection definitions and specs
 | Layer | Files | Responsibility |
 |---|---|---|
 | `domain_*` | 4 | Config, state, stores, services. Zero dependencies on Discord or asyncio. |
-| `entrypoint_*` | 15 | Lazy assembly, DI, mutable state hub, callback groups. Entrypoint only. |
-| `playback_*` | 9 | Audacious control, queue management, monitoring, asset runtime. |
-| `bot_*` | 5 | Discord events, bot runtime, command decorator factory. |
+| `entrypoint_*` | 15 | Lazy assembly, DI, mutable state hub, callback groups. |
+| `playback_*` | 8 | Audacious control, queue management, monitoring, asset runtime. |
+| `bot_*` | 4 | Discord events, bot runtime, command decorator factory. |
 | `runtime_*` | 7 | Service facade, composition, bootstrap, protocols, support. |
 | `archive_*` | 3 | Archive catalog, runtime config, downloads. |
 | `collection_*` | 3 | Collection specs, catalog, service. |
-| `launcher` | 4 | Process launcher, logged launcher, executable targets. |
+| launcher | 6 | Process launcher, logged launcher, executable targets, shell shim. |
 | Build tools | 7 | `build_*_index.py` — index rebuilders for each collection. |
 
 ### File Topology
@@ -47,10 +47,11 @@ robbo-obibok-strict.py           ← executable target (strict mode)
 robbo_obibok_launcher.py         ← process launcher
 robbo_obibok_logged_launcher.py  ← logging supervision launcher
 robbo_obibok_runtime.py          ← launcher runtime wiring
+run_bot_logged.py                ← compat entrypoint for logged launcher
 
 domain_state.py                  ← PlaylistState, AppRuntimeState, stores
 domain_config.py                 ← AppConfig, PlaybackConfig, PathConfig
-domain_context.py                ← AppContext, ArchiveRegistryViews, BootstrapApp, bootstrap_app()
+domain_context.py                ← AppContext, ArchiveRegistryViews, BootstrappedApp, bootstrap_app()
 domain_services.py               ← AppServices (facade over stores)
 
 entrypoint_app.py                ← EntrypointApp assembly, EntrypointFacade
@@ -75,11 +76,11 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 ### Typing
 
 - Use `from __future__ import annotations` in every file.
-- Use `@dataclass(slots=True)` for all data containers — no raw `__init__` unless necessary.
+- Use `@dataclass(slots=True)` for all data containers — avoid `__init__` where `@dataclass` suffices.
 - Use `Protocol` for interface contracts. Prefer Protocols over ABCs.
 - Use `TYPE_CHECKING` for import guards on type-only imports. No circular imports.
 - Use `Mapping` / `Iterable` (read-only views) in public interfaces, `dict` / `list` internally.
-- Limit `# type: ignore` / `# noqa` — current codebase has ~50 in 12k lines (~0.4%).
+- Only 1 `# type: ignore` / `# noqa` across the whole codebase (~12.8k lines).
 
 ### Patterns
 
@@ -119,33 +120,48 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 - **Mocking**: Prefer `unittest.mock` over `pytest.monkeypatch`. Use `types.SimpleNamespace` for lightweight fakes.
 - **Fixtures**: In `tests/test_entrypoint_launcher_fixtures.py`, `tests/test_entrypoint_module_fixtures.py`.
 - **Smoke tests**: `tests/test_runner_smoke.py` (735 lines) exercises the full assembly stack.
-- **Launcher tests**: `make test-launchers` (CI workflow: `.github/workflows/test-launchers.yml`).
-- **Entrypoint/runtime tests**: `.github/workflows/test-entrypoint-runtime.yml`.
+- **Launcher tests**: `make test-launchers` — the standalone script alias is `./test_launchers.sh`.
+  - The launcher smoke CI surface is `.github/workflows/test-launchers.yml`.
+  - The broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`.
 - **Integration**: `tests/test_real_services.py` — requires real archives on disk.
-
-**Important**: 12 tests fail when the live bot is running (flock file lock). This is expected. On CI, all 198 pass.
 
 ## Launcher Contract
 
-- `robbo_obibok_launcher.py` is the canonical process launcher.
-- `run_bot.sh` is a minimal shell shim that delegates to the launcher.
-- `run_bot_logged.py` adds log-file process supervision (separate on purpose).
+- `robbo_obibok_launcher.py` is the canonical process launcher for local entrypoint scripts.
+- `run_bot.sh` is a minimal shell shim that delegates to `robbo_obibok_launcher.py`.
+- `run_bot_logged.py` may add logging behavior, but it must reuse launcher helpers instead of reimplementing:
+  - `.env` loading
+  - `DISCORD_BOT_TOKEN` validation
+  - strict compatibility mode selection
+  - final entry command construction
+- `robbo_obibok_launcher.py` owns default vs strict executable target selection.
 - `robbo-obibok.py` and `robbo-obibok-strict.py` are the canonical executable targets.
-- Systemd units point at executable targets directly — no env-only switching.
-- `.env` loading is handled by `entrypoint_bootstrap.py` (config bootstrap), not by launchers.
-- Token validation happens at runtime in `boot_runtime.py` — not in the launcher.
+- Systemd units should point at those executable targets directly, not reconstruct launch logic with env-only switching.
+- `robbo_obibok_logged_launcher.py` remains separate on purpose. It adds log-file process supervision behavior, which is distinct from plain launcher execution and should stay thin rather than being merged back into `robbo_obibok_launcher.py`.
 
 ### Launcher File Map
 
 | File | Role |
 |---|---|
 | `robbo_obibok_launcher.py` | Process launcher + target selection |
-| `robbo_obibok_logged_launcher.py` | Logging supervision launcher |
+| `robbo_obibok_logged_launcher.py` | logging-oriented launcher module |
 | `robbo_obibok_runtime.py` | Launcher runtime wiring |
 | `robbo-obibok.py` | Default executable target |
 | `robbo-obibok-strict.py` | Strict compat executable target |
 | `run_bot_logged.py` | Compat entrypoint for logged launcher |
 | `run_bot.sh` | Minimal shell shim |
+
+### Boundary Notes
+
+- `entrypoint_bootstrap.py` loads `.env` for application/config bootstrap. That is separate from process-launch selection and not launcher duplication.
+- Token validation happens at runtime in `entrypoint_launcher_loader.py` / `robbo_obibok_runtime.py` — not in the launcher itself.
+
+### Test Surface
+
+- Use `make test-launchers` for the focused launcher smoke suite.
+- The standalone script alias is `./test_launchers.sh`.
+- The launcher smoke CI surface is `.github/workflows/test-launchers.yml`.
+- The broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`.
 
 ## Git Conventions
 
@@ -176,5 +192,6 @@ make clean            # Remove venv + caches
 
 pytest tests/ -q --tb=short                  # Quick test run
 pytest tests/test_command_behavior.py -q     # Command tests only
+pytest tests/test_install_assets.py -q       # Asset consistency checks
 python -c 'from domain_state import AppRuntimeState'  # Verify imports
 ```
