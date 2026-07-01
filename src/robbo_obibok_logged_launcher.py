@@ -12,7 +12,7 @@ from typing import MutableMapping
 from robbo_obibok_launcher import load_runtime_environment, selected_entry_command
 from robbo_obibok_launcher import selected_entry_script_from_env
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_logged_launch_command(
@@ -32,7 +32,7 @@ def run_logged_bot(
     env: dict[str, str] | None = None,
 ) -> int:
     runtime_env, command = build_logged_launch_command(root=root, env=env)
-    log_path = root / "bot_output.log"
+    log_path = root / "var" / "bot_output.log"
     with log_path.open("a", encoding="utf-8") as log:
         proc = subprocess.Popen(
             command,

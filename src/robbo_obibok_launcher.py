@@ -10,7 +10,7 @@ from typing import Mapping, MutableMapping, Sequence
 
 from runtime_support import load_dotenv_file
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def load_runtime_environment(
