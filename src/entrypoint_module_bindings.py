@@ -88,11 +88,11 @@ ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME = {
     spec.export_name: spec for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS
 }
 
-ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS = tuple(
+_ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS = tuple(
     spec for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS if spec.public_module_attr
 )
 
-ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS = tuple(
+_ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS = tuple(
     spec for spec in ENTRYPOINT_DIRECT_EXPORT_BINDINGS if not spec.public_module_attr
 )
 
@@ -230,7 +230,7 @@ ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES = frozenset({
 })
 
 ENTRYPOINT_EXECUTABLE_PUBLIC_DIRECT_COMPAT_ATTR_NAMES = frozenset(
-    spec.export_name for spec in ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS
+    spec.export_name for spec in _ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS
 )
 
 ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES = (
@@ -240,7 +240,7 @@ ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES = (
 ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES = ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES
 
 ENTRYPOINT_EXECUTABLE_PRIVATE_DIRECT_ATTR_NAMES = frozenset(
-    spec.export_name for spec in ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS
+    spec.export_name for spec in _ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS
 )
 
 ENTRYPOINT_EXECUTABLE_PRIVATE_ATTR_NAMES = frozenset({
@@ -309,7 +309,7 @@ def build_entrypoint_compat_module_bindings(
     }
 
 
-def resolve_compat_binding_attr(
+def _resolve_compat_binding_attr(
     name: str,
     *,
     compat_bindings: Mapping[str, object],
@@ -329,7 +329,7 @@ def resolve_bound_entrypoint_module_attr(
     raise AttributeError(name)
 
 
-def resolve_compat_entrypoint_module_attr(
+def _resolve_compat_entrypoint_module_attr(
     name: str,
     *,
     fallback_resolver: Callable[[str], object],
@@ -342,19 +342,19 @@ def resolve_compat_entrypoint_module_attr(
     return fallback_resolver(name)
 
 
-def is_supported_executable_attr(name: str) -> bool:
+def _is_supported_executable_attr(name: str) -> bool:
     return name in ENTRYPOINT_EXECUTABLE_SUPPORTED_ATTR_NAMES
 
 
-def is_stable_executable_attr(name: str) -> bool:
+def _is_stable_executable_attr(name: str) -> bool:
     return name in ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES
 
 
-def is_deprecated_executable_attr(name: str) -> bool:
+def _is_deprecated_executable_attr(name: str) -> bool:
     return name in ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES
 
 
-def supported_executable_dict_attrs(namespace: dict[str, object]) -> set[str]:
+def _supported_executable_dict_attrs(namespace: dict[str, object]) -> set[str]:
     return {name for name in namespace if name in ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES}
 
 
@@ -414,3 +414,14 @@ def _compat_source_get(
     if callable(getter):
         return getter(name)
     return None
+
+
+# ── backward-compat aliases for tests ──────────────────────────────────
+resolve_compat_binding_attr = _resolve_compat_binding_attr  # noqa: F401
+resolve_compat_entrypoint_module_attr = _resolve_compat_entrypoint_module_attr  # noqa: F401
+is_supported_executable_attr = _is_supported_executable_attr  # noqa: F401
+is_stable_executable_attr = _is_stable_executable_attr  # noqa: F401
+is_deprecated_executable_attr = _is_deprecated_executable_attr  # noqa: F401
+supported_executable_dict_attrs = _supported_executable_dict_attrs  # noqa: F401
+ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS = _ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS  # noqa: F401
+ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS = _ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS  # noqa: F401

@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(slots=True)
-class EntrypointExportBindings:
+class _EntrypointExportBindings:
     app: EntrypointApp
 
     def ensure_entrypoint_components(self) -> None:
@@ -115,7 +115,7 @@ class EntrypointExportBindings:
 
 
 def build_entrypoint_exports(app: EntrypointApp) -> dict[str, object]:
-    bindings = EntrypointExportBindings(app=app)
+    bindings = _EntrypointExportBindings(app=app)
     return {
         "_ensure_entrypoint_components": lambda: bindings.ensure_entrypoint_components,
         "_after_stream_end": lambda: bindings.after_stream_end,

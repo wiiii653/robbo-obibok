@@ -15,20 +15,20 @@ from entrypoint_module_bindings import (
 
 
 @dataclass(frozen=True, slots=True)
-class EntrypointStableBindingSpec:
+class _EntrypointStableBindingSpec:
     binding_name: str
     method_name: str
 
 
-ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS = tuple(
-    EntrypointStableBindingSpec(
+_ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS = tuple(
+    _EntrypointStableBindingSpec(
         spec.export_name,
         spec.export_name,
     )
     for spec in ENTRYPOINT_MODULE_STABLE_BINDINGS
 )
-ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS = tuple(
-    EntrypointStableBindingSpec(
+_ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS = tuple(
+    _EntrypointStableBindingSpec(
         spec.binding_name,
         spec.alias_name,
     )
@@ -36,13 +36,13 @@ ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS = tuple(
 )
 
 ENTRYPOINT_STABLE_RUNTIME_SURFACE_SPECS_BY_BINDING = {
-    spec.binding_name: spec for spec in ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
+    spec.binding_name: spec for spec in _ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
 }
 ENTRYPOINT_STABLE_RUNTIME_SURFACE_SPECS_BY_METHOD = {
     spec.method_name: spec
-    for spec in (ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS + ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS)
+    for spec in (_ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS + _ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS)
 }
-ENTRYPOINT_RUNTIME_STATE_BINDING_NAMES = frozenset(
+_ENTRYPOINT_RUNTIME_STATE_BINDING_NAMES = frozenset(
     {
         "_STATE",
         "_app_cfg",
@@ -101,10 +101,10 @@ def build_runtime_surface_bindings(
         else:
             def resolver(name):
                 return getattr(source, name)
-    selected_specs = ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
+    selected_specs = _ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
     if binding_names is not None:
         selected_specs = tuple(
-            spec for spec in ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS if spec.binding_name in binding_names
+            spec for spec in _ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS if spec.binding_name in binding_names
         )
     return {
         spec.binding_name: resolver(spec.binding_name)
@@ -152,12 +152,12 @@ def build_runtime_state_surface(
             def resolver(name):
                 return getattr(source, name)
     return EntrypointRuntimeStateSurface(
-        bindings={name: resolver(name) for name in ENTRYPOINT_RUNTIME_STATE_BINDING_NAMES}
+        bindings={name: resolver(name) for name in _ENTRYPOINT_RUNTIME_STATE_BINDING_NAMES}
     )
 
 
 def _build_surface_method(
-    spec: EntrypointStableBindingSpec,
+    spec: _EntrypointStableBindingSpec,
 ) -> Callable[[EntrypointRuntimeSurface], object]:
     def _method(self: EntrypointRuntimeSurface) -> object:
         if self.alias_bindings is not None and spec.binding_name in self.alias_bindings:
@@ -169,7 +169,7 @@ def _build_surface_method(
 
 def _build_alias_bindings(alias_resolver: Callable[[str], object]) -> dict[str, object]:
     alias_bindings: dict[str, object] = {}
-    for spec in ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS:
+    for spec in _ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS:
         try:
             alias_bindings[spec.binding_name] = alias_resolver(spec.binding_name)
         except (AttributeError, KeyError):
@@ -177,5 +177,10 @@ def _build_alias_bindings(alias_resolver: Callable[[str], object]) -> dict[str, 
     return alias_bindings
 
 
-for _spec in (ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS + ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS):
+for _spec in (_ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS + _ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS):
     setattr(EntrypointRuntimeSurface, _spec.method_name, _build_surface_method(_spec))
+
+
+# ── backward-compat aliases for tests ──────────────────────────────────
+ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS = _ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS  # noqa: F401
+ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS = _ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS  # noqa: F401

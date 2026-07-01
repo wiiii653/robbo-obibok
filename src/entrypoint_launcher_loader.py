@@ -75,7 +75,7 @@ class EntrypointSupportProtocol(Protocol):
     boot: EntrypointBootstrapBuilder
     state: EntrypointStateProtocol
     resources: LegacyAudioResourcesProtocol
-    guild_scope: GuildScope
+    guild_scope: _GuildScope
 
 
 class EntrypointModuleProtocol(Protocol):
@@ -89,7 +89,7 @@ class EntrypointModuleProtocol(Protocol):
     exports: dict[str, object]
 
 
-class EntrypointLegacyStateBindings:
+class _EntrypointLegacyStateBindings:
     __slots__ = (
         "_SUPPORT", "_ROOT", "log", "_SESSION_RUNTIME", "BOOT",
         "_STATE", "_RESOURCES", "_GUILD_SCOPE",
@@ -99,7 +99,7 @@ class EntrypointLegacyStateBindings:
     )
 
 
-class EntrypointLegacyControlBindings:
+class _EntrypointLegacyControlBindings:
     __slots__ = (
         "bot", "single_guild_check",
         "get_shared_session", "close_shared_session",
@@ -110,7 +110,7 @@ class EntrypointLegacyControlBindings:
     )
 
 
-class EntrypointLegacyBindings:
+class _EntrypointLegacyBindings:
     __slots__ = ("state", "control", "exports")
 
     def __init__(self, state, control, exports):
@@ -134,16 +134,16 @@ class EntrypointLegacyBindings:
             return default
 
 
-def build_entrypoint_legacy_bindings(
+def _build_entrypoint_legacy_bindings(
     *,
     entrypoint_module: EntrypointModuleProtocol,
     flip_order: list[str],
     flip_seq: list[str],
-) -> EntrypointLegacyBindings:
+) -> _EntrypointLegacyBindings:
     support = entrypoint_module.support
     resources = support.resources
     session_runtime = support.session_runtime
-    state = EntrypointLegacyStateBindings()
+    state = _EntrypointLegacyStateBindings()
     state._SUPPORT = support
     state._ROOT = support.root_dir
     state.log = support.logger
@@ -160,7 +160,7 @@ def build_entrypoint_legacy_bindings(
     state._APP = entrypoint_module.app
     state._FLIP_ORDER = flip_order
     state._FLIP_SEQ = flip_seq
-    control = EntrypointLegacyControlBindings()
+    control = _EntrypointLegacyControlBindings()
     control.bot = entrypoint_module.bot
     control.single_guild_check = entrypoint_module.single_guild_check
     control.get_shared_session = session_runtime.get_shared_session
@@ -176,7 +176,7 @@ def build_entrypoint_legacy_bindings(
     control.is_playing = resources.is_playing
     control.set_guild_id_override = entrypoint_module.guild_id_setter
     control.get_guild_id_override = entrypoint_module.guild_id_getter
-    return EntrypointLegacyBindings(
+    return _EntrypointLegacyBindings(
         state=state,
         control=control,
         exports=entrypoint_module.exports,
@@ -201,12 +201,12 @@ class CollectionStateProtocol(Protocol):
     service_facade: CollectionServiceFacadeProtocol
 
 
-class EntrypointCompatResolverProtocol(Protocol):
+class _EntrypointCompatResolverProtocol(Protocol):
     def resolve(self, name: str) -> object: ...
 
 
 class EntrypointModuleAppProtocol(Protocol):
-    compat: EntrypointCompatResolverProtocol
+    compat: _EntrypointCompatResolverProtocol
 
 
 class EntrypointLoadedModuleProtocol(Protocol):
@@ -219,7 +219,7 @@ class EntrypointLegacyExportsBindingsProtocol(Protocol):
     def resolve(self, name: str) -> object: ...
 
 
-class LazyModuleAttr:
+class _LazyModuleAttr:
     def __init__(self, getter: Callable[[], object], attr_name: str):
         self._getter = getter
         self._attr_name = attr_name
@@ -236,7 +236,7 @@ class LazyModuleAttr:
 
 
 @dataclass(frozen=True, slots=True)
-class EntrypointCompatView:
+class _EntrypointCompatView:
     resolve_compat: Callable[[str], object]
 
     def resolve_spec(self, spec: EntrypointCompatBindingSpec) -> object:
@@ -251,12 +251,12 @@ class EntrypointCompatView:
 
 
 @dataclass(slots=True)
-class EntrypointModuleLoader:
+class _EntrypointModuleLoader:
     module_factory: Callable[[], "EntrypointModule"]
     flip_order: list[str]
     flip_seq: list[str]
     module: "EntrypointModule | None" = None
-    bindings: EntrypointLegacyBindings | None = None
+    bindings: _EntrypointLegacyBindings | None = None
 
     def ensure_module(self) -> "EntrypointModule":
         if self.module is None:
@@ -268,7 +268,7 @@ class EntrypointModuleLoader:
             )
         return self.module
 
-    def legacy_bindings(self) -> EntrypointLegacyBindings:
+    def legacy_bindings(self) -> _EntrypointLegacyBindings:
         self.ensure_module()
         assert self.bindings is not None
         return self.bindings
@@ -282,8 +282,8 @@ class EntrypointModuleLoader:
     def bootstrap_app(self) -> "BootstrapAppProtocol":
         return cast("BootstrapAppProtocol", self.legacy_bindings().state._APP)
 
-    def compat(self) -> EntrypointCompatView:
-        return EntrypointCompatView(resolve_compat=self.resolve_compat)
+    def compat(self) -> _EntrypointCompatView:
+        return _EntrypointCompatView(resolve_compat=self.resolve_compat)
 
     def resolve_compat_view(self, view_name: str) -> object:
         return self.compat().resolve_view(view_name)
@@ -327,8 +327,8 @@ class EntrypointModuleLoader:
                 raise
             return self.resolve_compat(name)
 
-    def proxy(self, attr_name: str) -> LazyModuleAttr:
-        return LazyModuleAttr(self.ensure_module, attr_name)
+    def proxy(self, attr_name: str) -> _LazyModuleAttr:
+        return _LazyModuleAttr(self.ensure_module, attr_name)
 
     def lock_file(self) -> str:
         lock_file = self.runtime_state_surface().state().lock_file
@@ -345,15 +345,15 @@ class EntrypointModuleLoader:
             raise AttributeError(spec) from exc
 
 
-def _build_compat_view_method(spec: EntrypointCompatBindingSpec) -> Callable[[EntrypointCompatView], object]:
-    def _method(self: EntrypointCompatView) -> object:
+def _build_compat_view_method(spec: EntrypointCompatBindingSpec) -> Callable[[_EntrypointCompatView], object]:
+    def _method(self: _EntrypointCompatView) -> object:
         return self.resolve_spec(spec)
 
     return _method
 
 
-def _build_loader_compat_method(spec: EntrypointCompatBindingSpec) -> Callable[[EntrypointModuleLoader], object]:
-    def _method(self: EntrypointModuleLoader) -> object:
+def _build_loader_compat_method(spec: EntrypointCompatBindingSpec) -> Callable[[_EntrypointModuleLoader], object]:
+    def _method(self: _EntrypointModuleLoader) -> object:
         return self.resolve_compat_view(spec.view_name)
 
     return _method
@@ -368,8 +368,8 @@ for _compat_spec in (
     ENTRYPOINT_COMPAT_LOCK_FILE,
     ENTRYPOINT_COMPAT_SHUTDOWN_FLAG,
 ):
-    setattr(EntrypointCompatView, _compat_spec.view_name, _build_compat_view_method(_compat_spec))
-    setattr(EntrypointModuleLoader, _compat_spec.view_name, _build_loader_compat_method(_compat_spec))
+    setattr(_EntrypointCompatView, _compat_spec.view_name, _build_compat_view_method(_compat_spec))
+    setattr(_EntrypointModuleLoader, _compat_spec.view_name, _build_loader_compat_method(_compat_spec))
 
 
 # ─── Inlined from entrypoint_launcher_state.py ──────────────────────────────
@@ -404,7 +404,7 @@ class EntrypointRuntimeLoaderProtocol(Protocol):
 
 
 @dataclass(slots=True)
-class EntrypointRuntimeStateAccess:
+class _EntrypointRuntimeStateAccess:
     state: EntrypointRuntimeStateProtocol
     app: BootstrapAppProtocol
 
@@ -419,11 +419,11 @@ class EntrypointRuntimeStateAccess:
 
 
 @dataclass(slots=True)
-class EntrypointRuntimeController:
+class _EntrypointRuntimeController:
     loader: EntrypointRuntimeLoaderProtocol
 
-    def state_access(self) -> EntrypointRuntimeStateAccess:
-        return EntrypointRuntimeStateAccess(
+    def state_access(self) -> _EntrypointRuntimeStateAccess:
+        return _EntrypointRuntimeStateAccess(
             state=self.loader.runtime_state_surface().state(),
             app=self.loader.bootstrap_app(),
         )
@@ -457,7 +457,7 @@ class EntrypointRuntimeController:
 # ─── Inlined from entrypoint_launcher_support.py ────────────────────────────
 
 
-def configure_entrypoint_logger(root_dir: str, logger_name: str) -> logging.Logger:
+def _configure_entrypoint_logger(root_dir: str, logger_name: str) -> logging.Logger:
     logger = logging.getLogger(logger_name)
     if logger.handlers:
         return logger
@@ -490,7 +490,7 @@ class EntrypointSupport:
     boot: EntrypointBootstrapBuilder
     state: EntrypointStateProtocol
     resources: EntrypointResources
-    guild_scope: GuildScope
+    guild_scope: _GuildScope
 
 
 def build_entrypoint_support(
@@ -500,7 +500,7 @@ def build_entrypoint_support(
     load_last_collection: Callable[[str], str | None],
     atomic_json_write: Callable[[str, object, object], None],
     state: EntrypointStateProtocol | None = None,
-    configure_logger: Callable[[str, str], logging.Logger] = configure_entrypoint_logger,
+    configure_logger: Callable[[str, str], logging.Logger] = _configure_entrypoint_logger,
 ) -> EntrypointSupport:
     root_dir = os.path.dirname(os.path.abspath(module_path))
     # module is in src/, root is one level up
@@ -520,7 +520,7 @@ def build_entrypoint_support(
 
         state = EntrypointState()
     resources = EntrypointResources(boot=boot, state=state, logger=logger)
-    guild_scope = GuildScope()
+    guild_scope = _GuildScope()
     return EntrypointSupport(
         root_dir=root_dir,
         logger=logger,
@@ -536,7 +536,7 @@ def build_entrypoint_support(
 
 
 @dataclass(slots=True)
-class GuildScope:
+class _GuildScope:
     override_guild_id: int | None = None
 
     def resolve(self, configured_guild_id: int | None) -> int | None:
@@ -592,8 +592,8 @@ def build_entrypoint_launcher(
 
 @dataclass(slots=True)
 class LazyEntrypointLauncher:
-    loader: EntrypointModuleLoader
-    runtime: EntrypointRuntimeController
+    loader: _EntrypointModuleLoader
+    runtime: _EntrypointRuntimeController
 
     @classmethod
     def create(
@@ -603,12 +603,19 @@ class LazyEntrypointLauncher:
         flip_order: list[str],
         flip_seq: list[str],
     ) -> "LazyEntrypointLauncher":
-        loader = EntrypointModuleLoader(
+        loader = _EntrypointModuleLoader(
             module_factory=module_factory,
             flip_order=flip_order,
             flip_seq=flip_seq,
         )
         return cls(
             loader=loader,
-            runtime=EntrypointRuntimeController(loader=loader),
+            runtime=_EntrypointRuntimeController(loader=loader),
         )
+
+
+# ── backward-compat aliases for tests ──────────────────────────────────
+EntrypointModuleLoader = _EntrypointModuleLoader  # noqa: F401
+EntrypointRuntimeController = _EntrypointRuntimeController  # noqa: F401
+EntrypointRuntimeStateAccess = _EntrypointRuntimeStateAccess  # noqa: F401
+build_entrypoint_legacy_bindings = _build_entrypoint_legacy_bindings  # noqa: F401

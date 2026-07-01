@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from entrypoint_state import EntrypointCompatStateProtocol
 
 
-class LazyCallableExport:
+class _LazyCallableExport:
     def __init__(self, resolver: Callable[[], Callable[..., object]]):
         self._resolver = resolver
 
@@ -51,7 +51,7 @@ class LazyCallableExport:
         return self._target()(*args, **kwargs)
 
 
-class EntrypointSurfaceLoaderProtocol(Protocol):
+class _EntrypointSurfaceLoaderProtocol(Protocol):
     def resolve_legacy(self, name: str) -> object: ...
 
     def collection_export(self, spec: str | EntrypointDirectExportSpec) -> Callable[..., object]: ...
@@ -77,7 +77,7 @@ def build_entrypoint_compat_registry_attrs(
     return registry_attrs
 
 
-def build_entrypoint_direct_export_map(
+def _build_entrypoint_direct_export_map(
     *,
     resolve_collection: Callable[[EntrypointDirectExportSpec], Callable[..., object]],
     resolve_runtime: Callable[[EntrypointDirectExportSpec], Callable[..., object]],
@@ -92,8 +92,8 @@ def build_entrypoint_direct_export_map(
 
 
 @dataclass(frozen=True, slots=True)
-class EntrypointSurfaceExportAdapter:
-    loader: EntrypointSurfaceLoaderProtocol
+class _EntrypointSurfaceExportAdapter:
+    loader: _EntrypointSurfaceLoaderProtocol
 
     def resolve_legacy(self, name: str) -> object:
         return self.loader.resolve_legacy(name)
@@ -105,14 +105,14 @@ class EntrypointSurfaceExportAdapter:
         return self.loader.runtime_export(spec)
 
 
-def build_entrypoint_surface_exports(*, resolver: SurfaceExportResolver) -> Mapping[str, object]:
-    def lazy_collection(spec: EntrypointDirectExportSpec) -> LazyCallableExport:
-        return LazyCallableExport(lambda: resolver.resolve_collection(spec))
+def _build_entrypoint_surface_exports(*, resolver: SurfaceExportResolver) -> Mapping[str, object]:
+    def lazy_collection(spec: EntrypointDirectExportSpec) -> _LazyCallableExport:
+        return _LazyCallableExport(lambda: resolver.resolve_collection(spec))
 
-    def lazy_runtime(spec: EntrypointDirectExportSpec) -> LazyCallableExport:
-        return LazyCallableExport(lambda: resolver.resolve_runtime(spec))
+    def lazy_runtime(spec: EntrypointDirectExportSpec) -> _LazyCallableExport:
+        return _LazyCallableExport(lambda: resolver.resolve_runtime(spec))
 
-    direct_exports = build_entrypoint_direct_export_map(
+    direct_exports = _build_entrypoint_direct_export_map(
         resolve_collection=lazy_collection,
         resolve_runtime=lazy_runtime,
     )
@@ -132,8 +132,14 @@ def build_entrypoint_module_surface(
     resolve_fallback: Callable[[str], object],
 ) -> EntrypointModuleSurface:
     return EntrypointModuleSurface(
-        exports=build_entrypoint_surface_exports(
-            resolver=EntrypointSurfaceExportAdapter(loader=launcher.loader),
+        exports=_build_entrypoint_surface_exports(
+            resolver=_EntrypointSurfaceExportAdapter(loader=launcher.loader),
         ),
         resolve_fallback=resolve_fallback,
     )
+
+
+# ── backward-compat aliases for tests ──────────────────────────────────
+EntrypointSurfaceExportAdapter = _EntrypointSurfaceExportAdapter  # noqa: F401
+build_entrypoint_direct_export_map = _build_entrypoint_direct_export_map  # noqa: F401
+build_entrypoint_surface_exports = _build_entrypoint_surface_exports  # noqa: F401
