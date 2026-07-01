@@ -55,25 +55,48 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 
 | Command | Description |
 |---------|-------------|
-| `!play` / `!radio` | Start shuffled radio from current collection |
+| **🎮 Playback** | |
+| `!play` / `!radio` / `!pl` | Start shuffled radio from current collection |
 | `!play <query>` | Search and play first matching track |
 | `!play <number>` | Play a track from last search results |
-| `!stop` | Stop playback and disconnect |
-| `!skip` / `!next` | Skip to next track |
+| `!stop` / `!st` | Stop playback and disconnect |
+| `!skip` / `!next` / `!nt` | Skip to next track |
+| `!jump <n>` | Jump to track N in queue |
 | `!np` | Show current track info |
-| `!stats` | Show radio stats |
-| `!search <query>` | Search tracks by name, directory, or author |
-| `!flip` / `!switch` / `!toggle` / `!przelacz` | Rotate through all available collections |
+| `!queue` / `!q` | Show upcoming tracks |
+| `!history` | Show last 10 played tracks |
+| `!sleep <min>` | Stop playback after N minutes |
+| `!loop` | Toggle repeat current track |
+| `!volume <0-200>` | Set playback volume |
+| `!clear` | Clear the queue |
+| **🎵 Collections** | |
+| `!flip` / `!switch` / `!toggle` / `!przelacz` / `!fl` | Rotate through all available collections |
 | `!status` / `!mode` / `!collection` | Show current collection and queue info |
-| `!hvsc` / `!c64` / `!sid` | Switch to **Commodore 64 SID** collection |
-| `!asma` | Switch to **Atari SAP** collection |
-| `!ay` / `!spectrum` | Switch to **ZX Spectrum AY** collection |
-| `!ym` / `!st` | Switch to **Atari ST YM** collection |
-| `!mod` / `!modarchive` | Switch to **ModArchive tracker modules** collection |
-| `!snes` / `!spc` | Switch to **SNES SPC** collection |
-| `!tiny` | Switch to **Tiny Music modules** collection |
+| `!search <query>` | Search tracks by name, directory, or author |
+| `!snes search <term>` | Search SNES collection by game/composer |
+| `!hvsc` / `!c64` / `!sid` | Switch to **Commodore 64 SID** (~60 500) |
+| `!asma` | Switch to **Atari SAP** (~6 300) |
+| `!mod` / `!modarchive` / `!modules` | Switch to **ModArchive tracker modules** (~175 000) |
+| `!ay` / `!spectrum` / `!zx` | Switch to **ZX Spectrum AY** (~4 500) |
+| `!ym` / `!st` / `!atarist` | Switch to **Atari ST YM** (~7 200) |
+| `!tiny` / `!tm` | Switch to **Tiny Music modules** (~418) |
+| `!snes` / `!spc` | Switch to **SNES SPC** (~60 000) |
+| `!play subsong <number>` | Play a specific subsong from current track (SID/SAP only) |
+| **❤️ Favorites & Blacklist** | |
 | `!favorites` / `!favs` / `!playlista` | Show your reaction-based favorites playlist |
-| `!play subsong <number>` | Play a specific subsong from the current track (SID/SAP only) |
+| `!favplay` / `!fp` | Play favorites in shuffle mode |
+| `!favsave` / `!pls` | Save current favorites as a named playlist |
+| `!favload` / `!fpl` | Load and play a saved playlist |
+| `!playlists` / `!plist` | List all saved playlists |
+| `!blk` | Blacklist the currently playing track |
+| `!blks` | Show blacklist |
+| `!blkrm <n>` | Remove track N from blacklist |
+| **🔧 Tools & Info** | |
+| `!stats` | Show radio stats (uptime, tracks played) |
+| `!export` | Export queue as plain text |
+| `!ocko` | 🦉 Display an ASCII owl |
+| `!refresh` | Re-crawl ASMA collection *(mods only)* |
+| `!reindex` | Re-fetch metadata from files *(mods only)* |
 
 ### Favorites System
 
