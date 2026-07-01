@@ -9,13 +9,6 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from test_support import (
-    MagicMock,
-    RegistrationBot,
-    patch,
-    unittest,
-)
-
 import bot_events
 import library_commands
 import playback_commands
@@ -24,6 +17,12 @@ import session_runtime
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
 from entrypoint_glue import build_single_guild_check
+from test_support import (
+    MagicMock,
+    RegistrationBot,
+    patch,
+    unittest,
+)
 
 
 def build_archive_runtime_fixture():

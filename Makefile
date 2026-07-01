@@ -67,7 +67,7 @@ install-dev: $(DEV_STAMP)
 
 lint: $(DEV_STAMP)
 	@echo "🔍 Running ruff checks..."
-	@cd $(CURDIR) && PYTHONPATH=src $(VENV)/bin/ruff check src/ tests/ scripts/
+	@cd $(CURDIR) && PYTHONPATH=src/robbo_obibok $(VENV)/bin/ruff check src/ tests/ scripts/
 	@echo "✅ Lint passed"
 
 format: $(DEV_STAMP)
@@ -77,11 +77,11 @@ format: $(DEV_STAMP)
 
 test-launchers: $(VENV)/bin/activate
 	@echo "🧪 Running launcher smoke tests..."
-	@cd $(CURDIR) && PYTHONPATH=src ./scripts/test_launchers.sh
+	@cd $(CURDIR) && PYTHONPATH=src/robbo_obibok ./scripts/test_launchers.sh
 
 test: $(DEV_STAMP)
 	@echo "🧪 Running tests..."
-	@cd $(CURDIR) && PYTHONPATH=src $(PYTHON) -m unittest discover -s tests/ -v
+	@cd $(CURDIR) && PYTHONPATH=src/robbo_obibok $(PYTHON) -m unittest discover -s tests/ -v
 
 test-integration: $(VENV)/bin/activate
 	@echo "Running real dependency integration tests..."

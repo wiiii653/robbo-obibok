@@ -4,8 +4,8 @@ on:
   push:
     paths:
       - ".github/workflows/test-entrypoint-runtime.yml"
-      - "src/entrypoint_*.py"
-      - "src/robbo_obibok_runtime.py"
+      - "src/robbo_obibok/entrypoint_*.py"
+      - "src/robbo_obibok/robbo_obibok_runtime.py"
       - "robbo-obibok.py"
       - "robbo-obibok-strict.py"
       - "tests/test_entrypoint_*.py"
@@ -15,8 +15,8 @@ on:
   pull_request:
     paths:
       - ".github/workflows/test-entrypoint-runtime.yml"
-      - "src/entrypoint_*.py"
-      - "src/robbo_obibok_runtime.py"
+      - "src/robbo_obibok/entrypoint_*.py"
+      - "src/robbo_obibok/robbo_obibok_runtime.py"
       - "robbo-obibok.py"
       - "robbo-obibok-strict.py"
       - "tests/test_entrypoint_*.py"
@@ -40,7 +40,7 @@ jobs:
       - name: Install requirements
         run: ./venv/bin/python -m pip install -r requirements.txt
       - name: Run entrypoint/runtime regression suite
-        run: PYTHONPATH=src ./venv/bin/python -m unittest -v \
+        run: PYTHONPATH=src/robbo_obibok ./venv/bin/python -m unittest -v \
           tests.test_entrypoint_executable_assembly \
           tests.test_entrypoint_launcher \
           tests.test_entrypoint_module_bindings \

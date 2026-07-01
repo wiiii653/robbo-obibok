@@ -47,6 +47,7 @@ from entrypoint_module_bindings import (
     resolve_compat_entrypoint_module_attr,
     supported_executable_dict_attrs,
 )
+
 from tests.test_entrypoint_module_fixtures import (
     build_fake_module_bootstrap,
     build_fake_module_deps,

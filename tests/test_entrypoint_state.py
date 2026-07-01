@@ -13,6 +13,7 @@ import entrypoint_app
 import entrypoint_bootstrap
 import entrypoint_components
 import entrypoint_runtime_surface
+
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()

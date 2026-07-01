@@ -1,12 +1,31 @@
 [build-system]
 requires = ["setuptools>=64"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "robbo-obibok"
 version = "0.1.0"
 description = "Discord chiptune radio bot"
 requires-python = ">=3.11"
+dependencies = [
+    "discord.py[voice]>=2.3,<3",
+    "pynacl>=1.5,<2",
+    "aiohttp>=3.9,<4",
+    "pyyaml>=6.0,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.11,<1",
+]
+
+[project.scripts]
+robbo-obibok = "robbo_obibok.robbo_obibok_runtime:main"
+robbo-obibok-strict = "robbo_obibok.robbo_obibok_runtime:main_strict"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 target-version = "py311"

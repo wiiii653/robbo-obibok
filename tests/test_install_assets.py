@@ -29,7 +29,7 @@ class InstallAssetsTests(unittest.TestCase):
             position = next_position
 
     def test_launch_helper_declares_canonical_entry_scripts(self):
-        launcher_text = (ROOT / "src" / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
+        launcher_text = (ROOT / "src" / "robbo_obibok" / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
 
         self.assertIn('DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"', launcher_text)
         self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launcher_text)
@@ -54,8 +54,8 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make run-strict", install_text)
 
     def test_cli_entrypoints_delegate_to_shared_bootstrap(self):
-        logged_launcher_text = (ROOT / "src" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
-        runtime_text = (ROOT / "src" / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
+        logged_launcher_text = (ROOT / "src" / "robbo_obibok" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
+        runtime_text = (ROOT / "src" / "robbo_obibok" / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
         entrypoint_text = (ROOT / "robbo-obibok.py").read_text(encoding="utf-8")
         strict_entrypoint_text = (ROOT / "robbo-obibok-strict.py").read_text(encoding="utf-8")
 
@@ -68,8 +68,8 @@ class InstallAssetsTests(unittest.TestCase):
     def test_launch_assets_are_consistent_across_entrypoints_docs_and_services(self):
         shell_text = (ROOT / "run_bot.sh").read_text(encoding="utf-8")
         launcher_script_text = (ROOT / "scripts" / "test_launchers.sh").read_text(encoding="utf-8")
-        logged_launcher_text = (ROOT / "src" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
-        launcher_text = (ROOT / "src" / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
+        logged_launcher_text = (ROOT / "src" / "robbo_obibok" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
+        launcher_text = (ROOT / "src" / "robbo_obibok" / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
         make_text = (ROOT / "Makefile").read_text(encoding="utf-8")
         readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
         install_text = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
@@ -78,7 +78,7 @@ class InstallAssetsTests(unittest.TestCase):
         workflow_text = (ROOT / ".github" / "workflows" / "test-launchers.yml").read_text(encoding="utf-8")
         runtime_workflow_text = (ROOT / ".github" / "workflows" / "test-entrypoint-runtime.yml").read_text(encoding="utf-8")
 
-        self.assertIn("exec ./venv/bin/python3 -u src/robbo_obibok_launcher.py", shell_text)
+        self.assertIn("exec ./venv/bin/python3 -u src/robbo_obibok/robbo_obibok_launcher.py", shell_text)
         self.assertIn("tests.test_robbo_obibok_logged_launcher", launcher_script_text)
         self.assertNotIn("ENTRY_SCRIPT=", shell_text)
         self.assertIn("build_logged_launch_command", logged_launcher_text)

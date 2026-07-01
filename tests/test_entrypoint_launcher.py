@@ -18,6 +18,7 @@ from entrypoint_module_bindings import (
     is_supported_executable_attr,
     supported_executable_dict_attrs,
 )
+
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
 from tests.test_support import install_discord_stubs
 

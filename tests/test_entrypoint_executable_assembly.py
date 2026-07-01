@@ -22,6 +22,7 @@ from entrypoint_module_bindings import (
     ENTRYPOINT_EXPORT_GRAPH,
     ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
 )
+
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
 
 

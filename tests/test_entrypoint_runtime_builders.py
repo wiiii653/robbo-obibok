@@ -23,6 +23,7 @@ from entrypoint_runtime_surface import (
     build_runtime_surface,
 )
 from entrypoint_runtime_tasks import build_entrypoint_runtime_tasks
+
 from tests.test_entrypoint_runtime_fixtures import (
     build_runtime_callback_inputs,
     build_runtime_task_inputs,

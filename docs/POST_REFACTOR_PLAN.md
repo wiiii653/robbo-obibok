@@ -5,5 +5,4 @@ previous project structure. Those issues have been addressed by subsequent
 reorganisations and refactoring work.
 
 See [MAINTAINABILITY_PLAN.md](./MAINTAINABILITY_PLAN.md) for the current
-maintenance roadmap, and the `Implementation_Plan.md` file for the active
-10-phase improvement plan (Phase 1 in progress).
+maintenance roadmap. The corrective plan (Phases 1–9) has been fully implemented.

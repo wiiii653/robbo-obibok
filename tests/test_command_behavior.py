@@ -10,13 +10,12 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from test_runtime_context import command_test_context
-from test_support import FakeContext, RegistrationBot, patch, unittest
-
 import library_commands
 import playback_commands
 from collection_catalog import FLIP_SEQ as COLLECTION_FLIP_SEQ
 from domain_state import PlaylistState
+from test_runtime_context import command_test_context
+from test_support import FakeContext, RegistrationBot, patch, unittest
 
 
 class AsyncTestCase(unittest.TestCase):

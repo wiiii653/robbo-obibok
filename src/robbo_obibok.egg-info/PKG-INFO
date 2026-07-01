@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: robbo-obibok
+Version: 0.1.0
+Summary: Discord chiptune radio bot
+Requires-Python: >=3.11
+Requires-Dist: discord.py[voice]<3,>=2.3
+Requires-Dist: pynacl<2,>=1.5
+Requires-Dist: aiohttp<4,>=3.9
+Requires-Dist: pyyaml<7,>=6.0
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: ruff<1,>=0.11; extra == "dev"

@@ -9,8 +9,8 @@ on:
       - "scripts/install.sh"
       - "deploy/robbo-obibok.service"
       - "deploy/robbo-obibok-strict.service"
-      - "src/robbo_obibok_launcher.py"
-      - "src/robbo_obibok_logged_launcher.py"
+      - "src/robbo_obibok/robbo_obibok_launcher.py"
+      - "src/robbo_obibok/robbo_obibok_logged_launcher.py"
       - "run_bot.sh"
       - "scripts/test_launchers.sh"
       - "tests/test_install_assets.py"
@@ -24,8 +24,8 @@ on:
       - "scripts/install.sh"
       - "deploy/robbo-obibok.service"
       - "deploy/robbo-obibok-strict.service"
-      - "src/robbo_obibok_launcher.py"
-      - "src/robbo_obibok_logged_launcher.py"
+      - "src/robbo_obibok/robbo_obibok_launcher.py"
+      - "src/robbo_obibok/robbo_obibok_logged_launcher.py"
       - "run_bot.sh"
       - "scripts/test_launchers.sh"
       - "tests/test_install_assets.py"
@@ -48,4 +48,4 @@ jobs:
       - name: Install requirements
         run: ./venv/bin/python -m pip install -r requirements.txt
       - name: Run launcher smoke suite
-        run: PYTHONPATH=src ./scripts/test_launchers.sh
+        run: PYTHONPATH=src/robbo_obibok ./scripts/test_launchers.sh
