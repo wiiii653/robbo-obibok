@@ -261,7 +261,7 @@ make build-indexes    # Rebuild all track indexes
 make clean            # Remove venv + caches
 
 # Regenerate lockfile after changing requirements.txt:
-#   . venv/bin/activate && pip freeze --all > requirements.lock.txt
+#   uv pip compile requirements.txt requirements-dev.txt --universal --generate-hashes --output-file requirements.lock.txt
 
 # Extract ModArchive 2007 snapshot (optional, 67GB):
 #   python3 extract_modarchive_local.py

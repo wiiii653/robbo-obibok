@@ -21,7 +21,7 @@ help:
 	@echo "  make lint            # Run ruff linter"
 	@echo "  make format          # Run ruff formatter"
 	@echo "  make build-indexes   # Build all local track indexes"
-	@echo "  make requirements.lock # Regenerate lock file from requirements*.txt"
+	@echo "  make requirements.lock.txt # Regenerate lock file from requirements*.txt"
 	@echo "  make clean           # Remove venv, caches, temp files"
 	@echo "  make help            # This message"
 
