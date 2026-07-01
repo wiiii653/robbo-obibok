@@ -19,6 +19,7 @@ from collection_service import CollectionArchiveProtocol, CollectionService
 from collection_specs import CollectionSpec
 from domain_services import AppServicesProtocol
 from domain_state import PlaylistState
+from runtime_task_manager import TaskManager
 from session_runtime import (
     EmbedFactoryProtocol,
     MetadataSessionDependencies,
@@ -116,6 +117,7 @@ class RuntimeState:
     modarchive_store: ModArchiveNameStore | None = None
     snes_store: SnesMetadataStore | None = None
     playback_handlers: dict[str, Callable[..., Awaitable[bool]]] = field(default_factory=dict)
+    task_manager: TaskManager | None = None
 
     def __post_init__(self) -> None:
         if self.metadata_store is None:
@@ -504,6 +506,8 @@ class BotRuntime:
 
     async def graceful_shutdown(self) -> None:
         self.state.shutdown_flag.set()
+        if self.state.task_manager is not None:
+            self.state.task_manager.cancel_all()
         self.bootstrap.logger.info("Shutting down gracefully...")
         self.bootstrap.release_process_lock(self.config.LOCK_FILE)
         for state in self.state.app_services.iter_guild_states():

@@ -35,7 +35,7 @@ collection_*      — collection definitions and specs
 | `entrypoint_*` | 15 | Lazy assembly, DI, mutable state hub, callback groups. |
 | `playback_*` | 9 | Audacious control, queue management, monitoring, volume, asset runtime. |
 | `bot_*` | 4 | Discord events, bot runtime, command decorator factory. |
-| `runtime_*` | 8 | Service facade, composition, bootstrap, protocols, support, io. |
+| `runtime_*` | 9 | Service facade, composition, bootstrap, protocols, support, io, task manager. |
 | `archive_*` | 3 | Archive catalog, runtime config, downloads. |
 | `collection_*` | 3 | Collection specs, catalog, service. |
 | launcher | 6 | Process launcher, logged launcher, executable targets, shell shim. |
@@ -91,6 +91,7 @@ collection_*      — collection definitions and specs
 │   ├── runtime_callback_builders.py     ← Callback builder support
 │   ├── runtime_composition.py           ← Service composition
 │   ├── runtime_io.py                    ← File I/O helpers
+│   ├── runtime_task_manager.py          ← Background task lifecycle
 │   ├── runtime_protocols.py             ← Protocol contracts
 │   ├── runtime_service_facade.py        ← Service facade
 │   ├── runtime_support.py               ← Dependency checks, environment loading

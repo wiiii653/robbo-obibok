@@ -41,6 +41,7 @@ from runtime_protocols import (
     StreamRuntimeProtocol,
 )
 from runtime_service_facade import RuntimeServiceFacade
+from runtime_task_manager import TaskManager
 
 if TYPE_CHECKING:
     from discord.ext import commands
@@ -126,6 +127,7 @@ def build_runtime_state(
     shutdown_flag: asyncio.Event,
     snes_metadata: Mapping[str, dict[str, object]],
     status_count_cache: dict[str, tuple[float, int | str]],
+    task_manager: TaskManager | None = None,
 ) -> RuntimeState:
     return RuntimeState(
         active_streams=active_streams,
@@ -137,6 +139,7 @@ def build_runtime_state(
         shutdown_flag=shutdown_flag,
         snes_metadata=snes_metadata,
         status_count_cache=status_count_cache,
+        task_manager=task_manager,
     )
 
 
@@ -321,6 +324,7 @@ class EntrypointRuntimeInitializer:
     components: "EntrypointComponentAccess"
     registration_hooks: RuntimeRegistrationHooks
     callbacks: AppEntrypointCallbacks
+    _task_manager: TaskManager | None = None
 
     def build_startup_environment(self) -> StartupEnvironment:
         from entrypoint_runtime import build_startup_env
@@ -369,7 +373,16 @@ class EntrypointRuntimeInitializer:
             shutdown_flag=shutdown_flag,
             snes_metadata=self.state.runtime_snes_metadata(),
             status_count_cache=self.status_count_cache,
+            task_manager=self._task_manager,
         )
+
+    @property
+    def task_manager(self) -> TaskManager:
+        if self._task_manager is None:
+            self._task_manager = TaskManager(
+                logger=self.resources.logger,
+            )
+        return self._task_manager
 
     def build_app_callback_bundle(self):
         from entrypoint_runtime import build_app_callbacks
