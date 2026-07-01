@@ -126,9 +126,7 @@ sudo apt install -y python3 python3-venv audacious audacious-plugins ffmpeg pipe
 
 git clone git@github.com:wiiii653/robbo-obibok.git
 cd robbo-obibok
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+make install
 ```
 
 ### Fedora
@@ -138,9 +136,7 @@ sudo dnf install -y python3 python3-virtualenv audacious audacious-plugins ffmpe
 
 git clone git@github.com:wiiii653/robbo-obibok.git
 cd robbo-obibok
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+make install
 ```
 
 ### Arch Linux
@@ -150,9 +146,7 @@ sudo pacman -S python python-virtualenv audacious audacious-plugins ffmpeg pipew
 
 git clone git@github.com:wiiii653/robbo-obibok.git
 cd robbo-obibok
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+make install
 ```
 
 ## Running
@@ -186,6 +180,13 @@ Development checks:
 ```bash
 make test
 make test-integration
+```
+
+Lock file management:
+
+```bash
+# Regenerate requirements.lock.txt after changing requirements*.txt
+make requirements.lock.txt
 ```
 
 The logged launcher, strict mode, and entrypoint smoke targets are also available — see `make help`.
@@ -361,14 +362,13 @@ robbo-obibok/
 │   ├── bot_*.py                # Discord bot runtime
 │   ├── archive_*.py            # Archive abstraction
 │   ├── collection_*.py         # Collection specs
-│   └── ...                     # (63 source files total)
+│   └── ...                     # (56 source files total)
 ├── scripts/                   # Build and utility scripts
 │   ├── build_*_index.py       # Local index builders
 │   ├── install.sh             # Installation script
 │   └── test_launchers.sh      # Launcher smoke test runner
 ├── docs/                      # Documentation
-│   ├── MAINTAINABILITY_PLAN.md
-│   └── POST_REFACTOR_PLAN.md
+│   └── MAINTAINABILITY_PLAN.md
 ├── config.yaml                # Configuration file
 ├── requirements.txt           # Python dependencies
 ├── requirements.lock.txt      # Locked dependencies
