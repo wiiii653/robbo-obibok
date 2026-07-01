@@ -99,7 +99,11 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             await persist(ctx, "Queue", deps.save_queue, state)
             if state.monitor_task and not state.monitor_task.done():
                 state.monitor_task.cancel()
-            state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
+            if deps.task_manager is not None:
+                task = deps.task_manager.create(f"monitor_{ctx.guild.id}", deps.monitor_playback(ctx, vc, ctx.guild.id))
+            else:
+                task = asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id))
+            state.set_monitor_task(task)
         return True
 
     @bot.command(aliases=["favs", "playlist"])

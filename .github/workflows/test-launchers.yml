@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - ".github/workflows/test-launchers.yml"
-      - "AGENTS.md"
       - "Makefile"
       - "README.md"
       - "scripts/install.sh"
@@ -20,7 +19,6 @@ on:
   pull_request:
     paths:
       - ".github/workflows/test-launchers.yml"
-      - "AGENTS.md"
       - "Makefile"
       - "README.md"
       - "scripts/install.sh"

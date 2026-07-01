@@ -49,6 +49,7 @@ async def monitor_playback_entry(
     skip_to_next: Callable[[object], Awaitable[None]],
     stop_all_players: Callable[[], None],
     logger: logging.Logger,
+    task_manager: Any | None = None,
 ) -> None:
     from playback_runtime import MonitorDependencies
     from playback_runtime import monitor_playback as runtime_monitor_playback
@@ -80,6 +81,7 @@ async def monitor_playback_entry(
         get_song_length=audtool_song_length,
         logger=logger,
         run_sync=_run_sync,
+        task_manager=task_manager,
     )
     await runtime_monitor_playback(ctx, vc, guild_id, deps)
 
@@ -130,10 +132,15 @@ class EntrypointRuntimeTasks:
     stop_all_players: Callable[[], None]
     ensure_audacious: Callable[[], None]
     setup_virtual_sink: Callable[[], None]
+    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
 
     async def monitor_playback(self, ctx: object, vc: object, guild_id: int) -> None:
         component_bundle = self.components.require()
         assert self.state.shutdown_flag is not None
+        # Resolve TaskManager: prefer the field, then fall back to runtime state
+        tm = self.task_manager
+        if tm is None and self.state.runtime is not None:
+            tm = self.state.runtime.state.task_manager
         await monitor_playback_entry(
             ctx,
             vc,
@@ -158,6 +165,7 @@ class EntrypointRuntimeTasks:
             skip_to_next=self.skip_to_next,
             stop_all_players=self.stop_all_players,
             logger=self.logger,
+            task_manager=tm,
         )
 
     async def fetch_metadata_background(self) -> None:
@@ -191,6 +199,7 @@ def build_entrypoint_runtime_tasks(
     should_start_predownload: Callable[..., bool],
     facade: EntrypointFacade,
     glue: EntrypointGlue,
+    task_manager: Any | None = None,
 ) -> EntrypointRuntimeTasks:
     return EntrypointRuntimeTasks(
         bot=bot,
@@ -213,4 +222,5 @@ def build_entrypoint_runtime_tasks(
         stop_all_players=facade.stop_all_players,
         ensure_audacious=raw_callbacks.bootstrap.ensure_audacious,
         setup_virtual_sink=raw_callbacks.bootstrap.setup_virtual_sink,
+        task_manager=task_manager,
     )

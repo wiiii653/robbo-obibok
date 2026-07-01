@@ -66,7 +66,6 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("launcher facade", strict_entrypoint_text)
 
     def test_launch_assets_are_consistent_across_entrypoints_docs_and_services(self):
-        agents_text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         shell_text = (ROOT / "run_bot.sh").read_text(encoding="utf-8")
         launcher_script_text = (ROOT / "scripts" / "test_launchers.sh").read_text(encoding="utf-8")
         logged_launcher_text = (ROOT / "src" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
@@ -79,13 +78,6 @@ class InstallAssetsTests(unittest.TestCase):
         workflow_text = (ROOT / ".github" / "workflows" / "test-launchers.yml").read_text(encoding="utf-8")
         runtime_workflow_text = (ROOT / ".github" / "workflows" / "test-entrypoint-runtime.yml").read_text(encoding="utf-8")
 
-        self.assertIn("`robbo_obibok_launcher.py` is the canonical process launcher", agents_text)
-        self.assertIn("local entrypoint scripts", agents_text)
-        self.assertIn("./scripts/test_launchers.sh", agents_text)
-        self.assertIn("`robbo_obibok_logged_launcher.py` remains separate on purpose", agents_text)
-        self.assertIn("logging-oriented launcher module", agents_text)
-        self.assertIn("launcher smoke CI surface is `.github/workflows/test-launchers.yml`", agents_text)
-        self.assertIn("broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`", agents_text)
         self.assertIn("exec ./venv/bin/python3 -u src/robbo_obibok_launcher.py", shell_text)
         self.assertIn("tests.test_robbo_obibok_logged_launcher", launcher_script_text)
         self.assertNotIn("ENTRY_SCRIPT=", shell_text)

@@ -70,6 +70,7 @@ class PlaybackCommandDependencies:
     stop_all_players: Callable[[], None]
     stop_state_streams: Callable[[PlaylistState], Awaitable[None]]
     switch_collection: Callable[..., Awaitable[bool]]
+    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
 
 
 @dataclass(slots=True)
@@ -97,6 +98,7 @@ class LibraryCommandDependencies:
     save_queue: Callable[[PlaylistState], None]
     skip_to_next: Callable[[object], Awaitable[None]]
     toggle_user_track_entry: Callable[[dict, int | str, dict], tuple[dict, bool]]
+    task_manager: Any | None = None  # TaskManager
 
 
 @dataclass(slots=True)

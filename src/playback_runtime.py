@@ -56,6 +56,7 @@ class MonitorDependencies:
     get_song_length: Callable[[], int]
     logger: logging.Logger
     run_sync: RunSyncProtocol
+    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
 
 
 @dataclass(slots=True)
@@ -155,7 +156,11 @@ async def monitor_playback(
                 predownload_inflight=state.pre_download_task is not None,
                 next_url=next_url,
             ):
-                state.set_predownload_task(asyncio.create_task(deps.pre_download_next(state)))
+                if deps.task_manager is not None:
+                    task = deps.task_manager.create("predownload", deps.pre_download_next(state))
+                else:
+                    task = asyncio.create_task(deps.pre_download_next(state))
+                state.set_predownload_task(task)
         else:
             handled, not_playing_since = await handle_idle_state(
                 ctx, vc, guild_id, now, policy_deps, not_playing_since=not_playing_since

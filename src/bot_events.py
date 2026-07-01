@@ -29,6 +29,7 @@ class CoreEventDependencies:
     run_startup_steps: Callable[[], Awaitable[None]]
     save_queue: Callable[[Any], None]
     schedule_background_tasks: Callable[[list[Callable[[], Awaitable[None]]]], None]
+    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
 
 
 def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, fetch_metadata_background):
@@ -50,7 +51,12 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
         deps.log_preloaded_cache("ASMA", asma_cache)
         deps.log_preloaded_cache("HVSC", hvsc_cache)
         deps.log_preloaded_cache("SNES", snes_cache)
-        deps.schedule_background_tasks([health_watchdog, fetch_metadata_background])
+        # Start background tasks tracked by TaskManager for graceful shutdown
+        if deps.task_manager is not None:
+            deps.task_manager.create("bg_health_watchdog", health_watchdog())
+            deps.task_manager.create("bg_fetch_metadata", fetch_metadata_background())
+        else:
+            deps.schedule_background_tasks([health_watchdog, fetch_metadata_background])
 
     @bot.event
     async def on_voice_state_update(member, before, after):
@@ -99,7 +105,11 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
                 await asyncio.to_thread(deps.save_queue, state)
                 if state.monitor_task and not state.monitor_task.done():
                     state.monitor_task.cancel()
-                state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, member.guild.id)))
+                if deps.task_manager is not None:
+                    task = deps.task_manager.create(f"monitor_{member.guild.id}", deps.monitor_playback(ctx, vc, member.guild.id))
+                else:
+                    task = asyncio.create_task(deps.monitor_playback(ctx, vc, member.guild.id))
+                state.set_monitor_task(task)
         except Exception as exc:
             deps.log.error("Auto-start failed: %s", exc)
 

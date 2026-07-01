@@ -108,7 +108,11 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await persist_queue(ctx, state)
             if state.monitor_task and not state.monitor_task.done():
                 state.monitor_task.cancel()
-            state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
+            if deps.task_manager is not None:
+                task = deps.task_manager.create(f"monitor_{ctx.guild.id}", deps.monitor_playback(ctx, vc, ctx.guild.id))
+            else:
+                task = asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id))
+            state.set_monitor_task(task)
 
     @bot.command(aliases=["st"])
     @deps.mod_only()

@@ -8,7 +8,7 @@ import os
 import shutil
 import signal
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Sequence
+from typing import Any, Awaitable, Callable, Sequence
 
 _LOCK_DESCRIPTORS: dict[str, int] = {}
 
@@ -34,15 +34,16 @@ def log_preloaded_cache(label: str, tracks: list[str] | None, *, logger) -> None
 
 def schedule_background_tasks(
     task_factories: Sequence[Callable[[], Awaitable[object]]],
+    *,
+    task_manager: Any | None = None,
 ) -> None:
     """Create background tasks from factory callables.
 
     Relies on a running event loop — works when called from within
     an async context (e.g. on_ready).
     """
-    loop = asyncio.get_running_loop()
-    for factory in task_factories:
-        asyncio.ensure_future(factory(), loop=loop)
+    for i, factory in enumerate(task_factories):
+        task_manager.create(f"bg_{i}", factory())
 
 
 def acquire_process_lock(lock_file: str, process_name: str) -> int:

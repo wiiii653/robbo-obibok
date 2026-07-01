@@ -58,6 +58,7 @@ class PlaybackSessionDependencies:
     save_queue: Callable[[PlaylistState], None]
     apply_queue_state: Callable[[PlaylistState, dict[str, object]], bool]
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]]
+    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
 
 
 @dataclass(slots=True)
@@ -118,7 +119,11 @@ async def start_targeted_playback_session(
         await asyncio.to_thread(deps.save_queue, state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
-        state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
+        if deps.task_manager is not None:
+            task = deps.task_manager.create(f"monitor_{ctx.guild.id}", deps.monitor_playback(ctx, vc, ctx.guild.id))
+        else:
+            task = asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id))
+        state.set_monitor_task(task)
         return True
     return False
 
@@ -239,7 +244,11 @@ async def auto_play_after_switch(
         await asyncio.to_thread(deps.save_queue, state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
-        state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, state.vc, ctx.guild.id)))
+        if deps.task_manager is not None:
+            task = deps.task_manager.create(f"monitor_{ctx.guild.id}", deps.monitor_playback(ctx, state.vc, ctx.guild.id))
+        else:
+            task = asyncio.create_task(deps.monitor_playback(ctx, state.vc, ctx.guild.id))
+        state.set_monitor_task(task)
 
 
 async def fetch_metadata_background(bot: "commands.Bot", deps: MetadataSessionDependencies) -> None:

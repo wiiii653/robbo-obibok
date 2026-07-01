@@ -329,6 +329,7 @@ class BotRuntime:
             save_queue=self.save_queue,
             apply_queue_state=self.playback.session.apply_queue_state,
             place_track_in_queue=self.playback.session.place_track_in_queue,
+            task_manager=self.state.task_manager,
         )
 
     def build_metadata_session_deps(self) -> MetadataSessionDependencies:
@@ -388,6 +389,7 @@ class BotRuntime:
             run_startup_steps=self.bootstrap.run_startup_steps,
             save_queue=self.save_queue,
             schedule_background_tasks=self.bootstrap.schedule_background_tasks,
+            task_manager=self.state.task_manager,
         )
 
     def build_playback_command_deps(self) -> PlaybackCommandDependencies:
@@ -433,6 +435,7 @@ class BotRuntime:
             stop_all_players=self.collection.stop_all_players,
             stop_state_streams=self.collection.stop_state_streams,
             switch_collection=self.collection.switch_collection,
+            task_manager=self.state.task_manager,
         )
 
     def build_library_command_deps(self) -> LibraryCommandDependencies:
@@ -460,6 +463,7 @@ class BotRuntime:
             save_queue=self.save_queue,
             skip_to_next=self.playback.command.skip_to_next,
             toggle_user_track_entry=self.library.toggle_user_track_entry,
+            task_manager=self.state.task_manager,
         )
 
     def build_playback_handler_deps(self) -> PlaybackHandlerDependencies:
@@ -507,7 +511,7 @@ class BotRuntime:
     async def graceful_shutdown(self) -> None:
         self.state.shutdown_flag.set()
         if self.state.task_manager is not None:
-            self.state.task_manager.cancel_all()
+            await self.state.task_manager.shutdown()
         self.bootstrap.logger.info("Shutting down gracefully...")
         self.bootstrap.release_process_lock(self.config.LOCK_FILE)
         for state in self.state.app_services.iter_guild_states():
@@ -526,4 +530,9 @@ class BotRuntime:
         loop = asyncio.get_running_loop()
         if loop.is_running():
             asyncio.run_coroutine_threadsafe(self.graceful_shutdown(), loop)
-            loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.state.bot.close()))
+            if self.state.task_manager is not None:
+                loop.call_soon_threadsafe(
+                    lambda: self.state.task_manager.create("bot_close", self.state.bot.close())
+                )
+            else:
+                loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.state.bot.close()))
