@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING, Any, Callable
@@ -428,6 +429,6 @@ def run_bot_entrypoint(
         release_lock=lambda: release_process_lock(lock_file_getter()),
     )
     try:
-        bot.run(token_getter())
+        asyncio.run(bot.start(token_getter()))
     finally:
         release_process_lock(lock_file_getter())

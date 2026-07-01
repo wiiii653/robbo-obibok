@@ -32,9 +32,15 @@ class CoreEventDependencies:
 
 
 def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, fetch_metadata_background):
+    _on_ready_done = False
+
     @bot.event
     async def on_ready():
+        nonlocal _on_ready_done
         deps.log.info("Ready: %s", bot.user)
+        if _on_ready_done:
+            return
+        _on_ready_done = True
         await deps.run_startup_steps()
         asma_cache, hvsc_cache, snes_cache = await asyncio.gather(
             asyncio.to_thread(deps.load_asma_local_cache),
@@ -93,7 +99,7 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
                 await asyncio.to_thread(deps.save_queue, state)
                 if state.monitor_task and not state.monitor_task.done():
                     state.monitor_task.cancel()
-                state.set_monitor_task(bot.loop.create_task(deps.monitor_playback(ctx, vc, member.guild.id)))
+                state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, member.guild.id)))
         except Exception as exc:
             deps.log.error("Auto-start failed: %s", exc)
 

@@ -58,11 +58,25 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_s
 
 async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path, get_shared_session, logger, retries: int = 2) -> str:
     last_err: BaseException | None = None
+
+    # Persistent cache: archiwum/modarchive/cache/
+    cache_dir = os.path.join(os.path.dirname(os.path.normpath(temp_dir)), "archiwum", "modarchive", "cache")
+    mod_id_match = re.search(r"moduleid=(\d+)", url)
+    if mod_id_match:
+        mod_id = mod_id_match.group(1)
+        # Check cache first
+        os.makedirs(cache_dir, exist_ok=True)
+        for cached in os.listdir(cache_dir):
+            if cached.startswith(f"{mod_id}_") or cached == mod_id:
+                cached_path = os.path.join(cache_dir, cached)
+                logger.info("ModArchive cache hit: %s", cached_path)
+                return cached_path
+
     session = await get_shared_session()
     for attempt in range(retries + 1):
         try:
             filepath = build_temp_path(url)
-            async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}) as resp:
+            async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; BorutaBot)"}, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                 resp.raise_for_status()
                 data = await read_response_limited(resp, max_bytes=MAX_MODULE_DOWNLOAD_BYTES)
                 content_disposition = resp.headers.get("Content-Disposition", "")
@@ -72,6 +86,18 @@ async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path
                     if fname:
                         filepath = safe_download_path(temp_dir, fname, source=url)
             await asyncio.to_thread(Path(filepath).write_bytes, data)
+
+            # Save to persistent cache
+            if mod_id_match:
+                mod_id = mod_id_match.group(1)
+                cache_path = os.path.join(cache_dir, f"{mod_id}_{os.path.basename(filepath)}")
+                try:
+                    os.makedirs(cache_dir, exist_ok=True)
+                    await asyncio.to_thread(lambda: Path(cache_path).write_bytes(data))
+                    logger.info("ModArchive cached: %s", cache_path)
+                except Exception as exc:
+                    logger.warning("ModArchive cache write failed: %s", exc)
+
             return filepath
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             last_err = exc

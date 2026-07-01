@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 from domain_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory
+from runtime_protocols import PlaySubsongCallable
 from collection_specs import CollectionSpec
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ class PlaybackEntrypointCallbacks:
     get_shared_session: Callable[[], Awaitable[ClientSession]]
     is_playing: Callable[[], bool]
     monitor_playback: Callable[..., Coroutine[Any, Any, None]]
-    play_subsong: Callable[..., Awaitable[bool]]
+    play_subsong: PlaySubsongCallable
     play_via_audacious: Callable[..., Awaitable[None]]
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]]
     prepare_playback_queue: Callable[..., dict[str, object]]

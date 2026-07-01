@@ -99,7 +99,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             await persist(ctx, "Queue", deps.save_queue, state)
             if state.monitor_task and not state.monitor_task.done():
                 state.monitor_task.cancel()
-            state.set_monitor_task(bot.loop.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
+            state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
         return True
 
     @bot.command(aliases=["favs", "playlist"])
@@ -228,7 +228,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             if not state.queue or state.index < 0 or state.index >= len(state.queue):
                 return await ctx.send("Nothing is playing right now.")
             url = state.queue[state.index]
-            name = (await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)) or url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
+            name = (await asyncio.get_running_loop().run_in_executor(None, deps.audacious_song)) or url.split("/")[-1].rsplit(".", 1)[0].replace("_", " ")
         async with blacklist_lock:
             blk = await asyncio.to_thread(deps.load_blacklist)
             blk, added = deps.toggle_user_track_entry(blk, ctx.author.id, {"url": url, "name": name, "added_at": time.time()})

@@ -88,7 +88,7 @@ class SubsongRuntime:
         wav_path = self.subsong_temp_path(orig_path, subsong)
         try:
             ok = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
+                asyncio.get_running_loop().run_in_executor(
                     None, self.convert_subsong, orig_path, subsong, wav_path
                 ),
                 timeout=90,

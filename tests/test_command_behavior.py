@@ -83,15 +83,22 @@ class CommandBehaviorTests(AsyncTestCase):
             fake_bot = RegistrationBot()
             library_commands.register_library_commands(fake_bot, deps)
             ctx = FakeContext()
+            scheduled = []
+            original_create_task = asyncio.create_task
+            def tracking_create_task(coro):
+                task = original_create_task(coro)
+                scheduled.append(coro)
+                return task
 
-            with patch.object(library_commands.random, "shuffle", lambda items: None):
+            with patch.object(library_commands.random, "shuffle", lambda items: None), \
+                 patch("asyncio.create_task", side_effect=tracking_create_task):
                 await fake_bot.commands["favplay"]["func"](ctx, number="")
 
             self.assertEqual(state.collection_mode, "asma")
             self.assertEqual(state.queue, ["https://asma.atari.org/asma/A.sap", "https://asma.atari.org/asma/B.sap"])
             self.assertEqual(state.index, 0)
             self.assertEqual(save_calls, [state.queue])
-            self.assertEqual(len(fake_bot.scheduled), 1)
+            self.assertEqual(len(scheduled), 1)
             self.assertIn("Playing 2 favorites", ctx.sent[0].content)
 
     async def test_flip_advances_to_next_collection(self):

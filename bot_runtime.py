@@ -518,7 +518,7 @@ class BotRuntime:
 
     def handle_signal(self, signum: int, _frame: object) -> None:
         self.bootstrap.logger.info("Received signal %d, shutting down...", signum)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if loop.is_running():
             asyncio.run_coroutine_threadsafe(self.graceful_shutdown(), loop)
             loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.state.bot.close()))

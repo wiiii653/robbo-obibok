@@ -22,7 +22,7 @@ async def run_startup_steps(
     """Run blocking startup steps in the executor with consistent logging."""
     for step_name, func in steps:
         try:
-            await asyncio.get_event_loop().run_in_executor(None, func)
+            await asyncio.get_running_loop().run_in_executor(None, func)
         except Exception as exc:
             logger.error("%s failed: %s", step_name, exc)
 
@@ -41,7 +41,7 @@ def schedule_background_tasks(
     Relies on a running event loop — works when called from within
     an async context (e.g. on_ready).
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     for factory in task_factories:
         asyncio.ensure_future(factory(), loop=loop)
 

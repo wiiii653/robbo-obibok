@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable
 
 from domain_state import PlaylistState
+from runtime_protocols import PlaySubsongCallable
 from session_runtime import (
     auto_play_after_switch,
     fetch_metadata_background,
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 class PlaybackService:
     runtime: "BotRuntime"
     bot: "commands.Bot"
-    play_subsong: Callable[..., Awaitable[bool]]
+    play_subsong: PlaySubsongCallable
     cleanup_subsong_temp_wavs: Callable[[PlaylistState], None]
     audacious_stop: Callable[[], None]
     audacious_play: Callable[[str], None]

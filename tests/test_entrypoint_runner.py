@@ -24,8 +24,8 @@ class EntrypointRunnerTests(unittest.TestCase):
         calls = []
 
         class FakeBot:
-            def run(self, token):
-                calls.append(("run", token))
+            async def start(self, token):
+                calls.append(("start", token))
 
         run_bot_entrypoint(
             initialize_runtime=lambda: calls.append("init"),
@@ -43,7 +43,7 @@ class EntrypointRunnerTests(unittest.TestCase):
                 "init",
                 ("hooks", ["handle_signal", "release_lock"]),
                 ("release", "/tmp/lock"),
-                ("run", "runtime-token"),
+                ("start", "runtime-token"),
                 ("release", "/tmp/lock"),
             ],
         )
@@ -52,8 +52,8 @@ class EntrypointRunnerTests(unittest.TestCase):
         calls = []
 
         class FakeBot:
-            def run(self, _token):
-                calls.append("run")
+            async def start(self, _token):
+                calls.append("start")
                 raise RuntimeError("boom")
 
         with self.assertRaises(RuntimeError):
@@ -72,7 +72,7 @@ class EntrypointRunnerTests(unittest.TestCase):
             [
                 "init",
                 ("hooks", ["handle_signal", "release_lock"]),
-                "run",
+                "start",
                 ("release", "/tmp/lock"),
             ],
         )

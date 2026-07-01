@@ -109,14 +109,14 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await persist_queue(ctx, state)
             if state.monitor_task and not state.monitor_task.done():
                 state.monitor_task.cancel()
-            state.set_monitor_task(bot.loop.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
+            state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
 
     @bot.command(aliases=["st"])
     @deps.mod_only()
     async def stop(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
         await deps.stop_state_streams(state)
-        await asyncio.get_event_loop().run_in_executor(None, deps.stop_all_players)
+        await asyncio.get_running_loop().run_in_executor(None, deps.stop_all_players)
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
         state.clear_voice_client()
@@ -136,7 +136,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         state = deps.get_state(ctx.guild.id)
         if not await asyncio.to_thread(deps.is_playing):
             return await ctx.send("Nothing playing right now.")
-        track = await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)
+        track = await asyncio.get_running_loop().run_in_executor(None, deps.audacious_song)
         position = state.current_queue_position()
         meta = {}
         if state.current_track_path:
@@ -159,10 +159,10 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             embed.add_field(name="Copyright", value=copyright_info, inline=True)
         if position is not None:
             embed.add_field(name="Position", value=f"{position[0]}/{position[1]}", inline=True)
-        elapsed_r = await asyncio.get_event_loop().run_in_executor(
+        elapsed_r = await asyncio.get_running_loop().run_in_executor(
             None, lambda: subprocess.run(["audtool", "current-song-output-length-seconds"], capture_output=True, text=True)
         )
-        total_r = await asyncio.get_event_loop().run_in_executor(
+        total_r = await asyncio.get_running_loop().run_in_executor(
             None, lambda: subprocess.run(["audtool", "current-song-length-seconds"], capture_output=True, text=True)
         )
         try:
@@ -251,7 +251,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             state = deps.get_state(ctx.guild.id)
             if ctx.voice_client and ctx.voice_client.is_connected():
                 await deps.stop_state_streams(state)
-                await asyncio.get_event_loop().run_in_executor(None, deps.stop_all_players)
+                await asyncio.get_running_loop().run_in_executor(None, deps.stop_all_players)
                 await ctx.voice_client.disconnect()
                 state.clear_voice_client()
                 await ctx.send("🌙 **Sleep timer expired.** Radio stopped.")
@@ -293,7 +293,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             idx = int(position) - 1
             if not state.contains_queue_index(idx):
                 return await ctx.send(f"Position must be between 1 and {state.queue_length()}.")
-            await asyncio.get_event_loop().run_in_executor(None, deps.audacious_stop)
+            await asyncio.get_running_loop().run_in_executor(None, deps.audacious_stop)
             state.set_queue_state(state.queue, idx, loop=state.loop)
             if await deps.play_current_track(ctx):
                 await persist_queue(ctx, state)
@@ -308,7 +308,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         await persist_queue(ctx, state)
         if ctx.voice_client and ctx.voice_client.is_connected():
             await deps.stop_state_streams(state)
-            await asyncio.get_event_loop().run_in_executor(None, deps.stop_all_players)
+            await asyncio.get_running_loop().run_in_executor(None, deps.stop_all_players)
             await ctx.voice_client.disconnect()
             state.clear_voice_client()
         await ctx.send("🗑️ Queue cleared.")
@@ -502,7 +502,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         if query:
             query_lower = query.strip().lower()
             if not deps.has_snes_metadata():
-                await asyncio.get_event_loop().run_in_executor(None, deps.load_snes_cache)
+                await asyncio.get_running_loop().run_in_executor(None, deps.load_snes_cache)
             if not deps.has_snes_metadata():
                 return await ctx.send("❌ SNES SPC cache not found. Run `build_snes_index.py` first!")
             results = []
@@ -537,7 +537,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             "tiny_cache.json": ("🎵", "Tiny Music (Demoscene)"),
             "snes_cache.json": ("🔴", "SNES SPC"),
         }
-        cache_counts = await asyncio.get_event_loop().run_in_executor(None, deps.get_all_cache_counts, cache_map)
+        cache_counts = await asyncio.get_running_loop().run_in_executor(None, deps.get_all_cache_counts, cache_map)
         mode_icons = {"hvsc": "🟣", "asma": "🟢", "modarchive": "🟠", "ay": "🔵", "ym": "🎹", "tiny": "🎵", "spc": "🔴"}
         mode_labels = {"hvsc": "HVSC", "asma": "ASMA", "modarchive": "ModArchive", "ay": "AY", "ym": "Atari ST YM", "tiny": "Tiny", "spc": "SNES"}
         current_icon = mode_icons.get(state.collection_mode, "⚪")

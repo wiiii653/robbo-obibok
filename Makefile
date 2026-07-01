@@ -25,11 +25,11 @@ help:
 install: $(VENV)/bin/activate build-indexes
 	@echo "✅ Robbo Obibok ready. Set DISCORD_BOT_TOKEN in .env or the shell, then: make run"
 
-$(VENV)/bin/activate: requirements.txt
+$(VENV)/bin/activate: requirements.lock.txt
 	@echo "📦 Creating Python virtual environment..."
 	@python3 -m venv $(VENV)
 	@$(VENV)/bin/pip install --quiet --upgrade pip
-	@$(VENV)/bin/pip install --quiet -r requirements.txt
+	@$(VENV)/bin/pip install --quiet -r requirements.lock.txt
 	@touch $(VENV)/bin/activate
 	@echo "✅ Virtual environment ready"
 

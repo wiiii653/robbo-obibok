@@ -10,6 +10,7 @@ import discord
 
 from archive_catalog import CollectionInfo
 from domain_services import AppServicesProtocol
+from runtime_protocols import PlaySubsongCallable
 from domain_state import PlaylistState
 from bot_runtime import (
     BootstrapCallbacks,
@@ -94,7 +95,7 @@ class PlaybackHandlerCompositionCallbacks:
     get_subsongs: Callable[[str], list[float]]
     parse_sap_header: Callable[[str], dict[str, str]]
     parse_sid_header: Callable[[bytes], dict[str, str]]
-    play_subsong: Callable[..., Awaitable[bool]]
+    play_subsong: PlaySubsongCallable
     play_via_audacious: Callable[..., Awaitable[None]]
     queue_position: Callable[[PlaylistState], tuple[int, int]]
     register_np_message: Callable[[int, str, str, str], None]

@@ -71,7 +71,7 @@ class BotRuntimeTests(unittest.IsolatedAsyncioTestCase):
         runtime.state.bot.close = close_bot
 
         with (
-            patch.object(bot_runtime.asyncio, "get_event_loop", return_value=loop),
+            patch.object(bot_runtime.asyncio, "get_running_loop", return_value=loop),
             patch.object(bot_runtime.asyncio, "run_coroutine_threadsafe", side_effect=record_shutdown),
             patch.object(bot_runtime.asyncio, "ensure_future", side_effect=record_future),
         ):

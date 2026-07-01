@@ -91,6 +91,19 @@ class SubsongRuntimeProtocol(Protocol):
     def cleanup_subsong_temp_wavs(self, state: PlaylistState) -> None: ...
 
 
+class PlaySubsongCallable(Protocol):
+    async def __call__(
+        self,
+        ctx: object,
+        state: PlaylistState,
+        subsong: int,
+        *,
+        audacious_stop: Callable[[], None],
+        audacious_play: Callable[[str], None],
+        setup_monitor_source: Callable[[object], None],
+    ) -> bool: ...
+
+
 class ServiceFacadeProtocol(CollectionRuntimeProtocol, PlaybackRuntimeProtocol, Protocol):
     def bind(
         self,

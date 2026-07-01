@@ -106,7 +106,7 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
                 filepath = await deps.download_sap(url)
 
         await deps.play_via_audacious(state, filepath, current_path=filepath)
-        track = await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)
+        track = await asyncio.get_running_loop().run_in_executor(None, deps.audacious_song)
         meta = deps.parse_sap_header(filepath)
         name = meta.get("NAME", track or url.split("/")[-1])
         author = meta.get("AUTHOR", "")
@@ -130,7 +130,7 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
             return False
 
         await deps.play_via_audacious(state, full_path)
-        track = await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)
+        track = await asyncio.get_running_loop().run_in_executor(None, deps.audacious_song)
         name = track or filepath.split("/")[-1].replace(".ay", "")
         await deps.send_now_playing_embed(
             ctx,
@@ -149,9 +149,9 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
             await ctx.send(f"❌ File not found: `{filepath}`")
             return False
 
-        await asyncio.get_event_loop().run_in_executor(None, deps.ym_cleanup)
+        await asyncio.get_running_loop().run_in_executor(None, deps.ym_cleanup)
         try:
-            wav_path = await asyncio.get_event_loop().run_in_executor(None, deps.ym_to_wav, full_path)
+            wav_path = await asyncio.get_running_loop().run_in_executor(None, deps.ym_to_wav, full_path)
         except Exception as exc:
             deps.log.error("YM→WAV conversion failed: %s", exc)
             await ctx.send(f"❌ Failed to decode YM file: `{filepath}`")
@@ -195,7 +195,7 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
 
         await deps.play_via_audacious(state, full_path, current_path=full_path)
 
-        track = await asyncio.get_event_loop().run_in_executor(None, deps.audacious_song)
+        track = await asyncio.get_running_loop().run_in_executor(None, deps.audacious_song)
         name = (
             track
             or filepath.split("/")[-1]

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Protocol,
 
 from archive_catalog import CollectionInfo
 from domain_state import PlaylistState
+from runtime_protocols import PlaySubsongCallable
 
 if TYPE_CHECKING:
     import discord
@@ -117,7 +118,7 @@ async def start_targeted_playback_session(
         await asyncio.to_thread(deps.save_queue, state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
-        state.set_monitor_task(deps.bot.loop.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
+        state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, vc, ctx.guild.id)))
         return True
     return False
 
@@ -155,7 +156,7 @@ async def play_current_track(ctx: object, deps: PlaybackSessionDependencies) -> 
 async def skip_to_next(
     ctx: object,
     deps: PlaybackSessionDependencies,
-    play_subsong: Callable[..., Awaitable[bool]],
+    play_subsong: PlaySubsongCallable,
     cleanup_subsong_temp_wavs: Callable[[PlaylistState], None],
 ) -> None:
     ctx = cast(PlaybackSessionContext, ctx)
@@ -238,7 +239,7 @@ async def auto_play_after_switch(
         await asyncio.to_thread(deps.save_queue, state)
         if state.monitor_task and not state.monitor_task.done():
             state.monitor_task.cancel()
-        state.set_monitor_task(deps.bot.loop.create_task(deps.monitor_playback(ctx, state.vc, ctx.guild.id)))
+        state.set_monitor_task(asyncio.create_task(deps.monitor_playback(ctx, state.vc, ctx.guild.id)))
 
 
 async def fetch_metadata_background(bot: "commands.Bot", deps: MetadataSessionDependencies) -> None:

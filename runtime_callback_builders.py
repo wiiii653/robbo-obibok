@@ -25,6 +25,7 @@ from runtime_protocols import (
     ArchiveRuntimeProtocol,
     CollectionRuntimeProtocol,
     PlaybackAssetsProtocol,
+    PlaySubsongCallable,
     ServiceFacadeProtocol,
     StreamRuntimeProtocol,
 )
@@ -48,7 +49,7 @@ def build_playback_composition_callbacks(
     get_shared_session: Callable[[], Awaitable[ClientSession]],
     is_playing: Callable[[], bool],
     monitor_playback: Callable[..., Coroutine[Any, Any, None]],
-    play_subsong: Callable[..., Awaitable[bool]],
+    play_subsong: PlaySubsongCallable,
     play_via_audacious: Callable[..., Awaitable[None]],
     place_track_in_queue: Callable[[list[str], str], tuple[list[str], int]],
     prepare_playback_queue: Callable[..., dict[str, object]],
