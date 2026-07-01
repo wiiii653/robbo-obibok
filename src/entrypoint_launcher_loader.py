@@ -460,7 +460,8 @@ def configure_entrypoint_logger(root_dir: str, logger_name: str) -> logging.Logg
     logger = logging.getLogger(logger_name)
     if logger.handlers:
         return logger
-    log_file = os.path.join(root_dir, "bot_output.log")
+    log_file = os.path.join(root_dir, "var", "bot_output.log")
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
     file_handler = RotatingFileHandler(
         log_file,
         maxBytes=5_000_000,
