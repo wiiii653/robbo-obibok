@@ -6,17 +6,17 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from domain_context import ArchiveRegistryViews, BootstrappedApp, bootstrap_app
-from domain_config import AppConfig
-from domain_config import build_app_config
-from domain_context import AppContext
-from domain_services import AppServicesProtocol
-from domain_state import AppRuntimeState
+import entrypoint_state as state_protocols
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntimeConfig
+from domain_config import AppConfig
+from domain_context import AppContext, ArchiveRegistryViews, BootstrappedApp, bootstrap_app
+from domain_services import AppServicesProtocol
+from domain_state import AppRuntimeState
 from entrypoint_glue import build_temp_path as build_entry_temp_path
-import entrypoint_state as state_protocols
+from entrypoint_startup import build_app_config
 from runtime_io import AudioProcessRuntime
+from runtime_protocols import PlaybackProcessProtocol
 from runtime_support import load_dotenv_file
 from subsong_runtime import SubsongRuntime
 
@@ -120,7 +120,7 @@ class EntrypointResources:
     def archive_runtime_config(self) -> ArchiveRuntimeConfig:
         return self.boot.archive_runtime_config
 
-    def get_audio_runtime(self) -> AudioProcessRuntime:
+    def get_audio_runtime(self) -> PlaybackProcessProtocol:
         if self.state.audio_runtime is None:
             self.state.audio_runtime = AudioProcessRuntime(
                 sink_name=self.app_cfg().sink_name,

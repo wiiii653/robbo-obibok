@@ -16,7 +16,6 @@ import aiohttp
 
 from download_safety import read_response_limited, resolve_existing_path
 
-
 MAX_SAP_DOWNLOAD_BYTES = 16 * 1024 * 1024
 
 

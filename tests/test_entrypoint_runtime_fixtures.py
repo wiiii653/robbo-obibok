@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import types
+from dataclasses import dataclass
 
 
 @dataclass(slots=True)

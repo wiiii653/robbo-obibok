@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from archive_runtime import ArchiveRuntimeConfig
-from entrypoint_startup import cleanup_orphaned_temp_dir, load_config
 
 
 @dataclass(slots=True)
@@ -293,15 +292,3 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         paths=paths,
         archive=archive,
     )
-
-
-def prepare_app_environment(app_config: AppConfig, logger) -> None:
-    cleanup_orphaned_temp_dir(app_config.temp_dir, logger)
-    os.makedirs(app_config.temp_dir, exist_ok=True)
-
-
-def build_app_config(root_dir: str, logger) -> AppConfig:
-    config = load_config(root_dir, logger)
-    app_config = derive_app_config(root_dir, config)
-    prepare_app_environment(app_config, logger)
-    return app_config

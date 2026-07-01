@@ -10,8 +10,8 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, field
-from urllib.parse import urljoin
 from typing import TYPE_CHECKING, Awaitable, Callable
+from urllib.parse import urljoin
 
 import aiohttp
 

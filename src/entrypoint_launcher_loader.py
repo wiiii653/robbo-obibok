@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
-import logging
 from logging.handlers import RotatingFileHandler
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Protocol, cast
+
+from archive_runtime import ArchiveRuntimeConfig
+from domain_config import AppConfig
+from entrypoint_bootstrap import (
+    EntrypointBootstrapBuilder,
+    EntrypointResources,
+    build_entrypoint_bootstrap,
+)
 from entrypoint_runtime_surface import (
     EntrypointRuntimeStateSurface,
     EntrypointRuntimeSurface,
     build_runtime_state_surface,
     build_runtime_surface,
 )
-
-from domain_config import AppConfig
-from archive_runtime import ArchiveRuntimeConfig
-from bot_runtime import BotRuntime
-from entrypoint_bootstrap import EntrypointBootstrapBuilder, build_entrypoint_bootstrap
-from entrypoint_bootstrap import EntrypointResources
 from entrypoint_state import EntrypointRuntimeStateProtocol, EntrypointStateProtocol
 from runtime_bootstrap import StartupEnvironment
 from runtime_io import SharedSessionRuntime
@@ -26,8 +28,9 @@ from runtime_io import SharedSessionRuntime
 if TYPE_CHECKING:
     from aiohttp import ClientSession
     from discord.ext import commands
+
     from entrypoint_app import EntrypointApp
-    from entrypoint_module import EntrypointModule
+    from entrypoint_module import EntrypointModule, EntrypointModuleDeps
     from entrypoint_runtime import AppAssembly
 
 from entrypoint_module_bindings import (
@@ -39,13 +42,11 @@ from entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_SHUTDOWN_FLAG,
     ENTRYPOINT_COMPAT_STREAM_RUNTIME,
     ENTRYPOINT_COMPAT_VIEW_SPECS_BY_NAME,
-    EntrypointCompatBindingSpec,
-)
-from entrypoint_module_bindings import (
-    EntrypointDirectExportSpec,
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
+    ENTRYPOINT_EXPORT_GRAPH,
+    EntrypointCompatBindingSpec,
+    EntrypointDirectExportSpec,
 )
-from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH
 
 
 class SessionRuntimeProtocol(Protocol):

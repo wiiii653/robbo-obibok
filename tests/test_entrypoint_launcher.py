@@ -1,26 +1,25 @@
 import importlib.util
 import sys
 import types
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from entrypoint_executable_assembly import build_entrypoint_legacy_resolver
+from entrypoint_launcher_loader import build_entrypoint_launcher, build_entrypoint_support
 from entrypoint_module_bindings import (
-    ENTRYPOINT_EXPORT_GRAPH,
-    ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES,
     ENTRYPOINT_DIRECT_COLLECTION_BINDINGS,
+    ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES,
+    ENTRYPOINT_EXPORT_GRAPH,
     is_supported_executable_attr,
     supported_executable_dict_attrs,
 )
-from tests.test_support import install_discord_stubs
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
-from entrypoint_launcher_loader import build_entrypoint_support, build_entrypoint_launcher
-from entrypoint_executable_assembly import build_entrypoint_legacy_resolver
-
+from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 

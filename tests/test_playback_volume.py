@@ -8,8 +8,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import unittest
-from unittest.mock import patch, MagicMock
-from playback_volume import VolumePolicy, PactlVolumeController
+from unittest.mock import MagicMock, patch
+
+from playback_volume import PactlVolumeController, VolumePolicy
 
 
 class VolumePolicyTests(unittest.TestCase):

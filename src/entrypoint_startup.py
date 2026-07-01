@@ -183,3 +183,28 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> None:
             _deep_merge(base[key], value)
         else:
             base[key] = value
+
+
+def prepare_app_environment(app_config, logger) -> None:
+    """Create temp dir and clean up orphaned files from previous runs.
+
+    .. deprecated::
+        Moved from :mod:`domain_config`. Will be removed when callers
+        are updated.
+    """
+    cleanup_orphaned_temp_dir(app_config.temp_dir, logger)
+    os.makedirs(app_config.temp_dir, exist_ok=True)
+
+
+def build_app_config(root_dir: str, logger):
+    """Load config, derive app config, and prepare environment.
+
+    .. deprecated::
+        Moved from :mod:`domain_config`. Will be removed when callers
+        are updated.
+    """
+    from domain_config import derive_app_config
+    config = load_config(root_dir, logger)
+    app_config = derive_app_config(root_dir, config)
+    prepare_app_environment(app_config, logger)
+    return app_config

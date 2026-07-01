@@ -9,11 +9,10 @@ Uses parallel connections for speed.
 """
 
 import asyncio
-import aiohttp
-import os
 import logging
-import sys
-import time
+import os
+
+import aiohttp
 
 logging.basicConfig(
     level=logging.INFO,

@@ -9,12 +9,7 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from archive_catalog import ArchiveCatalog
-from archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
 from test_support import (
-    FakeContext,
-    FakeVoiceChannel,
-    FakeVoiceClient,
     MagicMock,
     RegistrationBot,
     patch,
@@ -22,11 +17,13 @@ from test_support import (
 )
 
 import bot_events
-from entrypoint_glue import build_single_guild_check, mod_only
 import library_commands
-import playback_handlers
 import playback_commands
+import playback_handlers
 import session_runtime
+from archive_catalog import ArchiveCatalog
+from archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
+from entrypoint_glue import build_single_guild_check
 
 
 def build_archive_runtime_fixture():

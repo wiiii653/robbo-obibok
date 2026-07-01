@@ -1,8 +1,8 @@
 import sys
 import types
-import unittest
+import unittest  # noqa: F401 — re-exported for other test modules
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch  # noqa: F401 — re-exported for other test modules
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:

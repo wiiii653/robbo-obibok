@@ -12,15 +12,23 @@ help:
 	@echo "Robbo Obibok — Makefile"
 	@echo ""
 	@echo "  make install         # Full installation (system deps + venv + indexes)"
-	@echo "  make install-dev     # Install dev dependencies (pytest)"
+	@echo "  make install-dev     # Install dev dependencies (pytest, ruff)"
 	@echo "  make run             # Start the bot (reads .env when present)"
 	@echo "  make run-strict      # Start the bot in strict compatibility mode"
 	@echo "  make test            # Run unit tests"
 	@echo "  make test-integration # Run real dependency integration tests"
 	@echo "  make test-launchers  # Run launcher smoke tests"
+	@echo "  make lint            # Run ruff linter"
+	@echo "  make format          # Run ruff formatter"
 	@echo "  make build-indexes   # Build all local track indexes"
+	@echo "  make requirements.lock # Regenerate lock file from requirements*.txt"
 	@echo "  make clean           # Remove venv, caches, temp files"
 	@echo "  make help            # This message"
+
+requirements.lock.txt: requirements.txt requirements-dev.txt
+	@echo "🔒 Locking dependencies with uv..."
+	@uv pip compile requirements.txt requirements-dev.txt --universal --generate-hashes --output-file requirements.lock.txt
+	@echo "✅ requirements.lock.txt updated"
 
 install: $(VENV)/bin/activate build-indexes
 	@echo "✅ Robbo Obibok ready. Set DISCORD_BOT_TOKEN in .env or the shell, then: make run"
@@ -33,8 +41,7 @@ $(VENV)/bin/activate: requirements.lock.txt
 	@touch $(VENV)/bin/activate
 	@echo "✅ Virtual environment ready"
 
-$(DEV_STAMP): $(VENV)/bin/activate requirements-dev.txt
-	@$(VENV)/bin/pip install --quiet -r requirements-dev.txt
+$(DEV_STAMP): $(VENV)/bin/activate requirements.lock.txt
 	@touch $(DEV_STAMP)
 
 build-indexes: $(VENV)/bin/activate
@@ -56,7 +63,17 @@ run-strict: $(VENV)/bin/activate
 	@cd $(CURDIR) && ROBBO_STRICT_COMPAT=1 ./run_bot.sh
 
 install-dev: $(DEV_STAMP)
-	@echo "✅ Development dependencies installed (pytest, etc.)"
+	@echo "✅ Development dependencies installed (pytest, ruff, etc.)"
+
+lint: $(DEV_STAMP)
+	@echo "🔍 Running ruff checks..."
+	@cd $(CURDIR) && PYTHONPATH=src $(VENV)/bin/ruff check src/ tests/ scripts/
+	@echo "✅ Lint passed"
+
+format: $(DEV_STAMP)
+	@echo "🎨 Running ruff formatter..."
+	@cd $(CURDIR) && $(VENV)/bin/ruff format src/ tests/ scripts/
+	@echo "✅ Format complete"
 
 test-launchers: $(VENV)/bin/activate
 	@echo "🧪 Running launcher smoke tests..."

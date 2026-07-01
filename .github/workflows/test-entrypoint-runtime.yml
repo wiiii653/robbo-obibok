@@ -27,11 +27,14 @@ on:
 jobs:
   entrypoint-runtime:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Create virtualenv
         run: python -m venv venv
       - name: Install requirements
@@ -44,9 +47,8 @@ jobs:
           tests.test_robbo_obibok_runtime \
           tests.test_entrypoint_launcher_loader \
           tests.test_entrypoint_launcher_surface \
-          tests.test_entrypoint_runtime_surface \
-          tests.test_entrypoint_launcher_config \
-          tests.test_entrypoint_launcher_state \
+          tests.test_entrypoint_runtime_builders \
+          tests.test_entrypoint_state \
           tests.test_runtime_context \
           tests.test_runtime_context_helpers \
           tests.test_install_assets

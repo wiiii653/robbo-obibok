@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 import random
 import shutil
-import json
 from typing import Callable, Iterable, MutableMapping
-
 
 REQUIRED_EXTERNAL_TOOLS: dict[str, str] = {
     "audacious": "headless playback engine",

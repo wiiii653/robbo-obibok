@@ -7,8 +7,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable, Mapping, cast
 
-from domain_services import AppServicesProtocol
-from domain_state import PlaylistState
 from bot_dependencies import (
     CommandDecoratorFactory,
     LibraryCommandDependencies,
@@ -17,8 +15,10 @@ from bot_dependencies import (
     SearchTracksProtocol,
 )
 from bot_events import CoreEventDependencies
-from collection_specs import CollectionSpec
 from collection_service import CollectionArchiveProtocol, CollectionService
+from collection_specs import CollectionSpec
+from domain_services import AppServicesProtocol
+from domain_state import PlaylistState
 from session_runtime import (
     EmbedFactoryProtocol,
     MetadataSessionDependencies,
@@ -29,8 +29,9 @@ from session_runtime import (
 if TYPE_CHECKING:
     import discord
     from aiohttp import ClientSession
-    from archive_catalog import CollectionInfo
     from discord.ext import commands
+
+    from archive_catalog import CollectionInfo
     from stream_runtime import MonitorAudioSource
 
 

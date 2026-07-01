@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
+from bot_dependencies import CommandDecoratorFactory
+from collection_service import CollectionArchiveProtocol
 from domain_services import AppServicesProtocol
 from domain_state import PlaylistState
-from bot_dependencies import CommandDecoratorFactory, SearchTracksProtocol
-from collection_service import CollectionArchiveProtocol
 from runtime_composition import (
     BootstrapCompositionCallbacks,
     CollectionCompositionCallbacks,
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from aiohttp import ClientSession
 from runtime_protocols import (
     ArchiveRuntimeProtocol,
-    CollectionRuntimeProtocol,
     PlaybackAssetsProtocol,
     PlaySubsongCallable,
     ServiceFacadeProtocol,

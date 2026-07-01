@@ -11,7 +11,6 @@ if str(ROOT) not in sys.path:
 
 from tests.test_support import install_discord_stubs
 
-
 install_discord_stubs()
 
 from collection_catalog import FLIP_ORDER, FLIP_SEQ

@@ -1,29 +1,28 @@
 import asyncio
 import sys
-from pathlib import Path
 import types
 import unittest
+from pathlib import Path
 from types import MappingProxyType
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tests.test_support import install_discord_stubs
-
 import entrypoint_app
 import entrypoint_bootstrap
 import entrypoint_components
 import entrypoint_runtime_surface
+from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
+from domain_context import ArchiveRegistryViews
 from entrypoint_state import (
     EntrypointComponentAccessStateProtocol,
     EntrypointComponentAssemblyStateProtocol,
     EntrypointLifecycle,
     EntrypointState,
 )
-from domain_context import ArchiveRegistryViews
 
 
 class EntrypointStateTests(unittest.TestCase):

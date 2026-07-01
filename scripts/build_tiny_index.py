@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Build Tiny Music module index — scans archiwum/tiny/ for MOD/XM/IT/S3M/MED."""
 
-import json, os, sys
+import json
+import os
+import sys
 
 ARCHIVE_DIR = os.path.join(os.path.dirname(__file__), "archiwum", "tiny")
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "tiny_cache.json")

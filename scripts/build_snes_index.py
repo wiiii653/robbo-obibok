@@ -9,11 +9,9 @@ Caches everything to snes_cache.json.
 import json
 import os
 import re
-import sys
 import time
-import urllib.request
 import urllib.error
-from html.parser import HTMLParser
+import urllib.request
 
 # ── Configuration ──────────────────────────────────────────────────
 SNES_BASE = "https://snesmusic.org/v2/"
@@ -137,7 +135,7 @@ def main():
     # Step 1: Scrape game listings
     print("\n📋 Step 1: Scraping game listings...")
     all_games = []
-    chars = [f"n1-9"] + [chr(c) for c in range(ord("A"), ord("Z") + 1)]
+    chars = ["n1-9"] + [chr(c) for c in range(ord("A"), ord("Z") + 1)]
     for char in chars:
         games = paginate_games(char)
         all_games.extend(games)
@@ -214,7 +212,7 @@ def main():
     print(f"   {len(track_list)} game sets")
     print(f"   ~{total_tracks} individual SPC tracks")
     print(f"   ~{total_size} KB total download size")
-    print(f"\n🌲 Done! 🎵")
+    print("\n🌲 Done! 🎵")
 
 
 if __name__ == "__main__":

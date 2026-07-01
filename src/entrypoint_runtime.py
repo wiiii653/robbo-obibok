@@ -7,19 +7,20 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Mapping
 
-from runtime_bootstrap import StartupEnvironment, initialize_startup_environment
 from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
 from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
-from domain_services import AppServicesProtocol
-from collection_specs import CollectionSpec
 from collection_service import CollectionArchiveProtocol
-from entrypoint_callback_groups import AppEntrypointCallbacks
+from collection_specs import CollectionSpec
+from domain_services import AppServicesProtocol
 from entrypoint_bootstrap import EntrypointResources
+from entrypoint_callback_groups import AppEntrypointCallbacks
 from entrypoint_state import EntrypointRuntimeInitializerStateProtocol
 from playback_assets import PlaybackAssetRuntime
 from runtime_bootstrap import (
+    StartupEnvironment,
     acquire_process_lock,
     cleanup_temp_dir,
+    initialize_startup_environment,
     log_preloaded_cache,
     release_process_lock,
     run_startup_steps,
@@ -43,6 +44,7 @@ from runtime_service_facade import RuntimeServiceFacade
 
 if TYPE_CHECKING:
     from discord.ext import commands
+
     from entrypoint_app import EntrypointComponentAccess
     from stream_runtime import MonitorAudioSource
 

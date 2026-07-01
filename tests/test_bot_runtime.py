@@ -1,4 +1,3 @@
-import asyncio
 import sys
 import types
 import unittest
@@ -9,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import domain_state
 import bot_runtime
+import domain_state
 
 
 class BotRuntimeTests(unittest.IsolatedAsyncioTestCase):

@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
 import discord
+from discord.ext import commands
+
+import entrypoint_state as state_protocols
+from bot_dependencies import (
+    PlaybackHandlerDependencies,
+    PlaybackHandlerMap,
+)
+from collection_specs import CollectionSpec
 from domain_config import AppConfig
 from domain_services import AppServicesProtocol
 from domain_state import PlaylistState
-from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
-from collection_specs import CollectionSpec
-import entrypoint_state as state_protocols
-
 from entrypoint_callback_groups import (
     AppEntrypointCallbacks,
     BootstrapEntrypointCallbacks,
@@ -23,19 +27,22 @@ from entrypoint_callback_groups import (
     LibraryEntrypointCallbacks,
     PlaybackEntrypointCallbacks,
 )
-from entrypoint_components import EntrypointComponentDeps, apply_entrypoint_components, build_entrypoint_components
+from entrypoint_components import (
+    EntrypointComponentDeps,
+    apply_entrypoint_components,
+    build_entrypoint_components,
+)
 from entrypoint_glue import EntrypointGlue
 from entrypoint_runtime import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
 from entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
 from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
-from discord.ext import commands
 
 if TYPE_CHECKING:
     from entrypoint_launcher_loader import EntrypointSupport
     from entrypoint_state import EntrypointCompatStateProtocol
-    from runtime_bindings import LegacyRuntimeBindings
     from playback_assets import PlaybackAssetRuntime
     from playback_helpers import NowPlayingDependencies
+    from runtime_bindings import LegacyRuntimeBindings
     from runtime_protocols import ArchiveRuntimeProtocol, PlaybackRuntimeProtocol
     from runtime_service_facade import RuntimeServiceFacade
     from stream_runtime import MonitorAudioSource, StreamRuntime

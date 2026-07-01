@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
+from bot_dependencies import (
+    CommandDecoratorFactory,
+    PlaybackHandlerDependencies,
+    PlaybackHandlerMap,
+)
 from domain_state import PlaylistState
-from bot_dependencies import CommandDecoratorFactory, PlaybackHandlerDependencies, PlaybackHandlerMap
-
 from entrypoint_app import (
     EntrypointApp,
     EntrypointRegistrationDeps,
     EntrypointRuntimePolicyDeps,
     build_entrypoint_app,
+    create_bot,
 )
-from entrypoint_glue import build_single_guild_check
-from entrypoint_launcher_loader import EntrypointSupport, build_entrypoint_support
 from entrypoint_callback_groups import (
     BootstrapStaticCallbacks,
     CollectionStaticCallbacks,
@@ -24,10 +26,11 @@ from entrypoint_callback_groups import (
     PlaybackStaticCallbacks,
 )
 from entrypoint_components import EntrypointComponentDeps
-from runtime_bindings import LegacyRuntimeBindings
+from entrypoint_glue import build_single_guild_check
+from entrypoint_launcher_loader import EntrypointSupport, build_entrypoint_support
 from playback_process import stop_all_players as runtime_stop_all_players
+from runtime_bindings import LegacyRuntimeBindings
 from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
-from entrypoint_app import create_bot
 
 if TYPE_CHECKING:
     from discord import Colour

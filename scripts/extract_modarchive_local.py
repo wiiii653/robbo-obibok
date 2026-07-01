@@ -10,12 +10,10 @@ After extraction, the outer+inner zips can be deleted (~30GB saved).
 
 from __future__ import annotations
 
-import json
-import os
-import sys
-import zipfile
 import io
 import re
+import sys
+import zipfile
 from pathlib import Path
 
 ARCHIVE_DIR = Path(__file__).resolve().parent / "archiwum"
@@ -91,31 +89,31 @@ def extract_modules_from_outer_zip(outer_path: Path, output_dir: Path) -> int:
 def main():
     output_dir = OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     total_modules = 0
     total_zips = 0
-    
+
     for source_name, source_dir in ZIP_SOURCES:
         if not source_dir.is_dir():
             print(f"[SKIP] {source_name}: {source_dir} not found")
             continue
-        
+
         # Collect all outer zip files
         outer_zips = sorted(source_dir.rglob('*.zip'))
         print(f"[{source_name}] Found {len(outer_zips)} outer zip files in {source_dir}")
-        
+
         for i, outer_path in enumerate(outer_zips):
             if i % 50 == 0 and i > 0:
                 print(f"  [{source_name}] {i}/{len(outer_zips)} zips processed, {total_modules} modules so far")
-            
+
             count = extract_modules_from_outer_zip(outer_path, output_dir)
             if count > 0:
                 total_modules += count
                 total_zips += 1
-    
+
     print(f"\n✅ Done: {total_modules} modules extracted, {total_zips} outer zips processed")
     print(f"   Output: {output_dir}")
-    
+
     # Quick stats
     total_size = sum(f.stat().st_size for f in output_dir.iterdir() if f.is_file())
     print(f"   Total size: {total_size / 1024 / 1024:.1f} MB, files: {len(list(output_dir.iterdir()))}")

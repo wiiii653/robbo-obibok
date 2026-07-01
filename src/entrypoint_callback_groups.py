@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
-from domain_state import PlaylistState
 from bot_dependencies import CommandDecoratorFactory
+from domain_state import PlaylistState
 from runtime_protocols import PlaySubsongCallable
-from collection_specs import CollectionSpec
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession

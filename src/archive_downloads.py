@@ -11,7 +11,6 @@ import aiohttp
 
 from download_safety import read_response_limited, safe_download_path
 
-
 MAX_RSN_DOWNLOAD_BYTES = 128 * 1024 * 1024
 MAX_MODULE_DOWNLOAD_BYTES = 64 * 1024 * 1024
 

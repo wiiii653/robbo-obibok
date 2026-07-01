@@ -1,15 +1,19 @@
-import sys
-import os
 import asyncio
+import os
+import sys
 import tempfile
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from runtime_bootstrap import acquire_process_lock, initialize_startup_environment, release_process_lock
+from runtime_bootstrap import (
+    acquire_process_lock,
+    initialize_startup_environment,
+    release_process_lock,
+)
 
 
 class StartupEnvironmentTests(unittest.TestCase):

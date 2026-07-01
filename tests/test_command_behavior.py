@@ -1,7 +1,7 @@
-import sys
 import asyncio
-from pathlib import Path
+import sys
 from dataclasses import replace
+from pathlib import Path
 
 TESTS_DIR = Path(__file__).resolve().parent
 ROOT = TESTS_DIR.parent
@@ -10,12 +10,13 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from domain_state import PlaylistState
-from collection_catalog import FLIP_SEQ as COLLECTION_FLIP_SEQ
-from test_support import FakeContext, RegistrationBot, patch, unittest
 from test_runtime_context import command_test_context
+from test_support import FakeContext, RegistrationBot, patch, unittest
+
 import library_commands
 import playback_commands
+from collection_catalog import FLIP_SEQ as COLLECTION_FLIP_SEQ
+from domain_state import PlaylistState
 
 
 class AsyncTestCase(unittest.TestCase):

@@ -11,7 +11,7 @@ Key facts:
 - **Collections**: 7 local archives — ASMA (6.3k), HVSC (60.8k), ModArchive (175k+), AY (4.5k), YM (7.2k), Tiny (418), SNES SPC (60k)
   - ModArchive modules are downloaded-on-demand and cached persistently in `archiwum/modarchive/cache/` (no repeat HTTP)
   - A 2007 snapshot (119k modules, 67GB) can be extracted via `extract_modarchive_local.py` for future hash-based matching
-- **Test suite**: 226/226 passing (2 skipped = integration tests requiring live services).
+- **Test suite**: passing (2 skipped = integration tests requiring live services).
 - **CI**: 4 workflows (test, integration, launchers, entrypoint-runtime)
 - **Build**: `make install` sets up venv + indexes
 

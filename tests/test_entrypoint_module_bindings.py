@@ -1,62 +1,58 @@
 import sys
-from pathlib import Path
-import unittest
 import types
+import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from entrypoint_app import EntrypointCompat
+from entrypoint_module import build_entrypoint_exports, build_entrypoint_module
 from entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_COLLECTION_BINDINGS,
     ENTRYPOINT_DIRECT_RUNTIME_BINDINGS,
-    ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS,
-    ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS,
-)
-from entrypoint_module_bindings import (
-    EntrypointSurfaceAliasSpec,
     ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_HELPER_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_INTERNAL_COMPAT_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_LEGACY_FLIP_COMPAT_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
     ENTRYPOINT_EXECUTABLE_LEGACY_STABLE_COMPAT_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_PRIVATE_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_PRIVATE_DIRECT_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_PUBLIC_DIRECT_COMPAT_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_RUNTIME_COMPAT_ATTR_NAMES,
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
+    ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_STABLE_INTERNAL_ATTR_NAMES,
+    ENTRYPOINT_EXECUTABLE_SUPPORTED_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
     ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
     ENTRYPOINT_MODULE_STABLE_NAMES,
+    ENTRYPOINT_PRIVATE_DIRECT_EXPORT_BINDINGS,
+    ENTRYPOINT_PUBLIC_DIRECT_EXPORT_BINDINGS,
+    EntrypointSurfaceAliasSpec,
     build_entrypoint_compat_module_bindings,
-    ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_HELPER_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_PRIVATE_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_SUPPORTED_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES,
-    ENTRYPOINT_EXECUTABLE_STABLE_INTERNAL_ATTR_NAMES,
     build_entrypoint_stable_module_bindings,
-    resolve_compat_binding_attr,
-    resolve_bound_entrypoint_module_attr,
-    resolve_compat_entrypoint_module_attr,
     is_deprecated_executable_attr,
-    is_supported_executable_attr,
     is_stable_executable_attr,
+    is_supported_executable_attr,
+    resolve_bound_entrypoint_module_attr,
+    resolve_compat_binding_attr,
+    resolve_compat_entrypoint_module_attr,
     supported_executable_dict_attrs,
 )
-
-from tests.test_support import install_discord_stubs
-from entrypoint_app import EntrypointCompat
-from entrypoint_module import build_entrypoint_exports, build_entrypoint_module
 from tests.test_entrypoint_module_fixtures import (
     build_fake_module_bootstrap,
     build_fake_module_deps,
     build_fake_module_support,
 )
-
+from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 

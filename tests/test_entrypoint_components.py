@@ -10,7 +10,6 @@ if str(ROOT) not in sys.path:
 
 from tests.test_support import install_discord_stubs
 
-
 install_discord_stubs()
 
 from domain_context import ArchiveRegistryViews

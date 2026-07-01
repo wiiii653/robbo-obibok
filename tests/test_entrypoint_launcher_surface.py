@@ -1,25 +1,25 @@
 import sys
 import types
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_module_bindings import ENTRYPOINT_COMPAT_RUNTIME_BINDINGS
-from entrypoint_module_bindings import ENTRYPOINT_DIRECT_EXPORT_BINDINGS
+from entrypoint_module_bindings import (
+    ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
+    ENTRYPOINT_DIRECT_EXPORT_BINDINGS,
+    ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
+    ENTRYPOINT_EXPORT_GRAPH,
+)
 from entrypoint_surface_assembly import (
+    EntrypointModuleSurface,
     EntrypointSurfaceExportAdapter,
     build_entrypoint_compat_registry_attrs,
     build_entrypoint_direct_export_map,
     build_entrypoint_surface_exports,
 )
-from entrypoint_module_bindings import (
-    ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
-    ENTRYPOINT_EXPORT_GRAPH,
-)
-from entrypoint_surface_assembly import EntrypointModuleSurface
 
 
 class EntrypointLauncherSurfaceTests(unittest.TestCase):

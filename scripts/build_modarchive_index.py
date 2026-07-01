@@ -15,12 +15,13 @@ Output:
 """
 
 import asyncio
-import aiohttp
 import json
-import os
-import time
-import re
 import logging
+import os
+import re
+import time
+
+import aiohttp
 
 logging.basicConfig(
     level=logging.INFO,

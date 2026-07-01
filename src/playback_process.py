@@ -8,7 +8,6 @@ from typing import Callable, Iterable
 
 from domain_state import PlaylistState
 
-
 COLLECTION_VOLUMES = {
     "hvsc": 120,
     "asma": 100,

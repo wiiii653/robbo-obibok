@@ -10,7 +10,6 @@ import signal
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Sequence
 
-
 _LOCK_DESCRIPTORS: dict[str, int] = {}
 
 

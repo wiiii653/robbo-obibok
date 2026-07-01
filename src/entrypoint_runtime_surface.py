@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, cast
 
-from domain_config import AppConfig
-from archive_runtime import ArchiveRuntimeConfig
 import entrypoint_state as state_protocols
-
+from archive_runtime import ArchiveRuntimeConfig
+from domain_config import AppConfig
 from entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
     ENTRYPOINT_MODULE_STABLE_BINDINGS,
@@ -100,7 +99,8 @@ def build_runtime_surface_bindings(
         if isinstance(source, Mapping):
             resolver = source.__getitem__
         else:
-            resolver = lambda name: getattr(source, name)
+            def resolver(name):
+                return getattr(source, name)
     selected_specs = ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS
     if binding_names is not None:
         selected_specs = tuple(
@@ -128,7 +128,8 @@ def build_runtime_surface(
         elif isinstance(alias_source, Mapping):
             alias_resolver = alias_source.__getitem__
         else:
-            alias_resolver = lambda name: getattr(alias_source, name)
+            def alias_resolver(name):
+                return getattr(alias_source, name)
     return EntrypointRuntimeSurface(
         bindings=build_runtime_surface_bindings(
             source,
@@ -148,7 +149,8 @@ def build_runtime_state_surface(
         if isinstance(source, Mapping):
             resolver = source.__getitem__
         else:
-            resolver = lambda name: getattr(source, name)
+            def resolver(name):
+                return getattr(source, name)
     return EntrypointRuntimeStateSurface(
         bindings={name: resolver(name) for name in ENTRYPOINT_RUNTIME_STATE_BINDING_NAMES}
     )

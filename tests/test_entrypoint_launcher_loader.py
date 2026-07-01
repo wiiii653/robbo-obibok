@@ -1,18 +1,20 @@
+import asyncio
 import sys
 import types
-from pathlib import Path
 import unittest
-import asyncio
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_launcher_loader import EntrypointModuleLoader, EntrypointRuntimeController, EntrypointRuntimeStateAccess
-from entrypoint_module_bindings import (
-    ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
+from entrypoint_launcher_loader import (
+    EntrypointModuleLoader,
+    EntrypointRuntimeController,
+    EntrypointRuntimeStateAccess,
 )
 from entrypoint_module_bindings import (
+    ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
 )
 

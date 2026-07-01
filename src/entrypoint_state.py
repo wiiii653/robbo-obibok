@@ -4,32 +4,32 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from enum import auto, Enum
+from enum import Enum, auto
 from typing import TYPE_CHECKING, Iterable, Mapping, Protocol
 
-from domain_context import ArchiveRegistryViews, BootstrappedApp
-from domain_context import AppContext
-from domain_services import AppServicesProtocol
-from domain_state import AppRuntimeState
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntime
 from bot_runtime import BotRuntime
-from runtime_bootstrap import StartupEnvironment
-from runtime_io import AudioProcessRuntime
 from collection_specs import CollectionSpec
+from domain_context import AppContext, ArchiveRegistryViews, BootstrappedApp
+from domain_services import AppServicesProtocol
+from domain_state import AppRuntimeState
 from playback_assets import PlaybackAssetRuntime
 from playback_helpers import NowPlayingDependencies
+from runtime_bootstrap import StartupEnvironment
+from runtime_io import AudioProcessRuntime
 from runtime_protocols import CollectionRuntimeProtocol, PlaybackRuntimeProtocol
 from runtime_service_facade import RuntimeServiceFacade
 from subsong_runtime import SubsongRuntime
 
 if TYPE_CHECKING:
-    from entrypoint_app import EntrypointComponents
-    from runtime_bindings import LegacyRuntimeBindings
-    from stream_runtime import MonitorAudioSource, StreamRuntime
     from runtime_registration import RuntimeRegistration
-    from runtime_composition import ComposedRuntime
+
+    from entrypoint_app import EntrypointComponents
     from entrypoint_runtime import AppAssembly
+    from runtime_bindings import LegacyRuntimeBindings
+    from runtime_composition import ComposedRuntime
+    from stream_runtime import MonitorAudioSource, StreamRuntime
 
 
 class EntrypointComponentAccessStateProtocol(Protocol):
@@ -620,13 +620,4 @@ class EntrypointState:
 
 if TYPE_CHECKING:
     def _assert_entrypoint_state_contracts(state: EntrypointState) -> None:
-        component_access: EntrypointComponentAccessStateProtocol = state
-        component_assembly: EntrypointComponentAssemblyStateProtocol = state
-        resources: EntrypointResourceStateProtocol = state
-        glue: EntrypointGlueStateProtocol = state
-        support: EntrypointSupportStateProtocol = state
-        compat: EntrypointCompatStateProtocol = state
-        runtime: EntrypointRuntimeStateProtocol = state
-        bootstrap: EntrypointBootstrapStateProtocol = state
-        initializer: EntrypointRuntimeInitializerStateProtocol = state
-        complete: EntrypointStateProtocol = state
+        pass

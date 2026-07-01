@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Awaitable, Callable
+from typing import TYPE_CHECKING, Callable
 
 from domain_state import PlaylistState
 from runtime_protocols import PlaySubsongCallable
@@ -16,8 +16,9 @@ from session_runtime import (
 )
 
 if TYPE_CHECKING:
-    from bot_runtime import BotRuntime
     from discord.ext import commands
+
+    from bot_runtime import BotRuntime
 
 
 @dataclass(slots=True)

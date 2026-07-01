@@ -1,7 +1,7 @@
 import sys
 import types
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +29,7 @@ class RunBotLoggedTests(unittest.TestCase):
 
     def test_run_logged_bot_launches_process_and_returns_exit_code(self):
         popen_calls = []
-        log_path = Path("/tmp/robbo/bot_output.log")
+        Path("/tmp/robbo/bot_output.log")
 
         class FakeLog:
             def __enter__(self):

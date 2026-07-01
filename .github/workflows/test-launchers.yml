@@ -8,8 +8,8 @@ on:
       - "Makefile"
       - "README.md"
       - "scripts/install.sh"
-      - "robbo-obibok.service"
-      - "robbo-obibok-strict.service"
+      - "deploy/robbo-obibok.service"
+      - "deploy/robbo-obibok-strict.service"
       - "src/robbo_obibok_launcher.py"
       - "src/robbo_obibok_logged_launcher.py"
       - "run_bot.sh"
@@ -24,8 +24,8 @@ on:
       - "Makefile"
       - "README.md"
       - "scripts/install.sh"
-      - "robbo-obibok.service"
-      - "robbo-obibok-strict.service"
+      - "deploy/robbo-obibok.service"
+      - "deploy/robbo-obibok-strict.service"
       - "src/robbo_obibok_launcher.py"
       - "src/robbo_obibok_logged_launcher.py"
       - "run_bot.sh"
@@ -37,11 +37,14 @@ on:
 jobs:
   launchers:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Create virtualenv
         run: python -m venv venv
       - name: Install requirements

@@ -11,7 +11,6 @@ import subprocess
 from dataclasses import dataclass
 from typing import Protocol
 
-
 # ─── Protocol ────────────────────────────────────────────────────────────────
 
 class VolumeController(Protocol):

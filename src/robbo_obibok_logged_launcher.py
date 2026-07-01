@@ -9,8 +9,11 @@ import sys
 from pathlib import Path
 from typing import MutableMapping
 
-from robbo_obibok_launcher import load_runtime_environment, selected_entry_command
-from robbo_obibok_launcher import selected_entry_script_from_env
+from robbo_obibok_launcher import (
+    load_runtime_environment,
+    selected_entry_command,
+    selected_entry_script_from_env,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 

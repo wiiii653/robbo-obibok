@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
-import logging
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, cast
 
-from domain_state import PlaylistState
 from collection_specs import CollectionSpec
+from domain_state import PlaylistState
 
 if TYPE_CHECKING:
-    from archive_catalog import CollectionInfo
     from discord.ext import commands
+
+    from archive_catalog import CollectionInfo
 
 
 class CollectionArchiveProtocol(Protocol):

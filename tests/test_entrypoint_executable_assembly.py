@@ -1,7 +1,7 @@
 import sys
 import types
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,16 +10,18 @@ if str(ROOT) not in sys.path:
 
 from tests.test_support import install_discord_stubs
 
-
 install_discord_stubs()
 
-from entrypoint_module_bindings import ALLOW_DEPRECATED
 from entrypoint_executable_assembly import (
     build_entrypoint_executable_assembly,
     build_entrypoint_executable_dependencies,
     build_strict_entrypoint_executable_assembly,
 )
-from entrypoint_module_bindings import ENTRYPOINT_EXPORT_GRAPH, ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES
+from entrypoint_module_bindings import (
+    ALLOW_DEPRECATED,
+    ENTRYPOINT_EXPORT_GRAPH,
+    ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
+)
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
 
 

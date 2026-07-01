@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, TypeVar
 
 from domain_state import PlaylistState

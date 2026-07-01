@@ -13,7 +13,6 @@ from discord.ext import commands
 
 from bot_dependencies import PlaybackCommandDependencies
 
-
 if TYPE_CHECKING:
     class PlaybackContext(commands.Context[commands.Bot]):
         guild: discord.Guild
