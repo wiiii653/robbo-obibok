@@ -116,6 +116,8 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 3. Wire the callback into the assembly in `entrypoint_app.py`.
 4. Add test coverage in `tests/test_command_behavior.py`.
 5. Add help text entry in the `!help` embed dict (around line 340 in `playback_commands.py`).
+   - **Compact format**: każda komenda pokazuje jeden alias w nawiasie, np. `!hvsc (!c64)`.
+   - Dodatkowe aliasy istnieją w kodzie (`@bot.command(aliases=[...])`) ale nie są wymieniane w helpie — help pokazuje tylko główną nazwę i jeden skrót.
 
 ## Testing
 
