@@ -94,26 +94,26 @@ def move_playback_to_sink(sink_name: str) -> None:
 def audacious_play(filepath: str, sink_name: str, logger) -> bool:
     """Start Audacious playback. Returns True if playback started."""
     ensure_audacious(logger)
-    subprocess.run(["audtool", "playlist-clear"], capture_output=True)
-    subprocess.run(["audtool", "playlist-addurl", filepath], capture_output=True)
+    subprocess.run(["audtool", "playlist-clear"], capture_output=True, timeout=10)
+    subprocess.run(["audtool", "playlist-addurl", filepath], capture_output=True, timeout=10)
     for attempt in range(3):
-        subprocess.run(["audtool", "playback-play"], capture_output=True)
+        subprocess.run(["audtool", "playback-play"], capture_output=True, timeout=10)
         time.sleep(0.5)
-        result = subprocess.run(["audtool", "playback-playing"], capture_output=True)
+        result = subprocess.run(["audtool", "playback-playing"], capture_output=True, timeout=10)
         if result.returncode == 0:
             break
         logger.warning("audacious_play: attempt %d failed, retrying...", attempt + 1)
     else:
         logger.error("audacious_play: all 3 attempts failed for %s, clearing playlist", filepath)
-        subprocess.run(["audtool", "playlist-clear"], capture_output=True)
+        subprocess.run(["audtool", "playlist-clear"], capture_output=True, timeout=10)
         return False
     move_playback_to_sink(sink_name)
     return True
 
 
 def audacious_stop() -> None:
-    subprocess.run(["audtool", "playback-stop"], capture_output=True)
-    subprocess.run(["audtool", "playlist-clear"], capture_output=True)
+    subprocess.run(["audtool", "playback-stop"], capture_output=True, timeout=10)
+    subprocess.run(["audtool", "playlist-clear"], capture_output=True, timeout=10)
 
 
 def audacious_kill() -> None:
@@ -122,12 +122,12 @@ def audacious_kill() -> None:
 
 
 def audacious_song() -> str:
-    result = subprocess.run(["audtool", "current-song"], capture_output=True, text=True)
+    result = subprocess.run(["audtool", "current-song"], capture_output=True, text=True, timeout=10)
     return result.stdout.strip()
 
 
 def is_playing() -> bool:
-    result = subprocess.run(["audtool", "playback-playing"], capture_output=True)
+    result = subprocess.run(["audtool", "playback-playing"], capture_output=True, timeout=10)
     return result.returncode == 0
 
 
@@ -141,7 +141,7 @@ def stop_all_players(
 
 
 def audtool_output_length() -> int:
-    result = subprocess.run(["audtool", "current-song-output-length-seconds"], capture_output=True, text=True)
+    result = subprocess.run(["audtool", "current-song-output-length-seconds"], capture_output=True, text=True, timeout=10)
     try:
         return int(result.stdout.strip())
     except (ValueError, OSError):
@@ -149,7 +149,7 @@ def audtool_output_length() -> int:
 
 
 def audtool_song_length() -> int:
-    result = subprocess.run(["audtool", "current-song-length-seconds"], capture_output=True, text=True)
+    result = subprocess.run(["audtool", "current-song-length-seconds"], capture_output=True, text=True, timeout=10)
     try:
         return int(result.stdout.strip())
     except (ValueError, OSError):
