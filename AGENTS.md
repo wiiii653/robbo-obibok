@@ -125,20 +125,23 @@ collection_*      — collection definitions and specs
 │   ├── extract_modarchive_local.py      ← Snapshot extraction
 │   ├── install.sh                       ← Installation script
 │   └── test_launchers.sh                ← Launcher smoke test runner
-├── docs/
+├── deploy/                      # Systemd service files
+│   ├── robbo-obibok.service
+│   └── robbo-obibok-strict.service
+├── docs/                        # Documentation
 │   ├── MAINTAINABILITY_PLAN.md          ← Maintenance plan
-│   └── POST_REFACTOR_PLAN.md            ← Post-refactor notes
-├── tests/
-│   └── ...                              ← 40 test files
-├── config.yaml                          ← Bot configuration file
-├── .env                                 ← Environment (token secrets)
-├── Makefile                             ← Build/test commands
-├── README.md                            ← This file
-├── AGENTS.md                            ← AI agent reference
-├── requirements.txt                     ← Python dependencies
-├── requirements-dev.txt                 ← Dev dependencies
-├── requirements.lock.txt                ← Locked dependencies
-└── run_bot.sh                           ← Shell launcher
+│   ├── POST_REFACTOR_PLAN.md            ← Post-refactor notes
+│   └── tracker-volume-analysis.md       ← Technical reference
+├── tests/                       # 40 unit test files
+├── config.yaml                  ← Bot configuration file
+├── Makefile                     ← Build/test commands
+├── README.md                    ← This file
+├── AGENTS.md                    ← AI agent reference
+├── requirements.txt             ← Python dependencies
+├── requirements-dev.txt         ← Dev dependencies
+├── requirements.lock.txt        ← Locked dependencies
+├── run_bot.sh                   ← Shell launcher
+└── .gitignore                   ← Git ignore rules
 ```
 
 ## Code Conventions

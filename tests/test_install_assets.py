@@ -35,7 +35,7 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launcher_text)
 
     def test_strict_service_uses_explicit_strict_entrypoint(self):
-        service_text = (ROOT / "robbo-obibok-strict.service").read_text(encoding="utf-8")
+        service_text = (ROOT / "deploy" / "robbo-obibok-strict.service").read_text(encoding="utf-8")
 
         self.assertIn("Description=Robbo Obibok", service_text)
         self.assertIn("strict compatibility mode", service_text)
@@ -45,7 +45,7 @@ class InstallAssetsTests(unittest.TestCase):
     def test_install_script_installs_both_service_units(self):
         install_text = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
 
-        self.assertIn('SERVICE_FILES=("robbo-obibok.service" "robbo-obibok-strict.service")', install_text)
+        self.assertIn('SERVICE_FILES=("deploy/robbo-obibok.service" "deploy/robbo-obibok-strict.service")', install_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
             self.assertIn(script_name, install_text)
         self.assertIn("systemctl --user enable --now robbo-obibok.service", install_text)
@@ -74,8 +74,8 @@ class InstallAssetsTests(unittest.TestCase):
         make_text = (ROOT / "Makefile").read_text(encoding="utf-8")
         readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
         install_text = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
-        strict_service_text = (ROOT / "robbo-obibok-strict.service").read_text(encoding="utf-8")
-        default_service_text = (ROOT / "robbo-obibok.service").read_text(encoding="utf-8")
+        strict_service_text = (ROOT / "deploy" / "robbo-obibok-strict.service").read_text(encoding="utf-8")
+        default_service_text = (ROOT / "deploy" / "robbo-obibok.service").read_text(encoding="utf-8")
         workflow_text = (ROOT / ".github" / "workflows" / "test-launchers.yml").read_text(encoding="utf-8")
         runtime_workflow_text = (ROOT / ".github" / "workflows" / "test-entrypoint-runtime.yml").read_text(encoding="utf-8")
 
@@ -109,7 +109,7 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make test-launchers", readme_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
             self.assertIn(script_name, readme_text)
-        self.assertIn("cp robbo-obibok-strict.service", readme_text)
+        self.assertIn("cp deploy/robbo-obibok-strict.service", readme_text)
         self.assertIn("make run-strict", install_text)
         self.assertIn("robbo-obibok-strict.py", strict_service_text)
         self.assertIn("robbo-obibok.py", default_service_text)

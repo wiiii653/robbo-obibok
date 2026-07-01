@@ -118,7 +118,7 @@ done
 
 # ── Setup systemd service ───────────────────────────────────────
 step 7 "Systemd service..."
-SERVICE_FILES=("robbo-obibok.service" "robbo-obibok-strict.service")
+SERVICE_FILES=("deploy/robbo-obibok.service" "deploy/robbo-obibok-strict.service")
 INSTALLED_SERVICE_NAMES=()
 SERVICE_DIR="$HOME/.config/systemd/user"
 mkdir -p "$SERVICE_DIR"

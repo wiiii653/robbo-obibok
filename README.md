@@ -217,9 +217,9 @@ Run as a background service:
 ```bash
 # Copy a service file
 mkdir -p ~/.config/systemd/user
-cp robbo-obibok.service ~/.config/systemd/user/
+cp deploy/robbo-obibok.service ~/.config/systemd/user/
 # or
-cp robbo-obibok-strict.service ~/.config/systemd/user/
+cp deploy/robbo-obibok-strict.service ~/.config/systemd/user/
 
 # Store token in the environment file used by the service
 printf 'DISCORD_BOT_TOKEN="%s"\n' "YOUR_TOKEN_HERE" > ~/robbo-obibok/.env
@@ -284,7 +284,7 @@ To adjust the settings: edit `~/.config/audacious/config` and restart the bot.
 | Bot auto-disconnects too fast | Increase `auto.empty_timeout` in config |
 | SID metadata is empty | Some SID files lack embedded headers — filename is shown as fallback |
 | GME formats skip too early | Updated in latest code — GME formats use 600s timeout with song-loaded check |
-| Temp dir cleanup errors | Temp dir moved under `tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
+| Temp dir cleanup errors | Temp dir moved under `var/tmp/` in bot root — no more `/tmp/asma_bot_*` orphaned dirs |
 | Audio is too quiet or uneven | Compressor plugin is enabled at startup — verify with `audtool plugin-is-enabled compressor` |
 
 ## Configuration
@@ -376,7 +376,10 @@ robbo-obibok/
 ├── .gitignore                 # Git ignore rules
 ├── Makefile                   # Build/test commands
 ├── extras/                    # Assets (robbo-banner.png)
-├── tmp/                       # Temp directory for subsong WAVs (generated)
+├── var/                       # Runtime data (queues, playlists, temp, logs)
+│   ├── queues/                # Persisted queues per guild (generated)
+│   ├── playlists/             # Saved playlists (generated)
+│   └── tmp/                   # Temp directory for subsong WAVs (generated)
 ├── archiwum/                  # Local archives (see Collections table)
 │   ├── asma/                  # Atari SAP files
 │   ├── hvsc/                  # C64 SID files
@@ -385,8 +388,6 @@ robbo-obibok/
 │   ├── tiny/                  # Tiny Music modules
 │   ├── snes_spc/              # SNES SPC files
 │   └── modarchive/            # ModArchive tracker modules + cache
-├── queues/                    # Persisted queues per guild (generated)
-├── playlists/                 # Saved playlists (generated)
 ├── favorites.json             # Reaction-based favorites (generated)
 ├── *_cache_local.json         # Local track indexes (generated)
 └── *.cache.json               # Other collection cache files (generated)

@@ -7,7 +7,6 @@ temp.wav
 asma_bot_*/
 runner.py
 *.log
-queues/
 modarchive_cache.json
 *.pid
 favorites.json
@@ -15,10 +14,9 @@ last_collection.txt
 archiwum/
 blacklist.json
 .hermes/plans/
-playlists/
 .vscode/
-tmp/
 var/
 *_cache_local.json
 *_cache_old_urls.json
+*_cache.json
 archiwum
