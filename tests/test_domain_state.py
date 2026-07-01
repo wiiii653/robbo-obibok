@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import domain_state
+from bot_persistence import load_queue_from_disk, save_queue_to_disk
 
 
 class AppRuntimeStateTests(unittest.TestCase):
@@ -94,6 +95,8 @@ class AppRuntimeStateTests(unittest.TestCase):
                 queue_dir=tmpdir,
                 default_collection_mode="hvsc",
                 json_writer=self._write_json,
+                save_queue_fn=save_queue_to_disk,
+                load_queue_fn=load_queue_from_disk,
             )
             state = runtime_state.get_state(42)
             state.set_guild_id(42)
@@ -118,6 +121,8 @@ class AppRuntimeStateTests(unittest.TestCase):
                 queue_dir=tmpdir,
                 default_collection_mode="hvsc",
                 json_writer=self._write_json,
+                save_queue_fn=save_queue_to_disk,
+                load_queue_fn=load_queue_from_disk,
             )
             Path(tmpdir, "42.json").write_text(
                 '{"queue": ["a.sid"], "index": "bad", "loop": true, "collection_mode": "hvsc"}',

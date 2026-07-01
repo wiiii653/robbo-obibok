@@ -96,7 +96,7 @@ class ArchitectureTests(unittest.TestCase):
                 continue
             for lineno, imported in _parse_imports(pyfile):
                 imported_top = imported.split(".")[0]
-                if imported_top in UPPER_LAYER_PREFIXES:
+                if any(imported_top.startswith(p) for p in UPPER_LAYER_PREFIXES):
                     violations.append((lineno, mod, imported))
         if violations:
             msg = "\n".join(

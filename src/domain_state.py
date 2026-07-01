@@ -14,9 +14,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Iterable, Mapping
-
-from bot_persistence import CachedJsonStore, PlaylistLibraryStore  # noqa: F401 — re-exported
+from typing import Any, Callable, Iterable, Mapping
 
 # ── Sub-states ──────────────────────────────────────────────────────────────
 
@@ -521,10 +519,14 @@ class AppRuntimeState:
         default_collection_mode: str,
         json_writer,
         message_track_map_max: int = 50,
+        save_queue_fn: Callable[..., None] | None = None,
+        load_queue_fn: Callable[..., dict | None] | None = None,
     ):
         self._queue_dir = queue_dir
         self._default_collection_mode = default_collection_mode
         self._json_writer = json_writer
+        self._save_queue_fn = save_queue_fn
+        self._load_queue_fn = load_queue_fn
         self.guilds: dict[int, PlaylistState] = {}
         self.message_track_map: dict[int, dict[str, object]] = {}
         self._message_track_map_max = message_track_map_max
@@ -597,21 +599,10 @@ class AppRuntimeState:
     # ── Temporary delegation methods for backward compatibility ────────────
 
     def save_queue(self, state: PlaylistState) -> None:
-        """Delegate to queue persistence.
-
-        .. deprecated::
-            Use ``save_queue_to_disk`` from :mod:`bot_persistence` directly.
-        """
-        from bot_persistence import save_queue_to_disk
-
-        save_queue_to_disk(state, self._queue_dir, self._json_writer)
+        if self._save_queue_fn is not None:
+            self._save_queue_fn(state, self._queue_dir, self._json_writer)
 
     def load_queue(self, guild_id: int) -> dict | None:
-        """Delegate to queue persistence.
-
-        .. deprecated::
-            Use ``load_queue_from_disk`` from :mod:`bot_persistence` directly.
-        """
-        from bot_persistence import load_queue_from_disk
-
-        return load_queue_from_disk(guild_id, self._queue_dir)
+        if self._load_queue_fn is not None:
+            return self._load_queue_fn(guild_id, self._queue_dir)
+        return None

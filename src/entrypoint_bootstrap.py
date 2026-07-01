@@ -9,8 +9,9 @@ from typing import Any, Callable
 import entrypoint_state as state_protocols
 from archive_catalog import ArchiveCatalog
 from archive_runtime import ArchiveRuntimeConfig
+from context_builder import bootstrap_app
 from domain_config import AppConfig
-from domain_context import AppContext, ArchiveRegistryViews, BootstrappedApp, bootstrap_app
+from domain_context import AppContext, ArchiveRegistryViews, BootstrappedApp
 from domain_services import AppServicesProtocol
 from domain_state import AppRuntimeState
 from entrypoint_glue import build_temp_path as build_entry_temp_path

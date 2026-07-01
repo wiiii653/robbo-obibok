@@ -8,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from archive_catalog import ArchivePaths
-from domain_context import bootstrap_app, build_app_context
+from domain_archive_config import ArchivePaths
+from context_builder import bootstrap_app, build_app_context
 
 
 class AppContextTests(unittest.TestCase):

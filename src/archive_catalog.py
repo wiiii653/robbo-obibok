@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Awaitable, Callable, Iterable, Mapping, TypeVar
 
-from archive_runtime import ArchiveRuntimeConfig
+from domain_archive_config import ArchiveRuntimeConfig
 
 ArchivePaths = ArchiveRuntimeConfig
 

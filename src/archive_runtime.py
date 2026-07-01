@@ -17,6 +17,7 @@ import aiohttp
 
 from archive_downloads import download_modarchive_module as archive_download_modarchive_module
 from archive_downloads import download_spc_rsn as archive_download_spc_rsn
+from domain_archive_config import ArchiveRuntimeConfig
 
 if TYPE_CHECKING:
     from archive_catalog import ArchiveCatalog
@@ -24,29 +25,6 @@ if TYPE_CHECKING:
 SAP_LINE_RE = re.compile(rb"^([A-Z]+)\s+(.+)")
 SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
 DIR_RE = re.compile(r'href="([^"]+)/"')
-
-
-@dataclass(slots=True)
-class ArchiveRuntimeConfig:
-    asma_base: str = ""
-    asma_dir: str = ""
-    asma_local_cache: str = ""
-    ay_cache: str = ""
-    hvsc_base: str = ""
-    hvsc_cache_file: str = ""
-    hvsc_cache_ttl_hours: int = 0
-    hvsc_local_cache: str = ""
-    hvsc_songlengths_url: str = ""
-    metadata_cache: str = ""
-    modarchive_cache_file: str = ""
-    snes_cache_file: str = ""
-    tiny_cache: str = ""
-    ym_cache: str = ""
-    crawl_timeout: int = 0
-    cache_ttl_hours: int = 0
-    cache_file: str = ""
-    top_level_dirs: list[str] | None = None
-    crawl_concurrency: int = 5
 
 
 @dataclass(slots=True)
