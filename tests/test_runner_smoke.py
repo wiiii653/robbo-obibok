@@ -412,7 +412,7 @@ with (
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
         env = dict(os.environ)
-        env["PYTHONPATH"] = str(ROOT)
+        env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
         env["DISCORD_BOT_TOKEN"] = "runtime-token"
 
         result = subprocess.run(
@@ -501,7 +501,7 @@ with (
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
         env = dict(os.environ)
-        env["PYTHONPATH"] = str(ROOT)
+        env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
         env["DISCORD_BOT_TOKEN"] = "runtime-token"
 
         result = subprocess.run(
@@ -586,7 +586,7 @@ with (
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
         env = dict(os.environ)
-        env["PYTHONPATH"] = str(ROOT)
+        env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
         env["DISCORD_BOT_TOKEN"] = "runtime-token"
 
         result = subprocess.run(
@@ -607,7 +607,8 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)
             shutil.copy(ROOT / "run_bot.sh", temp_root / "run_bot.sh")
-            shutil.copy(ROOT / "robbo_obibok_launcher.py", temp_root / "robbo_obibok_launcher.py")
+            (temp_root / "src").mkdir()
+            shutil.copy(ROOT / "src" / "robbo_obibok_launcher.py", temp_root / "src" / "robbo_obibok_launcher.py")
             os.chmod(temp_root / "run_bot.sh", 0o755)
             (temp_root / "venv" / "bin").mkdir(parents=True)
             launcher = temp_root / "venv" / "bin" / "python3"
@@ -619,7 +620,7 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
             os.chmod(launcher, 0o755)
 
             env = self._clean_env()
-            env["PYTHONPATH"] = str(ROOT)
+            env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
 
             result = subprocess.run(
                 ["bash", "run_bot.sh"],
@@ -636,7 +637,8 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)
             shutil.copy(ROOT / "run_bot.sh", temp_root / "run_bot.sh")
-            shutil.copy(ROOT / "robbo_obibok_launcher.py", temp_root / "robbo_obibok_launcher.py")
+            (temp_root / "src").mkdir()
+            shutil.copy(ROOT / "src" / "robbo_obibok_launcher.py", temp_root / "src" / "robbo_obibok_launcher.py")
             os.chmod(temp_root / "run_bot.sh", 0o755)
             capture_path = temp_root / "launcher_args.txt"
             (temp_root / "venv" / "bin").mkdir(parents=True)
@@ -664,7 +666,7 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertEqual(
             captured_args,
-            ["-u", "robbo_obibok_launcher.py"],
+            ["-u", "src/robbo_obibok_launcher.py"],
         )
 
 

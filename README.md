@@ -175,7 +175,7 @@ Launcher test commands:
 
 ```bash
 # Focused launcher smoke suite
-./test_launchers.sh
+./scripts/test_launchers.sh
 
 # Equivalent Make target
 make test-launchers
@@ -197,7 +197,7 @@ Logged launcher path:
 
 ```bash
 # Canonical logged launcher module
-./venv/bin/python3 robbo_obibok_logged_launcher.py
+./venv/bin/python3 -u src/robbo_obibok_logged_launcher.py
 ```
 
 > **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`
@@ -246,12 +246,12 @@ After cloning, build the local track indexes for the local archive collections:
 make build-indexes
 
 # or run the builders directly
-python build_asma_index.py   # indexes all .sap files in archiwum/asma/
-python build_hvsc_index.py   # indexes all .sid files in archiwum/hvsc/C64Music/
-python build_ay_index.py     # indexes all .ay files in archiwum/ay/
-python build_ym_index.py     # indexes all .ym files in archiwum/ym/
-python build_tiny_index.py   # indexes all tiny-module files in archiwum/tiny/
-python build_snes_index.py   # indexes all .spc files in archiwum/snes_spc/
+python scripts/build_asma_index.py   # indexes all .sap files in archiwum/asma/
+python scripts/build_hvsc_index.py   # indexes all .sid files in archiwum/hvsc/C64Music/
+python scripts/build_ay_index.py     # indexes all .ay files in archiwum/ay/
+python scripts/build_ym_index.py     # indexes all .ym files in archiwum/ym/
+python scripts/build_tiny_index.py   # indexes all tiny-module files in archiwum/tiny/
+python scripts/build_snes_index.py   # indexes all .spc files in archiwum/snes_spc/
 ```
 
 These generate `*_cache_local.json` files for instant startup — no crawling at runtime.
@@ -350,22 +350,32 @@ disabled to prevent multiple servers from sharing the global player.
 robbo-obibok/
 ├── robbo-obibok.py            # Default launcher facade
 ├── robbo-obibok-strict.py     # Strict launcher facade
-├── robbo_obibok_runtime.py    # Importable runtime facade
-├── robbo_obibok_launcher.py   # Shared process launcher
-├── robbo_obibok_logged_launcher.py # Logging-oriented launcher
+├── src/                       # Python source modules
+│   ├── robbo_obibok_runtime.py    # Importable runtime facade
+│   ├── robbo_obibok_launcher.py   # Shared process launcher
+│   ├── robbo_obibok_logged_launcher.py # Logging-oriented launcher
+│   ├── domain_*.py             # Pure data models
+│   ├── entrypoint_*.py         # DI / composition root
+│   ├── playback_*.py           # Playback logic
+│   ├── runtime_*.py            # Runtime wiring
+│   ├── bot_*.py                # Discord bot runtime
+│   ├── archive_*.py            # Archive abstraction
+│   ├── collection_*.py         # Collection specs
+│   └── ...                     # (63 source files total)
+├── scripts/                   # Build and utility scripts
+│   ├── build_*_index.py       # Local index builders
+│   ├── install.sh             # Installation script
+│   └── test_launchers.sh      # Launcher smoke test runner
+├── docs/                      # Documentation
+│   ├── MAINTAINABILITY_PLAN.md
+│   └── POST_REFACTOR_PLAN.md
 ├── config.yaml                # Configuration file
 ├── requirements.txt           # Python dependencies
+├── requirements.lock.txt      # Locked dependencies
 ├── README.md                  # This file
 ├── .gitignore                 # Git ignore rules
-├── build_asma_index.py        # ASMA local index builder
-├── build_hvsc_index.py        # HVSC local index builder
-├── build_ay_index.py          # AY local index builder
-├── build_ym_index.py          # YM local index builder
-├── build_tiny_index.py        # Tiny local index builder
-├── build_snes_index.py        # SNES local index builder
-├── download_modarchive_bulk.py # ModArchive bulk downloader
-├── extras/
-│   └── robbo-banner.png        # Projekt Robbo banner (see README intro)
+├── Makefile                   # Build/test commands
+├── extras/                    # Assets (robbo-banner.png)
 ├── tmp/                       # Temp directory for subsong WAVs (generated)
 ├── archiwum/                  # Local archives (see Collections table)
 │   ├── asma/                  # Atari SAP files
@@ -374,10 +384,10 @@ robbo-obibok/
 │   ├── ym/                    # Atari ST YM files
 │   ├── tiny/                  # Tiny Music modules
 │   ├── snes_spc/              # SNES SPC files
-│   └── modarchive_textfiles/  # ModArchive tracker modules
+│   └── modarchive/            # ModArchive tracker modules + cache
 ├── queues/                    # Persisted queues per guild (generated)
+├── playlists/                 # Saved playlists (generated)
 ├── favorites.json             # Reaction-based favorites (generated)
-├── asma_cache_local.json      # ASMA local track index (generated)
-├── hvsc_cache_local.json      # HVSC local track index (generated)
+├── *_cache_local.json         # Local track indexes (generated)
 └── *.cache.json               # Other collection cache files (generated)
 ```

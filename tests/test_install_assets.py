@@ -7,12 +7,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 EXPECTED_LOCAL_INDEX_BUILDERS = (
-    "build_asma_index.py",
-    "build_hvsc_index.py",
-    "build_ay_index.py",
-    "build_ym_index.py",
-    "build_tiny_index.py",
-    "build_snes_index.py",
+    "scripts/build_asma_index.py",
+    "scripts/build_hvsc_index.py",
+    "scripts/build_ay_index.py",
+    "scripts/build_ym_index.py",
+    "scripts/build_tiny_index.py",
+    "scripts/build_snes_index.py",
 )
 
 
@@ -29,7 +29,7 @@ class InstallAssetsTests(unittest.TestCase):
             position = next_position
 
     def test_launch_helper_declares_canonical_entry_scripts(self):
-        launcher_text = (ROOT / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
+        launcher_text = (ROOT / "src" / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
 
         self.assertIn('DEFAULT_ENTRY_SCRIPT = "robbo-obibok.py"', launcher_text)
         self.assertIn('STRICT_ENTRY_SCRIPT = "robbo-obibok-strict.py"', launcher_text)
@@ -43,7 +43,7 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertNotIn("ROBBO_STRICT_COMPAT=1", service_text)
 
     def test_install_script_installs_both_service_units(self):
-        install_text = (ROOT / "install.sh").read_text(encoding="utf-8")
+        install_text = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
 
         self.assertIn('SERVICE_FILES=("robbo-obibok.service" "robbo-obibok-strict.service")', install_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
@@ -54,8 +54,8 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("make run-strict", install_text)
 
     def test_cli_entrypoints_delegate_to_shared_bootstrap(self):
-        logged_launcher_text = (ROOT / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
-        runtime_text = (ROOT / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
+        logged_launcher_text = (ROOT / "src" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
+        runtime_text = (ROOT / "src" / "robbo_obibok_runtime.py").read_text(encoding="utf-8")
         entrypoint_text = (ROOT / "robbo-obibok.py").read_text(encoding="utf-8")
         strict_entrypoint_text = (ROOT / "robbo-obibok-strict.py").read_text(encoding="utf-8")
 
@@ -68,12 +68,12 @@ class InstallAssetsTests(unittest.TestCase):
     def test_launch_assets_are_consistent_across_entrypoints_docs_and_services(self):
         agents_text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         shell_text = (ROOT / "run_bot.sh").read_text(encoding="utf-8")
-        launcher_script_text = (ROOT / "test_launchers.sh").read_text(encoding="utf-8")
-        logged_launcher_text = (ROOT / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
-        launcher_text = (ROOT / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
+        launcher_script_text = (ROOT / "scripts" / "test_launchers.sh").read_text(encoding="utf-8")
+        logged_launcher_text = (ROOT / "src" / "robbo_obibok_logged_launcher.py").read_text(encoding="utf-8")
+        launcher_text = (ROOT / "src" / "robbo_obibok_launcher.py").read_text(encoding="utf-8")
         make_text = (ROOT / "Makefile").read_text(encoding="utf-8")
         readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
-        install_text = (ROOT / "install.sh").read_text(encoding="utf-8")
+        install_text = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
         strict_service_text = (ROOT / "robbo-obibok-strict.service").read_text(encoding="utf-8")
         default_service_text = (ROOT / "robbo-obibok.service").read_text(encoding="utf-8")
         workflow_text = (ROOT / ".github" / "workflows" / "test-launchers.yml").read_text(encoding="utf-8")
@@ -81,12 +81,12 @@ class InstallAssetsTests(unittest.TestCase):
 
         self.assertIn("`robbo_obibok_launcher.py` is the canonical process launcher", agents_text)
         self.assertIn("local entrypoint scripts", agents_text)
-        self.assertIn("./test_launchers.sh", agents_text)
+        self.assertIn("./scripts/test_launchers.sh", agents_text)
         self.assertIn("`robbo_obibok_logged_launcher.py` remains separate on purpose", agents_text)
         self.assertIn("logging-oriented launcher module", agents_text)
         self.assertIn("launcher smoke CI surface is `.github/workflows/test-launchers.yml`", agents_text)
         self.assertIn("broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`", agents_text)
-        self.assertIn("exec ./venv/bin/python3 -u robbo_obibok_launcher.py", shell_text)
+        self.assertIn("exec ./venv/bin/python3 -u src/robbo_obibok_launcher.py", shell_text)
         self.assertIn("tests.test_robbo_obibok_logged_launcher", launcher_script_text)
         self.assertNotIn("ENTRY_SCRIPT=", shell_text)
         self.assertIn("build_logged_launch_command", logged_launcher_text)
@@ -95,7 +95,7 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("selected_entry_command(root=root, env=runtime_env, entry_script=entry_script)", logged_launcher_text)
         self.assertIn("os.execvpe(command[0], command, runtime_env)", launcher_text)
         self.assertIn("./run_bot.sh", make_text)
-        self.assertIn("./test_launchers.sh", make_text)
+        self.assertIn("./scripts/test_launchers.sh", make_text)
         self.assertIn("make test-launchers", make_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
             self.assertIn(script_name, make_text)
@@ -105,7 +105,7 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertNotIn("robbo-obibok-ulimate-chiptune-bot", readme_text)
         self.assertIn("make build-indexes", readme_text)
         self.assertIn("# Canonical logged launcher module", readme_text)
-        self.assertIn("./test_launchers.sh", readme_text)
+        self.assertIn("./scripts/test_launchers.sh", readme_text)
         self.assertIn("make test-launchers", readme_text)
         for script_name in EXPECTED_LOCAL_INDEX_BUILDERS:
             self.assertIn(script_name, readme_text)
@@ -118,12 +118,12 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertNotIn("User=boruta", default_service_text)
         self.assertNotIn("ExecStartPre=", default_service_text)
         self.assertIn("Run launcher smoke suite", workflow_text)
-        self.assertIn("./test_launchers.sh", workflow_text)
+        self.assertIn("./scripts/test_launchers.sh", workflow_text)
         self.assertIn("Run entrypoint/runtime regression suite", runtime_workflow_text)
         self.assertIn("tests.test_entrypoint_executable_assembly", runtime_workflow_text)
 
     def test_local_index_builder_order_stays_consistent_across_install_docs_and_make(self):
-        install_text = (ROOT / "install.sh").read_text(encoding="utf-8")
+        install_text = (ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
         make_text = (ROOT / "Makefile").read_text(encoding="utf-8")
         readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
 

@@ -4,4 +4,4 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-exec ./venv/bin/python3 -u robbo_obibok_launcher.py
+exec ./venv/bin/python3 -u src/robbo_obibok_launcher.py

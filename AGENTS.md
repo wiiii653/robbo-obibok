@@ -47,32 +47,98 @@ collection_*      — collection definitions and specs
 ### File Topology
 
 ```
-robbo-obibok.py                  ← executable target (default mode)
-robbo-obibok-strict.py           ← executable target (strict mode)
-robbo_obibok_launcher.py         ← process launcher
-robbo_obibok_logged_launcher.py  ← logging supervision launcher
-robbo_obibok_runtime.py          ← launcher runtime wiring
-
-domain_state.py                  ← PlaylistState, AppRuntimeState, stores
-domain_config.py                 ← AppConfig, PlaybackConfig, PathConfig
-domain_context.py                ← AppContext, ArchiveRegistryViews, BootstrappedApp, bootstrap_app()
-domain_services.py               ← AppServices (facade over stores)
-
-entrypoint_app.py                ← EntrypointApp assembly, EntrypointFacade
-entrypoint_bootstrap.py          ← EntrypointBootstrapBuilder, EntrypointResources, lazy config
-entrypoint_state.py              ← EntrypointState (mutable state hub), Protocol contracts
-entrypoint_components.py         ← Component graph assembly
-entrypoint_callback_groups.py    ← Callback group definitions
-entrypoint_glue.py               ← EntrypointGlue (bridges resources → callbacks)
-entrypoint_runtime.py            ← Runtime initializer
-entrypoint_runtime_tasks.py      ← Monitor, health watchdog, metadata background
-entrypoint_runtime_surface.py    ← Runtime surface for compat exports
-entrypoint_startup.py            ← Orphan cleanup, config loading
-entrypoint_module.py             ← EntrypointModule for surface assembly
-entrypoint_module_bindings.py    ← Surface alias specs
-entrypoint_launcher_loader.py    ← EntrypointSupport (launcher scaffolding)
-entrypoint_executable_assembly.py ← Full executable assembly
-entrypoint_surface_assembly.py   ← Compat registry builders
+📁 robbo-obibok/
+├── robbo-obibok.py                  ← executable target (default mode)
+├── robbo-obibok-strict.py           ← executable target (strict mode)
+├── src/
+│   ├── robbo_obibok_launcher.py         ← process launcher
+│   ├── robbo_obibok_logged_launcher.py  ← logging supervision launcher
+│   ├── robbo_obibok_runtime.py          ← launcher runtime wiring
+│   │
+│   ├── domain_state.py                  ← PlaylistState, AppRuntimeState, stores
+│   ├── domain_config.py                 ← AppConfig, PlaybackConfig, PathConfig
+│   ├── domain_context.py                ← AppContext, ArchiveRegistryViews, BootstrappedApp, bootstrap_app()
+│   ├── domain_services.py               ← AppServices (facade over stores)
+│   │
+│   ├── entrypoint_app.py                ← EntrypointApp assembly, EntrypointFacade
+│   ├── entrypoint_bootstrap.py          ← EntrypointBootstrapBuilder, EntrypointResources, lazy config
+│   ├── entrypoint_state.py              ← EntrypointState (mutable state hub), Protocol contracts
+│   ├── entrypoint_components.py         ← Component graph assembly
+│   ├── entrypoint_callback_groups.py    ← Callback group definitions
+│   ├── entrypoint_glue.py               ← EntrypointGlue (bridges resources → callbacks)
+│   ├── entrypoint_runtime.py            ← Runtime initializer
+│   ├── entrypoint_runtime_tasks.py      ← Monitor, health watchdog, metadata background
+│   ├── entrypoint_runtime_surface.py    ← Runtime surface for compat exports
+│   ├── entrypoint_startup.py            ← Orphan cleanup, config loading
+│   ├── entrypoint_module.py             ← EntrypointModule for surface assembly
+│   ├── entrypoint_module_bindings.py    ← Surface alias specs
+│   ├── entrypoint_launcher_loader.py    ← EntrypointSupport (launcher scaffolding)
+│   ├── entrypoint_executable_assembly.py ← Full executable assembly
+│   ├── entrypoint_surface_assembly.py   ← Compat registry builders
+│   │
+│   ├── playback_assets.py               ← Asset path helpers
+│   ├── playback_commands.py             ← Discord command handlers (monolith)
+│   ├── playback_handlers.py             ← Playback event handlers
+│   ├── playback_helpers.py              ← Playback helper utilities
+│   ├── playback_monitor_policy.py       ← Playback monitor policy
+│   ├── playback_process.py              ← Subprocess playback control
+│   ├── playback_runtime.py              ← Playback runtime wiring
+│   ├── playback_service.py              ← Playback service facade
+│   ├── playback_volume.py               ← Volume control
+│   │
+│   ├── runtime_bindings.py              ← Runtime binding helpers
+│   ├── runtime_bootstrap.py             ← Bootstrap hook support
+│   ├── runtime_callback_builders.py     ← Callback builder support
+│   ├── runtime_composition.py           ← Service composition
+│   ├── runtime_io.py                    ← File I/O helpers
+│   ├── runtime_protocols.py             ← Protocol contracts
+│   ├── runtime_service_facade.py        ← Service facade
+│   ├── runtime_support.py               ← Dependency checks, environment loading
+│   │
+│   ├── bot_dependencies.py              ← Bot dependency wiring
+│   ├── bot_events.py                    ← Discord event handlers
+│   ├── bot_persistence.py               ← State persistence
+│   ├── bot_runtime.py                   ← Bot runtime management
+│   │
+│   ├── archive_catalog.py               ← Archive catalog definitions
+│   ├── archive_downloads.py             ← ModArchive download logic
+│   ├── archive_runtime.py               ← Archive runtime config
+│   │
+│   ├── collection_catalog.py            ← Collection catalog
+│   ├── collection_service.py            ← Collection service
+│   ├── collection_specs.py              ← Collection specs
+│   │
+│   ├── session_runtime.py               ← Session management
+│   ├── stream_runtime.py                ← Stream management
+│   ├── subsong_runtime.py               ← Subsong support
+│   ├── download_safety.py               ← Download safety helpers
+│   └── library_commands.py              ← Library command helpers
+├── scripts/
+│   ├── build_asma_index.py              ← Index build: ASMA
+│   ├── build_ay_index.py                ← Index build: AY
+│   ├── build_hvsc_index.py              ← Index build: HVSC
+│   ├── build_modarchive_index.py        ← Index build: ModArchive
+│   ├── build_snes_index.py              ← Index build: SNES
+│   ├── build_tiny_index.py              ← Index build: Tiny
+│   ├── build_ym_index.py                ← Index build: YM
+│   ├── download_modarchive_bulk.py      ← ModArchive bulk downloader
+│   ├── extract_modarchive_local.py      ← Snapshot extraction
+│   ├── install.sh                       ← Installation script
+│   └── test_launchers.sh                ← Launcher smoke test runner
+├── docs/
+│   ├── MAINTAINABILITY_PLAN.md          ← Maintenance plan
+│   └── POST_REFACTOR_PLAN.md            ← Post-refactor notes
+├── tests/
+│   └── ...                              ← 40 test files
+├── config.yaml                          ← Bot configuration file
+├── .env                                 ← Environment (token secrets)
+├── Makefile                             ← Build/test commands
+├── README.md                            ← This file
+├── AGENTS.md                            ← AI agent reference
+├── requirements.txt                     ← Python dependencies
+├── requirements-dev.txt                 ← Dev dependencies
+├── requirements.lock.txt                ← Locked dependencies
+└── run_bot.sh                           ← Shell launcher
 ```
 
 ## Code Conventions
@@ -126,7 +192,7 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 - **Mocking**: Prefer `unittest.mock` over `pytest.monkeypatch`. Use `types.SimpleNamespace` for lightweight fakes.
 - **Fixtures**: In `tests/test_entrypoint_launcher_fixtures.py`, `tests/test_entrypoint_module_fixtures.py`.
 - **Smoke tests**: `tests/test_runner_smoke.py` (735 lines) exercises the full assembly stack.
-- **Launcher tests**: `make test-launchers` — the standalone script alias is `./test_launchers.sh`.
+- **Launcher tests**: `make test-launchers` — the standalone script alias is `./scripts/test_launchers.sh`.
   - The launcher smoke CI surface is `.github/workflows/test-launchers.yml`.
   - The broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`.
 - **Integration**: `tests/test_real_services.py` — requires real archives on disk.
@@ -159,7 +225,7 @@ entrypoint_surface_assembly.py   ← Compat registry builders
 ### Test Surface
 
 - Use `make test-launchers` for the focused launcher smoke suite.
-- The standalone script alias is `./test_launchers.sh`.
+- The standalone script alias is `./scripts/test_launchers.sh`.
 - The launcher smoke CI surface is `.github/workflows/test-launchers.yml`.
 - The broader entrypoint/runtime CI surface is `.github/workflows/test-entrypoint-runtime.yml`.
 

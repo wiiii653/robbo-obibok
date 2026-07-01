@@ -105,12 +105,12 @@ fi
 # ── Build local indexes ─────────────────────────────────────────
 step 6 "Building local track indexes..."
 for script in \
-    build_asma_index.py \
-    build_hvsc_index.py \
-    build_ay_index.py \
-    build_ym_index.py \
-    build_tiny_index.py \
-    build_snes_index.py; do
+    scripts/build_asma_index.py \
+    scripts/build_hvsc_index.py \
+    scripts/build_ay_index.py \
+    scripts/build_ym_index.py \
+    scripts/build_tiny_index.py \
+    scripts/build_snes_index.py; do
     if [ -f "$script" ]; then
         python3 "$script" 2>/dev/null && info "$script: OK" || warn "$script: skipped (no archive)"
     fi

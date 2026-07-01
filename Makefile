@@ -39,12 +39,12 @@ $(DEV_STAMP): $(VENV)/bin/activate requirements-dev.txt
 
 build-indexes: $(VENV)/bin/activate
 	@echo "🏗️  Building local track indexes..."
-	@-$(PYTHON) build_asma_index.py 2>/dev/null || echo "  ⚠️  ASMA index skipped (no archive)"
-	@-$(PYTHON) build_hvsc_index.py 2>/dev/null || echo "  ⚠️  HVSC index skipped (no archive)"
-	@-$(PYTHON) build_ay_index.py 2>/dev/null || echo "  ⚠️  AY index skipped (no archive)"
-	@-$(PYTHON) build_ym_index.py 2>/dev/null || echo "  ⚠️  YM index skipped (no archive)"
-	@-$(PYTHON) build_tiny_index.py 2>/dev/null || echo "  ⚠️  Tiny index skipped (no archive)"
-	@-$(PYTHON) build_snes_index.py 2>/dev/null || echo "  ⚠️  SNES index skipped (no archive)"
+	@-$(PYTHON) scripts/build_asma_index.py 2>/dev/null || echo "  ⚠️  ASMA index skipped (no archive)"
+	@-$(PYTHON) scripts/build_hvsc_index.py 2>/dev/null || echo "  ⚠️  HVSC index skipped (no archive)"
+	@-$(PYTHON) scripts/build_ay_index.py 2>/dev/null || echo "  ⚠️  AY index skipped (no archive)"
+	@-$(PYTHON) scripts/build_ym_index.py 2>/dev/null || echo "  ⚠️  YM index skipped (no archive)"
+	@-$(PYTHON) scripts/build_tiny_index.py 2>/dev/null || echo "  ⚠️  Tiny index skipped (no archive)"
+	@-$(PYTHON) scripts/build_snes_index.py 2>/dev/null || echo "  ⚠️  SNES index skipped (no archive)"
 	@echo "✅ Indexes built"
 
 run: $(VENV)/bin/activate
@@ -60,11 +60,11 @@ install-dev: $(DEV_STAMP)
 
 test-launchers: $(VENV)/bin/activate
 	@echo "🧪 Running launcher smoke tests..."
-	@cd $(CURDIR) && ./test_launchers.sh
+	@cd $(CURDIR) && PYTHONPATH=src ./scripts/test_launchers.sh
 
 test: $(DEV_STAMP)
 	@echo "🧪 Running tests..."
-	@cd $(CURDIR) && $(PYTHON) -m unittest discover -s tests/ -v
+	@cd $(CURDIR) && PYTHONPATH=src $(PYTHON) -m unittest discover -s tests/ -v
 
 test-integration: $(VENV)/bin/activate
 	@echo "Running real dependency integration tests..."
@@ -72,7 +72,7 @@ test-integration: $(VENV)/bin/activate
 
 clean:
 	@echo "🧹 Cleaning..."
-	@rm -rf $(VENV) __pycache__ */__pycache__ .pytest_cache
+	@rm -rf $(VENV) __pycache__ */__pycache__ .pytest_cache src/__pycache__
 	@rm -f *.log *.pid *cache*.json
-	@rm -rf temp_sap_* asma_bot_*
+	@rm -rf temp_sap_* asma_bot_* var/
 	@echo "✅ Clean"

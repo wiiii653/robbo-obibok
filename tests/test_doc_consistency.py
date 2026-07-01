@@ -39,7 +39,9 @@ class AgentsDocConsistencyTests(unittest.TestCase):
 
     def test_layer_counts_match_agents_md(self) -> None:
         agents = self._agents_md()
-        all_py = [p.name for p in ROOT.iterdir() if p.suffix == ".py" and not p.name.startswith("build_")]
+        # Count .py files in src/ (excluding build_* and launcher files)
+        src_dir = ROOT / "src"
+        all_py = [p.name for p in src_dir.iterdir() if p.suffix == ".py" and not p.name.startswith("build_") and not p.name.startswith("robbo_")]
         for layer, prefix in self.LAYER_PATTERNS.items():
             actual = sum(1 for name in all_py if name.startswith(prefix))
             # Find count in AGENTS.md — look for "| `layer` | N |"
@@ -61,14 +63,14 @@ class AgentsDocConsistencyTests(unittest.TestCase):
 
     def test_launcher_count_matches(self) -> None:
         launcher_files = [
-            "robbo_obibok_launcher.py",
-            "robbo_obibok_logged_launcher.py",
-            "robbo_obibok_runtime.py",
-            "robbo-obibok.py",
-            "robbo-obibok-strict.py",
-            "run_bot.sh",
+            ROOT / "src" / "robbo_obibok_launcher.py",
+            ROOT / "src" / "robbo_obibok_logged_launcher.py",
+            ROOT / "src" / "robbo_obibok_runtime.py",
+            ROOT / "robbo-obibok.py",
+            ROOT / "robbo-obibok-strict.py",
+            ROOT / "run_bot.sh",
         ]
-        actual = sum(1 for f in launcher_files if (ROOT / f).exists())
+        actual = sum(1 for f in launcher_files if f.exists())
         match = re.search(r"\| launcher \| (\d+) \|", self._agents_md())
         self.assertIsNotNone(match)
         documented = int(match.group(1))
@@ -80,7 +82,7 @@ class AgentsDocConsistencyTests(unittest.TestCase):
         )
 
     def test_build_tool_count_matches(self) -> None:
-        actual = len(list(ROOT.glob("build_*_index.py")))
+        actual = len(list((ROOT / "scripts").glob("build_*_index.py")))
         match = re.search(r"\| Build tools \| (\d+) \|", self._agents_md())
         self.assertIsNotNone(match)
         documented = int(match.group(1))
