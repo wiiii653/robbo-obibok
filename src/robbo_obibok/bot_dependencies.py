@@ -11,6 +11,8 @@ from domain_state import PlaylistState
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
+    from playback_volume import VolumeController
+    from runtime_protocols import PlaybackProcessProtocol
 
 
 CommandDecoratorFactory = Callable[[], Callable[[Any], Any]]
@@ -71,6 +73,8 @@ class PlaybackCommandDependencies:
     stop_state_streams: Callable[[PlaylistState], Awaitable[None]]
     switch_collection: Callable[..., Awaitable[bool]]
     task_manager: Any | None = None  # TaskManager (runtime_task_manager)
+    playback_process: PlaybackProcessProtocol | None = None
+    volume_controller: VolumeController | None = None
 
 
 @dataclass(slots=True)

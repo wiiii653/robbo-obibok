@@ -153,3 +153,58 @@ def audtool_song_length() -> int:
         return int(result.stdout.strip())
     except (ValueError, OSError):
         return -1
+
+
+class PlaybackProcessAdapter:
+    """Wraps standalone playback_process functions into PlaybackProcessProtocol.
+
+    Captures sink_name and logger at construction so command code can depend
+    on a focused adapter instead of subprocess directly.
+    """
+
+    def __init__(self, sink_name: str, logger: object) -> None:
+        self._sink_name = sink_name
+        self._logger = logger
+
+    def setup_virtual_sink(self) -> None:
+        setup_virtual_sink(self._sink_name)
+
+    def ensure_audacious(self) -> None:
+        ensure_audacious(self._logger)
+
+    def setup_audacious_sid_config(self) -> None:
+        setup_audacious_sid_config(self._logger)
+
+    def set_volume_for_collection(self, mode: str) -> None:
+        set_volume_for_collection(mode, self._sink_name, self._logger)
+
+    def move_playback_to_sink(self) -> None:
+        move_playback_to_sink(self._sink_name)
+
+    def audacious_play(self, filepath: str) -> bool:
+        return audacious_play(filepath, self._sink_name, self._logger)
+
+    def audacious_stop(self) -> None:
+        audacious_stop()
+
+    def audacious_kill(self) -> None:
+        audacious_kill()
+
+    def audacious_song(self) -> str:
+        return audacious_song()
+
+    def is_playing(self) -> bool:
+        return is_playing()
+
+    def audtool_output_length(self) -> int:
+        return audtool_output_length()
+
+    def audtool_song_length(self) -> int:
+        return audtool_song_length()
+
+    def stop_all_players(
+        self,
+        guild_states: Iterable[PlaylistState],
+        cleanup_subsong_temp_wavs: Callable[[PlaylistState], None],
+    ) -> None:
+        stop_all_players(guild_states, cleanup_subsong_temp_wavs)

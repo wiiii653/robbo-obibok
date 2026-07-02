@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import random
-import subprocess
 from typing import TYPE_CHECKING, Protocol, cast
 
 import aiohttp
@@ -161,15 +160,13 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             embed.add_field(name="Copyright", value=copyright_info, inline=True)
         if position is not None:
             embed.add_field(name="Position", value=f"{position[0]}/{position[1]}", inline=True)
-        elapsed_r = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: subprocess.run(["audtool", "current-song-output-length-seconds"], capture_output=True, text=True)
-        )
-        total_r = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: subprocess.run(["audtool", "current-song-length-seconds"], capture_output=True, text=True)
-        )
         try:
-            elapsed = int(elapsed_r.stdout.strip())
-            total_s = int(total_r.stdout.strip())
+            elapsed = await asyncio.get_running_loop().run_in_executor(
+                None, deps.playback_process.audtool_output_length
+            )
+            total_s = await asyncio.get_running_loop().run_in_executor(
+                None, deps.playback_process.audtool_song_length
+            )
             if total_s > 0:
                 elapsed_m, elapsed_s = divmod(elapsed, 60)
                 total_m, total_ss = divmod(total_s, 60)
@@ -187,9 +184,9 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
 
     @bot.command()
     async def volume(ctx: PlaybackContext, *, level: str = ""):
-        from playback_volume import PactlVolumeController, VolumePolicy
+        from playback_volume import VolumePolicy
 
-        ctrl = PactlVolumeController()
+        ctrl = deps.volume_controller
         policy = VolumePolicy()
 
         if not level:

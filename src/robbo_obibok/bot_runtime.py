@@ -19,6 +19,8 @@ from collection_service import CollectionArchiveProtocol, CollectionService
 from collection_specs import CollectionSpec
 from domain_services import AppServicesProtocol
 from domain_state import PlaylistState
+from playback_process import PlaybackProcessAdapter
+from playback_volume import PactlVolumeController
 from runtime_task_manager import TaskManager
 from session_runtime import (
     EmbedFactoryProtocol,
@@ -435,6 +437,10 @@ class BotRuntime:
             stop_state_streams=self.collection.stop_state_streams,
             switch_collection=self.collection.switch_collection,
             task_manager=self.state.task_manager,
+            playback_process=PlaybackProcessAdapter(
+                self.config.SINK_NAME, self.bootstrap.logger
+            ),
+            volume_controller=PactlVolumeController(),
         )
 
     def build_library_command_deps(self) -> LibraryCommandDependencies:
