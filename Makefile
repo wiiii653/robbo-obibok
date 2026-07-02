@@ -25,10 +25,15 @@ help:
 	@echo "  make clean           # Remove venv, caches, temp files"
 	@echo "  make help            # This message"
 
-requirements.lock.txt: requirements.txt requirements-dev.txt
-	@echo "🔒 Locking dependencies with uv..."
-	@uv pip compile requirements.txt requirements-dev.txt --universal --generate-hashes --output-file requirements.lock.txt
+requirements.lock.txt: requirements.txt
+	@echo "🔒 Locking runtime dependencies with uv..."
+	@uv pip compile requirements.txt --universal --generate-hashes --output-file requirements.lock.txt
 	@echo "✅ requirements.lock.txt updated"
+
+requirements-dev.lock.txt: requirements-dev.txt
+	@echo "🔒 Locking dev dependencies with uv..."
+	@uv pip compile requirements-dev.txt --universal --generate-hashes --output-file requirements-dev.lock.txt
+	@echo "✅ requirements-dev.lock.txt updated"
 
 install: $(VENV)/bin/activate build-indexes
 	@echo "✅ Robbo Obibok ready. Set DISCORD_BOT_TOKEN in .env or the shell, then: make run"
@@ -41,7 +46,8 @@ $(VENV)/bin/activate: requirements.lock.txt
 	@touch $(VENV)/bin/activate
 	@echo "✅ Virtual environment ready"
 
-$(DEV_STAMP): $(VENV)/bin/activate requirements.lock.txt
+$(DEV_STAMP): $(VENV)/bin/activate requirements-dev.lock.txt
+	@$(VENV)/bin/pip install --quiet -r requirements-dev.lock.txt
 	@touch $(DEV_STAMP)
 
 build-indexes: $(VENV)/bin/activate

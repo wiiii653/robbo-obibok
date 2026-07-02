@@ -362,7 +362,7 @@ robbo-obibok/
 │   ├── bot_*.py                # Discord bot runtime
 │   ├── archive_*.py            # Archive abstraction
 │   ├── collection_*.py         # Collection specs
-│   └── ...                     # (56 source files total)
+│   └── ...                     # source files (see AGENTS.md for layer map)
 ├── scripts/                   # Build and utility scripts
 │   ├── build_*_index.py       # Local index builders
 │   ├── install.sh             # Installation script
