@@ -35,6 +35,55 @@ class CoreEventDependencies:
     playback_lease: PlaybackLease | None = None
 
 
+async def _auto_connect(bot, deps: CoreEventDependencies, guild, voice_channel, *, member_name="system"):
+    """Connect to a voice channel and start playback (shared by on_ready + voice_state_update)."""
+    if guild.voice_client:
+        return
+    lease = deps.playback_lease
+    if lease is not None and not lease.acquire(guild.id, guild.name):
+        deps.log.info("Auto-start skipped: lease held by guild %d (%s)",
+                       lease.owner_guild_id, lease.owner_guild_name)
+        return
+    try:
+        vc = await voice_channel.connect()
+        state = deps.get_state(guild.id)
+        state.bind_voice_context(guild_id=guild.id, ctx=None, vc=vc)
+        state.set_loop_enabled(deps.PLAYBACK_LOOP)
+
+        if not state.tracks:
+            await deps.ensure_tracks(state)
+        if not state.tracks:
+            deps.log.warning("Auto-start: no tracks available")
+            await vc.disconnect()
+            return
+
+        saved = await asyncio.to_thread(deps.load_queue, guild.id)
+        queue_state = deps.prepare_playback_queue(
+            state.tracks,
+            saved,
+            state.collection_mode,
+            deps.PLAYBACK_LOOP,
+            shuffle_enabled=deps.PLAYBACK_SHUFFLE,
+            min_queue_length=10,
+        )
+        deps.apply_queue_state(state, queue_state)
+        info = deps.get_collection_info(state.collection_mode)
+        ctx = await bot.get_context(await voice_channel.send(f"\U0001f4fb **Auto-starting {info.station}...**"))
+        state.bind_voice_context(guild_id=guild.id, ctx=ctx, vc=vc)
+
+        if await deps.play_current_track(ctx):
+            await asyncio.to_thread(deps.save_queue, state)
+            if state.monitor_task and not state.monitor_task.done():
+                state.monitor_task.cancel()
+            if deps.task_manager is not None:
+                task = deps.task_manager.create(f"monitor_{guild.id}", deps.monitor_playback(ctx, vc, guild.id))
+            else:
+                task = asyncio.create_task(deps.monitor_playback(ctx, vc, guild.id))
+            state.set_monitor_task(task)
+    except Exception as exc:
+        deps.log.error("Auto-start failed: %s", exc)
+
+
 def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, fetch_metadata_background):
     _on_ready_done = False
 
@@ -61,6 +110,19 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
         else:
             deps.schedule_background_tasks([health_watchdog, fetch_metadata_background])
 
+        # Auto-reconnect to voice channel if someone is already there
+        if deps.AUTO_START_CHANNEL and not bot.voice_clients:
+            for guild in bot.guilds:
+                if deps.GUILD_ID is not None and guild.id != deps.GUILD_ID:
+                    continue
+                for vc in guild.voice_channels:
+                    if vc.name == deps.AUTO_START_CHANNEL:
+                        humans = [m for m in vc.members if not m.bot]
+                        if humans:
+                            deps.log.info("Auto-reconnect: %d human(s) in %s after restart", len(humans), vc.name)
+                            await _auto_connect(bot, deps, guild, vc, member_name="restart")
+                        break
+
     @bot.event
     async def on_voice_state_update(member, before, after):
         if not deps.AUTO_START_CHANNEL or member.bot:
@@ -77,51 +139,6 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
             return
 
         deps.log.info("Auto-start: %s joined %s", member.display_name, after.channel.name)
-        lease = deps.playback_lease
-        if lease is not None and not lease.acquire(member.guild.id, member.guild.name):
-            deps.log.info(
-                "Auto-start skipped: lease held by guild %d (%s)",
-                lease.owner_guild_id,
-                lease.owner_guild_name,
-            )
-            return
-        try:
-            vc = await after.channel.connect()
-            state = deps.get_state(member.guild.id)
-            state.bind_voice_context(guild_id=member.guild.id, ctx=None, vc=vc)
-            state.set_loop_enabled(deps.PLAYBACK_LOOP)
-
-            if not state.tracks:
-                await deps.ensure_tracks(state)
-            if not state.tracks:
-                deps.log.warning("Auto-start: no tracks available")
-                await vc.disconnect()
-                return
-
-            saved = await asyncio.to_thread(deps.load_queue, member.guild.id)
-            queue_state = deps.prepare_playback_queue(
-                state.tracks,
-                saved,
-                state.collection_mode,
-                deps.PLAYBACK_LOOP,
-                shuffle_enabled=deps.PLAYBACK_SHUFFLE,
-                min_queue_length=10,
-            )
-            deps.apply_queue_state(state, queue_state)
-            info = deps.get_collection_info(state.collection_mode)
-            ctx = await bot.get_context(await after.channel.send(f"📻 **Auto-starting {info.station}...**"))
-            state.bind_voice_context(guild_id=member.guild.id, ctx=ctx, vc=vc)
-
-            if await deps.play_current_track(ctx):
-                await asyncio.to_thread(deps.save_queue, state)
-                if state.monitor_task and not state.monitor_task.done():
-                    state.monitor_task.cancel()
-                if deps.task_manager is not None:
-                    task = deps.task_manager.create(f"monitor_{member.guild.id}", deps.monitor_playback(ctx, vc, member.guild.id))
-                else:
-                    task = asyncio.create_task(deps.monitor_playback(ctx, vc, member.guild.id))
-                state.set_monitor_task(task)
-        except Exception as exc:
-            deps.log.error("Auto-start failed: %s", exc)
+        await _auto_connect(bot, deps, member.guild, after.channel, member_name=member.display_name)
 
     return on_ready, on_voice_state_update

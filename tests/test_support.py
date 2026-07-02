@@ -147,6 +147,8 @@ class RegistrationBot:
         self.scheduled = []
         self.user = "test-bot"
         self.loop = types.SimpleNamespace(create_task=self._create_task)
+        self.voice_clients = []
+        self.guilds = []
 
     def command(self, *args, **kwargs):
         aliases = tuple(kwargs.get("aliases", []))
