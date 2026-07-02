@@ -56,3 +56,11 @@ indent-style = "space"
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/robbo_obibok"]
+omit = ["*/__pycache__/*"]
+
+[tool.coverage.report]
+fail_under = 65
+show_missing = true

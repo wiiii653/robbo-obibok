@@ -71,7 +71,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install requirements
         run: python -m pip install -r requirements.txt
+      - name: Install dev requirements (coverage)
+        run: python -m pip install -r requirements-dev.txt
       - name: Install FFmpeg for the dependency smoke test
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Run full unit suite
-        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Run full unit suite with coverage
+        run: PYTHONPATH=src python -m pytest tests/ --cov=robbo_obibok --cov-report=term-missing --cov-fail-under=65
