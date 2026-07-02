@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable,
 
 from archive_catalog import CollectionInfo
 from domain_state import PlaylistState
+from playback_lease import PlaybackLease
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -73,6 +74,7 @@ class PlaybackCommandDependencies:
     stop_state_streams: Callable[[PlaylistState], Awaitable[None]]
     switch_collection: Callable[..., Awaitable[bool]]
     task_manager: Any | None = None  # TaskManager (runtime_task_manager)
+    playback_lease: PlaybackLease | None = None
     playback_process: PlaybackProcessProtocol | None = None
     volume_controller: VolumeController | None = None
 

@@ -19,6 +19,7 @@ from collection_service import CollectionArchiveProtocol, CollectionService
 from collection_specs import CollectionSpec
 from domain_services import AppServicesProtocol
 from domain_state import PlaylistState
+from playback_lease import PlaybackLease
 from playback_process import PlaybackProcessAdapter
 from playback_volume import PactlVolumeController
 from runtime_task_manager import TaskManager
@@ -254,6 +255,7 @@ class BotRuntime:
     library: LibraryCallbacks
     collection: CollectionCallbacks
     bootstrap: BootstrapCallbacks
+    playback_lease: PlaybackLease = field(default_factory=PlaybackLease)
 
     def get_state(self, guild_id: int) -> PlaylistState:
         return self.state.app_services.get_state(guild_id)
@@ -391,6 +393,7 @@ class BotRuntime:
             save_queue=self.save_queue,
             schedule_background_tasks=self.bootstrap.schedule_background_tasks,
             task_manager=self.state.task_manager,
+            playback_lease=self.playback_lease,
         )
 
     def build_playback_command_deps(self) -> PlaybackCommandDependencies:
@@ -441,6 +444,7 @@ class BotRuntime:
                 self.config.SINK_NAME, self.bootstrap.logger
             ),
             volume_controller=PactlVolumeController(),
+            playback_lease=self.playback_lease,
         )
 
     def build_library_command_deps(self) -> LibraryCommandDependencies:
@@ -519,6 +523,7 @@ class BotRuntime:
             await self.state.task_manager.shutdown()
         self.bootstrap.logger.info("Shutting down gracefully...")
         self.bootstrap.release_process_lock(self.config.LOCK_FILE)
+        self.playback_lease.release()
         for state in self.state.app_services.iter_guild_states():
             await self.collection.stop_state_streams(state)
         for _guild_id, source in list(self.state.active_streams.items()):

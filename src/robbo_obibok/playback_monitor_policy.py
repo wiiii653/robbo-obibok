@@ -35,6 +35,7 @@ class MonitorPolicyDependencies:
     should_force_timeout_stop: Callable[[int, int], bool]
     skip_to_next: Callable[[object], Awaitable[None]]
     stop_all_players: Callable[[], None]
+    release_lease: Callable[[], None] | None = None
 
 
 async def disconnect_for_empty_channel(ctx, vc, guild_id: int, deps: MonitorPolicyDependencies) -> bool:
@@ -43,6 +44,8 @@ async def disconnect_for_empty_channel(ctx, vc, guild_id: int, deps: MonitorPoli
     if stream:
         stream.cleanup()
     await deps.run_sync(deps.stop_all_players)
+    if deps.release_lease:
+        deps.release_lease()
     await vc.disconnect()
     await ctx.send("🌙 No one listening. Stopping Radio.")
     return True
@@ -52,6 +55,8 @@ async def finish_playlist(ctx, vc, guild_id: int, deps: MonitorPolicyDependencie
     stream = deps.ACTIVE_STREAMS.pop(guild_id, None)
     if stream:
         stream.cleanup()
+    if deps.release_lease:
+        deps.release_lease()
     if vc.is_connected():
         await vc.disconnect()
     await ctx.send("Playlist ended. Use !play to restart.")

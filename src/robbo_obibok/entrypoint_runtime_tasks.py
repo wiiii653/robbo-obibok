@@ -49,6 +49,7 @@ async def monitor_playback_entry(
     stop_all_players: Callable[[], None],
     logger: logging.Logger,
     task_manager: Any | None = None,
+    release_lease: Callable[[], None] | None = None,
 ) -> None:
     from playback_runtime import MonitorDependencies
     from playback_runtime import monitor_playback as runtime_monitor_playback
@@ -81,6 +82,7 @@ async def monitor_playback_entry(
         logger=logger,
         run_sync=_run_sync,
         task_manager=task_manager,
+        release_lease=release_lease,
     )
     await runtime_monitor_playback(ctx, vc, guild_id, deps)
 
@@ -165,6 +167,7 @@ class EntrypointRuntimeTasks:
             stop_all_players=self.stop_all_players,
             logger=self.logger,
             task_manager=tm,
+            release_lease=self.state.runtime.playback_lease.release if self.state.runtime is not None else None,
         )
 
     async def fetch_metadata_background(self) -> None:

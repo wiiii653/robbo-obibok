@@ -56,6 +56,7 @@ class MonitorDependencies:
     logger: logging.Logger
     run_sync: RunSyncProtocol
     task_manager: Any | None = None  # TaskManager (runtime_task_manager)
+    release_lease: Callable[[], None] | None = None
 
 
 @dataclass(slots=True)
@@ -100,6 +101,7 @@ async def monitor_playback(
         should_force_timeout_stop=deps.should_force_timeout_stop,
         skip_to_next=deps.skip_to_next,
         stop_all_players=deps.stop_all_players,
+        release_lease=deps.release_lease,
     )
     while vc.is_connected() and not deps.shutdown_flag.is_set():
         try:

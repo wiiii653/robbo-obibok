@@ -177,7 +177,7 @@ class FakeVoiceChannel:
 
 class FakeContext:
     def __init__(self, guild_id=1, author_id=7, voice_client=None):
-        self.guild = types.SimpleNamespace(id=guild_id)
+        self.guild = types.SimpleNamespace(id=guild_id, name="Test Guild")
         self.voice_client = voice_client
         self.sent = []
         self.author = types.SimpleNamespace(

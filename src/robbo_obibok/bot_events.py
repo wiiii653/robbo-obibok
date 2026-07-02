@@ -6,6 +6,8 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
+from playback_lease import PlaybackLease
+
 
 @dataclass(slots=True)
 class CoreEventDependencies:
@@ -30,6 +32,7 @@ class CoreEventDependencies:
     save_queue: Callable[[Any], None]
     schedule_background_tasks: Callable[[list[Callable[[], Awaitable[None]]]], None]
     task_manager: Any | None = None  # TaskManager (runtime_task_manager)
+    playback_lease: PlaybackLease | None = None
 
 
 def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, fetch_metadata_background):
@@ -74,6 +77,14 @@ def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, f
             return
 
         deps.log.info("Auto-start: %s joined %s", member.display_name, after.channel.name)
+        lease = deps.playback_lease
+        if lease is not None and not lease.acquire(member.guild.id, member.guild.name):
+            deps.log.info(
+                "Auto-start skipped: lease held by guild %d (%s)",
+                lease.owner_guild_id,
+                lease.owner_guild_name,
+            )
+            return
         try:
             vc = await after.channel.connect()
             state = deps.get_state(member.guild.id)

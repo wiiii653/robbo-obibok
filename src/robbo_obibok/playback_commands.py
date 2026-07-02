@@ -46,6 +46,14 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
         if not ctx.author.voice:
             return await ctx.send("Join a voice channel first!")
 
+        lease = deps.playback_lease
+        if lease is not None and not lease.acquire(ctx.guild.id, ctx.guild.name):
+            owner = lease.owner_guild_name or "another server"
+            return await ctx.send(
+                f"🔊 Music is already playing in **{owner}**. "
+                f"Please stop it there first with `!stop`."
+            )
+
         state = deps.get_state(ctx.guild.id)
 
         if query.isdigit():
@@ -122,6 +130,8 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await ctx.voice_client.disconnect()
         state.clear_voice_client()
         state.clear_queue_state()
+        if deps.playback_lease is not None:
+            deps.playback_lease.release()
         await persist_queue(ctx, state)
         await ctx.send("⏹️ Stopped.")
 
@@ -253,6 +263,8 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
                 await asyncio.get_running_loop().run_in_executor(None, deps.stop_all_players)
                 await ctx.voice_client.disconnect()
                 state.clear_voice_client()
+                if deps.playback_lease is not None:
+                    deps.playback_lease.release()
                 await ctx.send("🌙 **Sleep timer expired.** Radio stopped.")
         except ValueError:
             await ctx.send("Usage: `!sleep <minutes>` — e.g. `!sleep 30`")
@@ -310,6 +322,8 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             await asyncio.get_running_loop().run_in_executor(None, deps.stop_all_players)
             await ctx.voice_client.disconnect()
             state.clear_voice_client()
+        if deps.playback_lease is not None:
+            deps.playback_lease.release()
         await ctx.send("🗑️ Queue cleared.")
 
     @bot.command()
