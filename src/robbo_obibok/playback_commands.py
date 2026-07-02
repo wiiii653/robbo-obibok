@@ -342,7 +342,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
     async def help_command(ctx: PlaybackContext):
         embed = discord.Embed(
             title="🤖 Robbo Obibok — Help",
-            description="Seven collections, one bot — **the biggest chiptune radio on Discord.**\nJoin a voice channel and `!play`!",
+            description="Eight collections, one bot — **the biggest chiptune radio on Discord.**\nJoin a voice channel and `!play`!",
             color=discord.Color.from_str("#2ECC71"),
         )
         embed.add_field(name="🎮 Playback", value=(
@@ -364,8 +364,9 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             "`!mod` (`!modules`) — 🟠 Tracker Modules (~175 000)\n"
             "`!ay` (`!zx`) — 🔵 ZX Spectrum AY (~4 500)\n"
             "`!ym` (`!atarist`) — 🎹 Atari ST YM (~7 200)\n"
-            "`!tiny` (`!tm`) — 🎵 Demoscene Modules (~418)\n"
-            "`!snes` (`!spc`) — 🔴 SNES SPC (~60 000)"
+            "`!tiny` (`!tm`) — 🎵 Demoscene Modules (~550)\n"
+            "`!snes` (`!spc`) — 🔴 SNES SPC (~2 600 game sets)\n"
+            "`!kgen` (`!keygen` / `!k`) — 🔊 Keygen Music (~4 800)"
         ), inline=False)
         embed.add_field(name="🔄 Navigation", value=(
             "`!flip` (`!fl`) — cycle through all collections\n"

@@ -38,7 +38,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 
 ## Features
 
-- 🎵 **Eight collections** — switch between ASMA (Atari SAP, 6400+), HVSC (C64 SID, 60 000+), AY (ZX Spectrum, 43 000+), YM (Atari ST, 23 000+), ModArchive (Amiga/PC tracker modules, 120 000+), SNES SPC (RSN), Tiny Music modules, and KGen (demoscene keygen music, 4800+)
+- 🎵 **Eight collections** — switch between ASMA (Atari SAP, 6 300+), HVSC (C64 SID, 60 000+), AY (ZX Spectrum, 4 500+), YM (Atari ST, 7 200+), ModArchive (Amiga/PC tracker modules, 175 000+), SNES SPC (RSN, ~2 600 game sets), Tiny Music modules (~550), and KGen (demoscene keygen music, 4 800+)
 - 🔀 **Shuffle loop** — never hear the same track twice in a row
 - 🎼 **Rich metadata** — track name, composer, copyright from headers
 - ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks
@@ -108,11 +108,11 @@ React with **any emoji** to a Now Playing embed to save the track to your favori
 |------------|--------|--------|--------|
 | **ASMA** | `.sap` | 6 335 | Local `archiwum/asma/` |
 | **HVSC** | `.sid` | 60 811 | Local `archiwum/hvsc/C64Music/` |
-| **AY** | `.ay` | 43 480 | Local `archiwum/ay/` |
-| **YM** | `.ym` | 23 000+ | Local `archiwum/ym/` |
-| **ModArchive** | `.mod`, `.xm`, `.s3m`, `.it` | 120 000+ | Local `archiwum/modarchive_textfiles/` |
-| **SNES SPC** | `.spc` | 40 000+ | Local `archiwum/snes_spc/` (RSN mirror) |
-| **Tiny Music** | `.mod`, `.xm`, `.s3m`, `.it` | varies | Local `archiwum/tiny/` |
+| **AY** | `.ay` | 4 550 | Local `archiwum/ay/` |
+| **YM** | `.ym` | 7 266 | Local `archiwum/ym/` |
+| **ModArchive** | `.mod`, `.xm`, `.s3m`, `.it` | 175 000+ | Local `archiwum/modarchive_textfiles/` |
+| **SNES SPC** | `.spc` | 2 612 game sets | Local `archiwum/snes_spc/` (RSN mirror) |
+| **Tiny Music** | `.mod`, `.xm`, `.s3m`, `.it` | 548 | Local `archiwum/tiny/` |
 | **KGen** | `.mod`, `.xm`, `.s3m`, `.it` | 4 843 | Local `archiwum/kgen/` |
 
 All archives are served from local disk — no external HTTP calls during playback.
