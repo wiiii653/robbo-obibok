@@ -6,8 +6,8 @@ from typing import Callable
 
 from .collection_specs import CollectionSpec
 
-FLIP_ORDER = ["hvsc", "asma", "modarchive", "ay", "ym", "tiny", "spc"]
-FLIP_SEQ = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎹YM", "🎵Tiny", "🔴SNES"]
+FLIP_ORDER = ["hvsc", "asma", "modarchive", "ay", "ym", "tiny", "spc", "kgen"]
+FLIP_SEQ = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎹YM", "🎵Tiny", "🔴SNES", "🔊KGen"]
 
 
 def build_collections(
@@ -19,6 +19,7 @@ def build_collections(
     load_ym_cache: Callable[[], list[str] | None],
     load_tiny_cache: Callable[[], list[str] | None],
     load_snes_cache: Callable[[], list[str] | None],
+    load_kgen_cache: Callable[[], list[str] | None],
 ) -> dict[str, CollectionSpec]:
     return {
         "hvsc": CollectionSpec(
@@ -115,5 +116,18 @@ def build_collections(
             flip_ready_msg="🔴 **Switched to SNES SPC — {count} games!**",
             flip_fail_msg="🔴 **SNES cache not ready.** Staying on {prev}.",
             log_msg="SNES: collection switched, %d game sets loaded",
+        ),
+        "kgen": CollectionSpec(
+            label="Keygen",
+            flip_tag="🔊KGen",
+            load_func=load_kgen_cache,
+            fallback_func=None,
+            already_msg="🔊 **Already in Keygen Music mode.** Use `!play` to start!",
+            load_msg="🔊 **Loading Keygen Music (5,300+ modules)...**",
+            error_msg="❌ KGen cache not found. Run `build_kgen_index.py` first!",
+            ready_msg="🔊 **Keygen Music collection ready — {count} modules!**\nMOD / XM / S3M / IT — music from the demoscene keygen era",
+            flip_ready_msg="🔊 **Switched to Keygen Music — {count} modules!**",
+            flip_fail_msg="🔊 **KGen cache not ready.** Staying on {prev}.",
+            log_msg="KGen: collection switched, %d tracks loaded",
         ),
     }

@@ -287,6 +287,9 @@ class ArchiveCatalog:
     def load_tiny_cache(self) -> list[str] | None:
         return self._load_path_cache(self.paths.tiny_cache, "Tiny")
 
+    def load_kgen_cache(self) -> list[str] | None:
+        return self._load_path_cache(self.paths.kgen_cache, "KGen")
+
     def load_asma_local_cache(self) -> list[str] | None:
         return self._load_path_cache(self.paths.asma_local_cache, "ASMA")
 

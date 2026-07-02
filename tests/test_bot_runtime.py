@@ -105,6 +105,7 @@ class BotRuntimeTests(unittest.IsolatedAsyncioTestCase):
                 TEMP_DIR="tmp",
                 TINY_DIR="tiny-dir",
                 YM_DIR="ym-dir",
+                KGEN_DIR="kgen-dir",
             ),
             state=bot_runtime.RuntimeState(
                 active_streams={},

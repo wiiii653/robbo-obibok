@@ -121,6 +121,10 @@ class ArchiveRuntime:
         self._sync_archive_paths()
         return self.archives.load_snes_cache()
 
+    def load_kgen_cache(self) -> list[str] | None:
+        self._sync_archive_paths()
+        return self.archives.load_kgen_cache()
+
     def load_metadata_cache(self) -> dict[str, dict[str, str]]:
         self._sync_archive_paths()
         return self.archives.load_metadata_cache()

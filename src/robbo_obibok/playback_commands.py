@@ -539,6 +539,10 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             return await ctx.send("\n".join(lines))
         await deps.switch_collection(ctx, "spc")
 
+    @bot.command(aliases=["keygen", "k"])
+    async def kgen(ctx: PlaybackContext):
+        await deps.switch_collection(ctx, "kgen")
+
     @bot.command(aliases=["mode", "collection", "all"])
     async def status(ctx: PlaybackContext):
         state = deps.get_state(ctx.guild.id)
@@ -550,10 +554,11 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
             "ym_cache.json": ("🎹", "Atari ST YM"),
             "tiny_cache.json": ("🎵", "Tiny Music (Demoscene)"),
             "snes_cache.json": ("🔴", "SNES SPC"),
+            "kgen_cache.json": ("🔊", "Keygen Music"),
         }
         cache_counts = await asyncio.get_running_loop().run_in_executor(None, deps.get_all_cache_counts, cache_map)
-        mode_icons = {"hvsc": "🟣", "asma": "🟢", "modarchive": "🟠", "ay": "🔵", "ym": "🎹", "tiny": "🎵", "spc": "🔴"}
-        mode_labels = {"hvsc": "HVSC", "asma": "ASMA", "modarchive": "ModArchive", "ay": "AY", "ym": "Atari ST YM", "tiny": "Tiny", "spc": "SNES"}
+        mode_icons = {"hvsc": "🟣", "asma": "🟢", "modarchive": "🟠", "ay": "🔵", "ym": "🎹", "tiny": "🎵", "spc": "🔴", "kgen": "🔊"}
+        mode_labels = {"hvsc": "HVSC", "asma": "ASMA", "modarchive": "ModArchive", "ay": "AY", "ym": "Atari ST YM", "tiny": "Tiny", "spc": "SNES", "kgen": "Keygen"}
         current_icon = mode_icons.get(state.collection_mode, "⚪")
         current_label = mode_labels.get(state.collection_mode, "Unknown")
         total = len(state.tracks) if state.tracks else 0

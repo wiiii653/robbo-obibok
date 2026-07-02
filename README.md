@@ -32,13 +32,13 @@
 
 # Robbo Obibok — The Ultimate Chiptune Bot
 
-Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Blending intricate technical grooves with retro charm, Robbo plays from **seven collections** spanning Atari, C64, ZX Spectrum, Amiga, SNES, and beyond.
+Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-garde jazz band *Robotobibok*, this specialized Discord bot streams vintage retro chipmusic. Blending intricate technical grooves with retro charm, Robbo plays from **eight collections** spanning Atari, C64, ZX Spectrum, Amiga, SNES, demoscene keygens, and beyond.
 
 **Join a voice channel, type `!play`, and let the chips play.**
 
 ## Features
 
-- 🎵 **Seven collections** — switch between ASMA (Atari SAP, 6400+), HVSC (C64 SID, 60 000+), AY (ZX Spectrum, 43 000+), YM (Atari ST, 23 000+), ModArchive (Amiga/PC tracker modules, 120 000+), SNES SPC (RSN), and Tiny Music modules
+- 🎵 **Eight collections** — switch between ASMA (Atari SAP, 6400+), HVSC (C64 SID, 60 000+), AY (ZX Spectrum, 43 000+), YM (Atari ST, 23 000+), ModArchive (Amiga/PC tracker modules, 120 000+), SNES SPC (RSN), Tiny Music modules, and KGen (demoscene keygen music, 4800+)
 - 🔀 **Shuffle loop** — never hear the same track twice in a row
 - 🎼 **Rich metadata** — track name, composer, copyright from headers
 - ❤️ **Favorites playlist** — react to any Now Playing embed to save/remove tracks
@@ -56,7 +56,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | Command | Description |
 |---------|-------------|
 | **🎮 Playback** | |
-| `!play` / `!radio` / `!pl` | Start shuffled radio from current collection |
+| `!play` / `!pl` | Start shuffled radio from current collection |
 | `!play <query>` | Search and play first matching track |
 | `!play <number>` | Play a track from last search results |
 | `!stop` / `!st` | Stop playback and disconnect |
@@ -81,6 +81,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!ym` / `!atarist` | Switch to **Atari ST YM** (~7 200) |
 | `!tiny` / `!tm` | Switch to **Tiny Music modules** (~418) |
 | `!snes` / `!spc` | Switch to **SNES SPC** (~60 000) |
+| `!kgen` / `!keygen` / `!k` | Switch to **Keygen Music** (~4 800) |
 | **❤️ Favorites & Blacklist** | |
 | `!favorites` / `!favs` | Show your reaction-based favorites playlist |
 | `!favplay` / `!fp` | Play favorites in shuffle mode |
@@ -112,6 +113,7 @@ React with **any emoji** to a Now Playing embed to save the track to your favori
 | **ModArchive** | `.mod`, `.xm`, `.s3m`, `.it` | 120 000+ | Local `archiwum/modarchive_textfiles/` |
 | **SNES SPC** | `.spc` | 40 000+ | Local `archiwum/snes_spc/` (RSN mirror) |
 | **Tiny Music** | `.mod`, `.xm`, `.s3m`, `.it` | varies | Local `archiwum/tiny/` |
+| **KGen** | `.mod`, `.xm`, `.s3m`, `.it` | 4 843 | Local `archiwum/kgen/` |
 
 All archives are served from local disk — no external HTTP calls during playback.
 
@@ -254,6 +256,7 @@ python scripts/build_ay_index.py     # indexes all .ay files in archiwum/ay/
 python scripts/build_ym_index.py     # indexes all .ym files in archiwum/ym/
 python scripts/build_tiny_index.py   # indexes all tiny-module files in archiwum/tiny/
 python scripts/build_snes_index.py   # indexes all .spc files in archiwum/snes_spc/
+# KGen uses a static archive — index is built from keygen-music pack metadata
 ```
 
 These generate `*_cache_local.json` files for instant startup — no crawling at runtime.
@@ -387,6 +390,7 @@ robbo-obibok/
 │   ├── ay/                    # ZX Spectrum AY files
 │   ├── ym/                    # Atari ST YM files
 │   ├── tiny/                  # Tiny Music modules
+│   ├── kgen/                  # Keygen Music modules
 │   ├── snes_spc/              # SNES SPC files
 │   └── modarchive/            # ModArchive tracker modules + cache
 ├── favorites.json             # Reaction-based favorites (generated)

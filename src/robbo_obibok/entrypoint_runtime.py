@@ -93,6 +93,7 @@ def build_runtime_config(
     temp_dir: str,
     tiny_dir: str,
     ym_dir: str,
+    kgen_dir: str,
     guild_id: int | None = None,
 ) -> RuntimeConfig:
     return RuntimeConfig(
@@ -103,6 +104,7 @@ def build_runtime_config(
         FLIP_ORDER=flip_order,
         FLIP_SEQ=flip_seq,
         HVSC_DIR=hvsc_dir,
+        KGEN_DIR=kgen_dir,
         LOCK_FILE=lock_file,
         PLAYBACK_LOOP=playback_loop,
         PLAYBACK_SHUFFLE=playback_shuffle,
@@ -357,6 +359,7 @@ class EntrypointRuntimeInitializer:
             temp_dir=app_cfg.temp_dir,
             tiny_dir=app_cfg.tiny_dir,
             ym_dir=app_cfg.ym_dir,
+            kgen_dir=app_cfg.kgen_dir,
             guild_id=app_cfg.guild_id,
         )
 

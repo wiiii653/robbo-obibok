@@ -143,6 +143,7 @@ def build_collection_loaders(
         load_ym_cache=archive_runtime.load_ym_cache,
         load_tiny_cache=archive_runtime.load_tiny_cache,
         load_snes_cache=archive_runtime.load_snes_cache,
+        load_kgen_cache=archive_runtime.load_kgen_cache,
     )
 
 

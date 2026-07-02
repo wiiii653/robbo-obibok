@@ -97,6 +97,7 @@ class CommandRegistrationTests(unittest.TestCase):
             "ym": {"atarist", "ym2149"},
             "tiny": {"tm", "demoscene"},
             "snes_cmd": {"snes", "spc", "supernintendo", "nintendo"},
+            "kgen": {"keygen", "k"},
             "status": {"mode", "collection", "all"},
             "flip": {"switch", "toggle", "fl"},
         }
@@ -132,6 +133,7 @@ class CommandRegistrationTests(unittest.TestCase):
                 ASMA_DIR="",
                 AY_DIR="",
                 HVSC_DIR="",
+                KGEN_DIR="",
                 TINY_DIR="",
                 YM_DIR="",
             )
@@ -139,7 +141,7 @@ class CommandRegistrationTests(unittest.TestCase):
 
         self.assertEqual(
             set(handlers),
-            {"asma", "ay", "hvsc", "modarchive", "spc", "tiny", "ym"},
+            {"asma", "ay", "hvsc", "kgen", "modarchive", "spc", "tiny", "ym"},
         )
 
     def test_collection_info_is_typed(self):

@@ -48,6 +48,7 @@ class RuntimeConfig:
     FLIP_ORDER: list[str]
     FLIP_SEQ: list[str]
     HVSC_DIR: str
+    KGEN_DIR: str
     LOCK_FILE: str
     PLAYBACK_LOOP: bool
     PLAYBACK_SHUFFLE: bool
@@ -483,6 +484,7 @@ class BotRuntime:
             HVSC_DIR=self.config.HVSC_DIR,
             TINY_DIR=self.config.TINY_DIR,
             YM_DIR=self.config.YM_DIR,
+            KGEN_DIR=self.config.KGEN_DIR,
             audacious_play=self.playback.handler.audacious_play,
             audacious_song=self.playback.handler.audacious_song,
             audacious_stop=self.playback.handler.audacious_stop,

@@ -16,6 +16,7 @@ class ArchiveRuntimeConfig:
     hvsc_cache_ttl_hours: int = 0
     hvsc_local_cache: str = ""
     hvsc_songlengths_url: str = ""
+    kgen_cache: str = ""
     metadata_cache: str = ""
     modarchive_cache_file: str = ""
     snes_cache_file: str = ""

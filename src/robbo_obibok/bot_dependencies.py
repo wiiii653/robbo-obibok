@@ -113,6 +113,7 @@ class PlaybackHandlerDependencies:
     ASMA_DIR: str
     AY_DIR: str
     HVSC_DIR: str
+    KGEN_DIR: str
     TINY_DIR: str
     YM_DIR: str
     audacious_play: Callable[[str], None]

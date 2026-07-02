@@ -223,6 +223,58 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
         deps.log.info("Tiny now playing: %s", name)
         return True
 
+    async def play_current_kgen_track(ctx, state, filepath):
+        full_path = os.path.join(deps.KGEN_DIR, filepath)
+        if not os.path.exists(full_path):
+            await ctx.send(f"❌ File not found: `{filepath}`")
+            return False
+
+        deps.cleanup_subsong_temp_wavs(state)
+        subsongs = deps.get_subsongs(full_path)
+        has_multi = len(subsongs) > 1
+        if has_multi:
+            state.set_subsong_state(path=full_path, total=len(subsongs), current=0)
+            deps.log.info(
+                "Subsong: %s has %d sub-songs (main=%.1fs, extra=%d)",
+                os.path.basename(full_path),
+                len(subsongs),
+                subsongs[0],
+                len(subsongs) - 1,
+            )
+        else:
+            deps.cleanup_subsong_temp_wavs(state)
+
+        await deps.play_via_audacious(state, full_path, current_path=full_path)
+
+        track = await asyncio.get_running_loop().run_in_executor(None, deps.audacious_song)
+        name = (
+            track
+            or filepath.split("/")[-1]
+            .replace(".mod", "")
+            .replace(".xm", "")
+            .replace(".it", "")
+            .replace(".s3m", "")
+            .replace(".med", "")
+            .replace(".dmf", "")
+            .replace(".mo3", "")
+            .replace(".mptm", "")
+        )
+        footer = (
+            f"Keygen Music — demoscene keygen modules · {len(subsongs)} parts"
+            if has_multi
+            else "Keygen Music — demoscene keygen modules"
+        )
+        await deps.send_now_playing_embed(
+            ctx,
+            state,
+            filepath,
+            title=name,
+            color=discord.Color.from_str("#E67E22"),
+            footer=footer,
+        )
+        deps.log.info("KGen now playing: %s", name)
+        return True
+
     async def play_current_spc_track(ctx, state, game_entry: dict):
         spc_now = game_entry["spc_now"]
         game_name = game_entry.get("name", "Unknown")
@@ -274,4 +326,5 @@ def build_playback_handlers(deps: PlaybackHandlerDependencies):
         "spc": play_current_spc_track,
         "tiny": play_current_tiny_track,
         "ym": play_current_ym_track,
+        "kgen": play_current_kgen_track,
     }

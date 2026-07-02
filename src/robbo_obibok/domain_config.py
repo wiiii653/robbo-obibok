@@ -47,6 +47,8 @@ class PathConfig:
     hvsc_cache_file: str
     modarchive_cache_file: str
     metadata_cache: str
+    kgen_dir: str
+    kgen_cache: str
 
 
 @dataclass(slots=True)
@@ -162,6 +164,10 @@ class AppConfig:
     @property
     def guild_id(self) -> int | None: return self.playback.guild_id
     @property
+    def kgen_dir(self) -> str: return self.paths.kgen_dir
+    @property
+    def kgen_cache(self) -> str: return self.paths.kgen_cache
+    @property
     def archive_runtime_config(self) -> ArchiveRuntimeConfig: return self.archive.archive_runtime_config
 
 
@@ -202,6 +208,8 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
     hvsc_songlengths_url = config.get("hvsc", {}).get("songlengths_url", "")
     hvsc_cache_ttl = config.get("hvsc", {}).get("cache_ttl", 168)
     hvsc_cache_file = os.path.join(root_dir, "hvsc_cache.json")
+    kgen_dir = os.path.join(root_dir, "archiwum", "kgen")
+    kgen_cache = os.path.join(root_dir, "kgen_cache.json")
     default_collection_mode = "hvsc" if config.get("hvsc", {}).get("enabled", False) else "asma"
 
     modarchive_base = config.get("modarchive", {}).get("base_url", "https://modarchive.org/index.php")
@@ -227,6 +235,7 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         snes_cache_file=snes_cache_file,
         tiny_cache=tiny_cache,
         ym_cache=ym_cache,
+        kgen_cache=kgen_cache,
         crawl_timeout=crawl_timeout,
         cache_ttl_hours=cache_ttl,
         cache_file=cache_file,
@@ -269,6 +278,8 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         hvsc_cache_file=hvsc_cache_file,
         modarchive_cache_file=modarchive_cache_file,
         metadata_cache=metadata_cache,
+        kgen_dir=kgen_dir,
+        kgen_cache=kgen_cache,
     )
     archive = ArchiveConfig(
         asma_base=asma_base,
