@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from discord.ext import commands
 
     from .entrypoint_app import EntrypointComponentAccess, EntrypointFacade
-    from .entrypoint_launcher_loader import EntrypointSupport
+    from .entrypoint_launcher_runtime import EntrypointSupport
     from .runtime_task_manager import TaskManager
     from .stream_runtime import MonitorAudioSource
 

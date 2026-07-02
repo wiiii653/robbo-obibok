@@ -27,7 +27,7 @@ from .entrypoint_callback_groups import (
 )
 from .entrypoint_components import EntrypointComponentDeps
 from .entrypoint_glue import build_single_guild_check
-from .entrypoint_launcher_loader import EntrypointSupport, build_entrypoint_support
+from .entrypoint_launcher_runtime import EntrypointSupport, build_entrypoint_support
 from .playback_process import stop_all_players as runtime_stop_all_players
 from .runtime_bindings import LegacyRuntimeBindings
 from .runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol

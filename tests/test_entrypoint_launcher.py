@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from robbo_obibok.entrypoint_executable_assembly import build_entrypoint_legacy_resolver
-from robbo_obibok.entrypoint_launcher_loader import (
+from robbo_obibok.entrypoint_launcher_runtime import (
     build_entrypoint_launcher,
     build_entrypoint_support,
 )
@@ -325,7 +325,7 @@ class EntrypointLauncherSupportTests(unittest.TestCase):
         logger = types.SimpleNamespace(name="test-logger")
 
         with patch(
-            "robbo_obibok.entrypoint_launcher_loader.build_entrypoint_bootstrap",
+            "robbo_obibok.entrypoint_launcher_runtime.build_entrypoint_bootstrap",
             side_effect=lambda *args, **kwargs: boot_calls.append((args, kwargs)) or types.SimpleNamespace(),
         ):
             support = build_entrypoint_support(
@@ -369,7 +369,7 @@ class EntrypointLauncherConfigTests(unittest.TestCase):
         with (
             patch("robbo_obibok.entrypoint_module.build_entrypoint_module", side_effect=fake_builder),
             patch(
-                "robbo_obibok.entrypoint_launcher_loader.LazyEntrypointLauncher.create",
+                "robbo_obibok.entrypoint_launcher_runtime.LazyEntrypointLauncher.create",
                 side_effect=lambda **kwargs: create_calls.append(kwargs) or fake_launcher,
             ),
         ):

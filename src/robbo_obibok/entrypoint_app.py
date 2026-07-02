@@ -38,7 +38,7 @@ from .entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_r
 from .entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 
 if TYPE_CHECKING:
-    from .entrypoint_launcher_loader import EntrypointSupport
+    from .entrypoint_launcher_runtime import EntrypointSupport
     from .entrypoint_state import EntrypointCompatStateProtocol
     from .playback_assets import PlaybackAssetRuntime
     from .playback_helpers import NowPlayingDependencies

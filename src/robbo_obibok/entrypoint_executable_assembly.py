@@ -13,7 +13,7 @@ from .bot_persistence import (
     toggle_user_track_entry,
 )
 from .entrypoint_glue import mod_only
-from .entrypoint_launcher_loader import LazyEntrypointLauncher, build_entrypoint_launcher
+from .entrypoint_launcher_runtime import LazyEntrypointLauncher, build_entrypoint_launcher
 from .entrypoint_module import (
     EntrypointModuleCollectionConfig,
     EntrypointModuleDeps,

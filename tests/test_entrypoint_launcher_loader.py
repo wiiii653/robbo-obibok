@@ -10,6 +10,8 @@ if str(ROOT) not in sys.path:
 
 from robbo_obibok.entrypoint_launcher_loader import (
     EntrypointModuleLoader,
+)
+from robbo_obibok.entrypoint_launcher_runtime import (
     EntrypointRuntimeController,
     EntrypointRuntimeStateAccess,
 )
