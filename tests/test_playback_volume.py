@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
 import unittest
 from unittest.mock import MagicMock, patch
 
-from playback_volume import PactlVolumeController, VolumePolicy
+from robbo_obibok.playback_volume import PactlVolumeController, VolumePolicy
 
 
 class VolumePolicyTests(unittest.TestCase):

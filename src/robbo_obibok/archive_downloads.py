@@ -8,7 +8,8 @@ import re
 from pathlib import Path
 
 import aiohttp
-from download_safety import read_response_limited, safe_download_path
+
+from .download_safety import read_response_limited, safe_download_path
 
 MAX_RSN_DOWNLOAD_BYTES = 128 * 1024 * 1024
 MAX_MODULE_DOWNLOAD_BYTES = 64 * 1024 * 1024
@@ -30,7 +31,7 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_s
             resp.raise_for_status()
             data = await read_response_limited(resp, max_bytes=MAX_RSN_DOWNLOAD_BYTES)
         await asyncio.to_thread(Path(rsn_path).write_bytes, data)
-    except Exception as exc:
+    except (aiohttp.ClientError, asyncio.TimeoutError, OSError, ValueError) as exc:
         logger.error("SNES: RSN download failed for %s: %s", game_name, exc)
         return None
 
@@ -49,7 +50,7 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_s
         extracted = [name for name in os.listdir(game_dir) if name.endswith(".spc")]
         logger.info("SNES: extracted %d SPC files for %s", len(extracted), game_name)
         return game_dir
-    except Exception as exc:
+    except OSError as exc:
         logger.error("SNES: RSN extraction failed for %s: %s", game_name, exc)
         return None
 
@@ -93,7 +94,7 @@ async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path
                     os.makedirs(cache_dir, exist_ok=True)
                     await asyncio.to_thread(lambda: Path(cache_path).write_bytes(data))
                     logger.info("ModArchive cached: %s", cache_path)
-                except Exception as exc:
+                except OSError as exc:
                     logger.warning("ModArchive cache write failed: %s", exc)
 
             return filepath

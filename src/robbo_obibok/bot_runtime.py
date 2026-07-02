@@ -7,23 +7,23 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable, Mapping, cast
 
-from bot_dependencies import (
+from .app_services import AppServicesProtocol
+from .bot_dependencies import (
     CommandDecoratorFactory,
     LibraryCommandDependencies,
     PlaybackCommandDependencies,
     PlaybackHandlerDependencies,
     SearchTracksProtocol,
 )
-from bot_events import CoreEventDependencies
-from collection_service import CollectionArchiveProtocol, CollectionService
-from collection_specs import CollectionSpec
-from domain_services import AppServicesProtocol
-from domain_state import PlaylistState
-from playback_lease import PlaybackLease
-from playback_process import PlaybackProcessAdapter
-from playback_volume import PactlVolumeController
-from runtime_task_manager import TaskManager
-from session_runtime import (
+from .bot_events import CoreEventDependencies
+from .collection_service import CollectionArchiveProtocol, CollectionService
+from .collection_specs import CollectionSpec
+from .domain_state import PlaylistState
+from .playback_lease import PlaybackLease
+from .playback_process import PlaybackProcessAdapter
+from .playback_volume import PactlVolumeController
+from .runtime_task_manager import TaskManager
+from .session_runtime import (
     EmbedFactoryProtocol,
     MetadataSessionDependencies,
     PlaybackSessionContext,
@@ -33,9 +33,10 @@ from session_runtime import (
 if TYPE_CHECKING:
     import discord
     from aiohttp import ClientSession
-    from archive_catalog import CollectionInfo
     from discord.ext import commands
-    from stream_runtime import MonitorAudioSource
+
+    from .archive_catalog import CollectionInfo
+    from .stream_runtime import MonitorAudioSource
 
 
 @dataclass(slots=True)
@@ -508,7 +509,7 @@ class BotRuntime:
         )
 
     async def start_targeted_playback_session(self, ctx: object, state: PlaylistState, url: str) -> bool:
-        from session_runtime import start_targeted_playback_session
+        from .session_runtime import start_targeted_playback_session
 
         return await start_targeted_playback_session(
             cast(PlaybackSessionContext, ctx),

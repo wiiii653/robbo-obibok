@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import shutil
 from typing import Callable, Iterable, MutableMapping
+
+logger = logging.getLogger(__name__)
 
 REQUIRED_EXTERNAL_TOOLS: dict[str, str] = {
     "audacious": "headless playback engine",
@@ -335,7 +338,8 @@ def load_cached_json_file(path: str, cache_state: dict[str, object]) -> dict:
     try:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
-    except Exception:
+    except (OSError, UnicodeError, json.JSONDecodeError, TypeError) as exc:
+        logger.warning("Ignoring unreadable JSON cache %s: %s", path, exc)
         return {}
     if not isinstance(data, dict):
         return {}
@@ -398,7 +402,8 @@ def load_playlist_record(playlists_dir: str, name: str) -> dict | None:
             try:
                 with open(path, encoding="utf-8") as handle:
                     return json.load(handle)
-            except Exception:
+            except (OSError, UnicodeError, json.JSONDecodeError, TypeError) as exc:
+                logger.warning("Ignoring unreadable playlist %s: %s", path, exc)
                 return None
     return None
 
@@ -420,7 +425,8 @@ def summarize_playlists(playlists_dir: str) -> list[dict]:
                 "tracks": len(data.get("tracks", [])),
                 "created": data.get("created", 0),
             })
-        except Exception:
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, AttributeError) as exc:
+            logger.warning("Ignoring unreadable playlist summary %s: %s", path, exc)
             playlists.append({
                 "name": fname[:-5],
                 "author": "?",

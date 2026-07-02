@@ -47,7 +47,13 @@ class SubsongRuntime:
                 if duration is None:
                     break
                 durations.append(float(duration))
-            except Exception:
+            except (
+                OSError,
+                subprocess.SubprocessError,
+                json.JSONDecodeError,
+                TypeError,
+                ValueError,
+            ):
                 break
 
         self.cache[filepath] = durations
@@ -64,7 +70,7 @@ class SubsongRuntime:
                 timeout=60,
             )
             return os.path.exists(output_path) and os.path.getsize(output_path) > 100
-        except Exception:
+        except (OSError, subprocess.SubprocessError):
             return False
 
     def subsong_temp_path(self, filepath: str, subsong: int) -> str:

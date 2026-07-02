@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import types
 import unittest  # noqa: F401 — re-exported for other test modules
@@ -7,6 +8,19 @@ from unittest.mock import MagicMock, patch  # noqa: F401 — re-exported for oth
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+async def _inline_to_thread(operation, *args, **kwargs):
+    return operation(*args, **kwargs)
+
+
+class InlineToThreadAsyncTestCase(unittest.IsolatedAsyncioTestCase):
+    """Run injected synchronous unit-test callbacks without a thread pool."""
+
+    def setUp(self):
+        patcher = patch.object(asyncio, "to_thread", _inline_to_thread)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
 
 def install_discord_stubs():

@@ -6,10 +6,10 @@ import logging
 from dataclasses import dataclass
 from typing import Callable, Iterable
 
-from archive_catalog import CollectionInfo
-from domain_services import AppServicesProtocol
-from domain_state import PlaylistState
-from runtime_protocols import (
+from .app_services import AppServicesProtocol
+from .archive_catalog import CollectionInfo
+from .domain_state import PlaylistState
+from .runtime_protocols import (
     CollectionRuntimeProtocol,
     PlaybackRuntimeProtocol,
     SubsongRuntimeProtocol,

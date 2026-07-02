@@ -9,16 +9,18 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_executable_assembly import build_entrypoint_legacy_resolver
-from entrypoint_launcher_loader import build_entrypoint_launcher, build_entrypoint_support
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_executable_assembly import build_entrypoint_legacy_resolver
+from robbo_obibok.entrypoint_launcher_loader import (
+    build_entrypoint_launcher,
+    build_entrypoint_support,
+)
+from robbo_obibok.entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_COLLECTION_BINDINGS,
     ENTRYPOINT_EXECUTABLE_DICT_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
     is_supported_executable_attr,
     supported_executable_dict_attrs,
 )
-
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
 from tests.test_support import install_discord_stubs
 
@@ -28,7 +30,7 @@ install_discord_stubs()
 class EntrypointLauncherTests(unittest.TestCase):
     @staticmethod
     def _load_entrypoint_module(module_name: str):
-        sys.modules.pop("robbo_obibok_runtime", None)
+        sys.modules.pop("robbo_obibok.robbo_obibok_runtime", None)
         module_path = ROOT / "robbo-obibok.py"
         spec = importlib.util.spec_from_file_location(module_name, module_path)
         module = importlib.util.module_from_spec(spec)
@@ -45,7 +47,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module) as build_module:
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module) as build_module:
             module = self._load_entrypoint_module("robbo_obibok_test_lazy_import")
             self.assertIsNone(module._ASSEMBLY)
             self.assertNotIn("_LAUNCHER", module.__dict__)
@@ -67,7 +69,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_module")
             first_app = module.initialize_runtime()
             second_app = module.initialize_runtime()
@@ -92,7 +94,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_unknown_attr")
 
         with self.assertRaises(AttributeError):
@@ -111,7 +113,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_bound_names")
             bindings = module._BINDINGS
             for name in ENTRYPOINT_EXPORT_GRAPH.dynamic_names():
@@ -145,7 +147,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_binding_map")
             self.assertEqual(
                 set(module._BINDINGS),
@@ -167,7 +169,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_export_surface")
 
             managed_attrs = supported_executable_dict_attrs(module.__dict__)
@@ -205,7 +207,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_startup_smoke")
             app = module.initialize_runtime()
 
@@ -235,7 +237,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_legacy_compat_exports")
 
         for name in ("_STATE", "_app_cfg", "_archive_runtime_config", "_FLIP_ORDER", "_FLIP_SEQ"):
@@ -255,7 +257,7 @@ class EntrypointLauncherTests(unittest.TestCase):
             bot_calls=[],
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             module = self._load_entrypoint_module("robbo_obibok_test_unmanaged_globals")
 
         binding_value_ids = {id(value) for value in module._BINDINGS.values()}
@@ -283,7 +285,7 @@ class EntrypointLauncherTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         assert spec.loader is not None
 
-        with patch.dict(sys.modules, {"robbo_obibok_runtime": runtime_module}):
+        with patch.dict(sys.modules, {"robbo_obibok.robbo_obibok_runtime": runtime_module}):
             spec.loader.exec_module(module)
 
         self.assertIs(module.initialize_runtime, runtime_module.initialize_runtime)
@@ -294,6 +296,27 @@ class EntrypointLauncherTests(unittest.TestCase):
         self.assertIs(module.selected_main, runtime_module.selected_main)
         self.assertNotIn("BOT_TOKEN", module.__dict__)
 
+    def test_strict_entrypoint_script_calls_runtime_main_strict(self):
+        calls = []
+        runtime_module = types.SimpleNamespace(
+            main_strict=lambda: calls.append("strict"),
+        )
+        module_path = ROOT / "robbo-obibok-strict.py"
+        spec = importlib.util.spec_from_file_location(
+            "robbo_obibok_test_strict_entrypoint", module_path
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+
+        with patch.dict(
+            sys.modules,
+            {"robbo_obibok.robbo_obibok_runtime": runtime_module},
+        ):
+            spec.loader.exec_module(module)
+            module.main()
+
+        self.assertEqual(calls, ["strict"])
+
 
 class EntrypointLauncherSupportTests(unittest.TestCase):
     def test_build_entrypoint_support_uses_injected_logger_builder(self):
@@ -302,7 +325,7 @@ class EntrypointLauncherSupportTests(unittest.TestCase):
         logger = types.SimpleNamespace(name="test-logger")
 
         with patch(
-            "entrypoint_launcher_loader.build_entrypoint_bootstrap",
+            "robbo_obibok.entrypoint_launcher_loader.build_entrypoint_bootstrap",
             side_effect=lambda *args, **kwargs: boot_calls.append((args, kwargs)) or types.SimpleNamespace(),
         ):
             support = build_entrypoint_support(
@@ -344,9 +367,9 @@ class EntrypointLauncherConfigTests(unittest.TestCase):
         )
 
         with (
-            patch("entrypoint_module.build_entrypoint_module", side_effect=fake_builder),
+            patch("robbo_obibok.entrypoint_module.build_entrypoint_module", side_effect=fake_builder),
             patch(
-                "entrypoint_launcher_loader.LazyEntrypointLauncher.create",
+                "robbo_obibok.entrypoint_launcher_loader.LazyEntrypointLauncher.create",
                 side_effect=lambda **kwargs: create_calls.append(kwargs) or fake_launcher,
             ),
         ):

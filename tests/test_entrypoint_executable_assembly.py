@@ -12,17 +12,16 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_executable_assembly import (
+from robbo_obibok.entrypoint_executable_assembly import (
     build_entrypoint_executable_assembly,
     build_entrypoint_executable_dependencies,
     build_strict_entrypoint_executable_assembly,
 )
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_module_bindings import (
     ALLOW_DEPRECATED,
     ENTRYPOINT_EXPORT_GRAPH,
     ENTRYPOINT_MODULE_LEGACY_COMPAT_NAMES,
 )
-
 from tests.test_entrypoint_launcher_fixtures import build_fake_launcher_module
 
 
@@ -37,11 +36,11 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_default_entrypoint_providers",
+                "robbo_obibok.entrypoint_executable_assembly.build_default_entrypoint_providers",
                 return_value=providers,
             ) as build_providers,
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_module_deps",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_module_deps",
                 return_value=deps,
             ) as build_deps,
         ):
@@ -80,27 +79,27 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_dependencies",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_dependencies",
                 return_value=(providers, deps),
             ) as build_dependencies,
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_launcher",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_launcher",
                 return_value=launcher,
             ) as build_launcher,
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_legacy_resolver",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_legacy_resolver",
                 return_value=legacy_resolve,
             ) as build_legacy,
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_module_surface",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_module_surface",
                 return_value=surface,
             ) as build_surface,
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_stable_module_bindings",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_stable_module_bindings",
                 return_value=bindings,
             ) as build_bindings,
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_compat_module_bindings",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_compat_module_bindings",
                 return_value=compat_bindings,
             ) as build_compat_bindings,
         ):
@@ -148,7 +147,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             assembly = build_entrypoint_executable_assembly(
                 module_path=str(ROOT / "robbo-obibok.py"),
                 logger_name="robbo-obibok",
@@ -188,7 +187,7 @@ class EntrypointExecutableAssemblyTests(unittest.TestCase):
             bot_calls=bot_calls,
         )
 
-        with patch("entrypoint_module.build_entrypoint_module", return_value=fake_module):
+        with patch("robbo_obibok.entrypoint_module.build_entrypoint_module", return_value=fake_module):
             assembly = build_strict_entrypoint_executable_assembly(
                 module_path=str(ROOT / "robbo-obibok.py"),
                 logger_name="robbo-obibok",

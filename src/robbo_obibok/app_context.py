@@ -1,14 +1,14 @@
-"""Application state types — pure domain models (no IO, no upper-layer deps)."""
+"""Application context tying runtime state to persistence and archive adapters."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Mapping
 
-from archive_catalog import ArchiveCatalog
-from bot_persistence import CachedJsonStore, PlaylistLibraryStore
-from domain_services import AppServices
-from domain_state import AppRuntimeState
+from .app_services import AppServices
+from .archive_catalog import ArchiveCatalog
+from .bot_persistence import CachedJsonStore, PlaylistLibraryStore
+from .domain_state import AppRuntimeState
 
 
 @dataclass(frozen=True, slots=True)

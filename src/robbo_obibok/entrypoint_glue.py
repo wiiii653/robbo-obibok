@@ -8,14 +8,16 @@ from hashlib import sha1
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 from discord.ext import commands
-from domain_state import PlaylistState
-from playback_helpers import play_via_audacious, queue_position, send_now_playing_embed
+
+from .domain_state import PlaylistState
+from .playback_helpers import play_via_audacious, queue_position, send_now_playing_embed
 
 if TYPE_CHECKING:
     from discord import Colour
-    from entrypoint_app import EntrypointComponentAccess
-    from entrypoint_bootstrap import EntrypointResources
-    from entrypoint_state import EntrypointGlueStateProtocol
+
+    from .entrypoint_app import EntrypointComponentAccess
+    from .entrypoint_bootstrap import EntrypointResources
+    from .entrypoint_state import EntrypointGlueStateProtocol
 
 
 def clear_predownload_state(state: Any, *, keep_file: bool = False) -> None:

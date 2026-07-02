@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from runtime_bootstrap import (
+from robbo_obibok.runtime_bootstrap import (
     acquire_process_lock,
     initialize_startup_environment,
     release_process_lock,

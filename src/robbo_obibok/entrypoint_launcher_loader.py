@@ -8,31 +8,32 @@ from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Protocol, cast
 
-from archive_runtime import ArchiveRuntimeConfig
-from domain_config import AppConfig
-from entrypoint_bootstrap import (
+from .archive_runtime import ArchiveRuntimeConfig
+from .domain_config import AppConfig
+from .entrypoint_bootstrap import (
     EntrypointBootstrapBuilder,
     EntrypointResources,
     build_entrypoint_bootstrap,
 )
-from entrypoint_runtime_surface import (
+from .entrypoint_runtime_surface import (
     EntrypointRuntimeStateSurface,
     EntrypointRuntimeSurface,
     build_runtime_state_surface,
     build_runtime_surface,
 )
-from entrypoint_state import EntrypointRuntimeStateProtocol, EntrypointStateProtocol
-from runtime_bootstrap import StartupEnvironment
-from runtime_io import SharedSessionRuntime
+from .entrypoint_state import EntrypointRuntimeStateProtocol, EntrypointStateProtocol
+from .runtime_bootstrap import StartupEnvironment
+from .runtime_io import SharedSessionRuntime
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
     from discord.ext import commands
-    from entrypoint_app import EntrypointApp
-    from entrypoint_module import EntrypointModule, EntrypointModuleDeps
-    from entrypoint_runtime import AppAssembly
 
-from entrypoint_module_bindings import (
+    from .entrypoint_app import EntrypointApp
+    from .entrypoint_module import EntrypointModule, EntrypointModuleDeps
+    from .entrypoint_runtime import AppAssembly
+
+from .entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_APP,
     ENTRYPOINT_COMPAT_GUILD_ID,
     ENTRYPOINT_COMPAT_LOCK_FILE,
@@ -518,7 +519,7 @@ def build_entrypoint_support(
         atomic_json_write=atomic_json_write,
     )
     if state is None:
-        from entrypoint_state import EntrypointState  # type: ignore[unused-ignore]
+        from .entrypoint_state import EntrypointState  # type: ignore[unused-ignore]
 
         state = EntrypointState()
     resources = EntrypointResources(boot=boot, state=state, logger=logger)
@@ -566,7 +567,7 @@ def build_entrypoint_launcher(
     flip_order: list[str],
     flip_seq: list[str],
 ) -> LazyEntrypointLauncher:
-    from entrypoint_module import build_entrypoint_module
+    from .entrypoint_module import build_entrypoint_module
 
     module_builder = build_entrypoint_module
 

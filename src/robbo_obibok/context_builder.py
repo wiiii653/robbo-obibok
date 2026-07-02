@@ -5,17 +5,17 @@ from __future__ import annotations
 import logging
 from typing import Callable
 
-from archive_catalog import ArchiveCatalog
-from bot_persistence import (
+from .app_context import AppContext, ArchiveRegistryViews, BootstrappedApp
+from .app_services import AppServices
+from .archive_catalog import ArchiveCatalog
+from .bot_persistence import (
     CachedJsonStore,
     PlaylistLibraryStore,
     load_queue_from_disk,
     save_queue_to_disk,
 )
-from domain_archive_config import ArchivePaths
-from domain_context import AppContext, ArchiveRegistryViews, BootstrappedApp
-from domain_services import AppServices
-from domain_state import AppRuntimeState
+from .domain_archive_config import ArchivePaths
+from .domain_state import AppRuntimeState
 
 
 def build_app_context(

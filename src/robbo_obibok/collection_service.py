@@ -8,12 +8,13 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, cast
 
-from collection_specs import CollectionSpec
-from domain_state import PlaylistState
+from .collection_specs import CollectionSpec
+from .domain_state import PlaylistState
 
 if TYPE_CHECKING:
-    from archive_catalog import CollectionInfo
     from discord.ext import commands
+
+    from .archive_catalog import CollectionInfo
 
 
 class CollectionArchiveProtocol(Protocol):
@@ -162,7 +163,7 @@ class CollectionService:
                     count = len(tracks) if isinstance(tracks, (list, dict, str)) else "?"
             else:
                 count = "?"
-        except Exception:
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, AttributeError):
             count = "⚠️"
         self.status_count_cache[fname] = (mtime, count)
         return count

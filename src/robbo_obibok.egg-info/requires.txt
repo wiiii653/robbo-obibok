@@ -1,8 +1,0 @@
-discord.py[voice]<3,>=2.3
-pynacl<2,>=1.5
-aiohttp<4,>=3.9
-pyyaml<7,>=6.0
-
-[dev]
-pytest<9,>=8
-ruff<1,>=0.11

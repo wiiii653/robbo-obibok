@@ -6,27 +6,27 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, cast
 
-import entrypoint_executable_assembly
-import runtime_bootstrap
-from collection_catalog import (
+from . import entrypoint_executable_assembly, runtime_bootstrap
+from .collection_catalog import (
     FLIP_ORDER as COLLECTION_FLIP_ORDER,
 )
-from collection_catalog import (
+from .collection_catalog import (
     FLIP_SEQ as COLLECTION_FLIP_SEQ,
 )
-from entrypoint_app import run_bot_entrypoint
-from entrypoint_module_bindings import (
+from .entrypoint_app import run_bot_entrypoint
+from .entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_DEPRECATED_INTERNAL_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
     resolve_bound_entrypoint_module_attr,
 )
-from entrypoint_runtime_surface import (
+from .entrypoint_runtime_surface import (
     build_runtime_surface,
 )
 
 if TYPE_CHECKING:
     from discord.ext import commands
-    from entrypoint_runtime import AppAssembly
+
+    from .entrypoint_runtime import AppAssembly
 
 BOT_TOKEN = ""
 _ASSEMBLY = None

@@ -2,7 +2,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from playback_process import move_playback_to_sink
+from robbo_obibok.playback_process import move_playback_to_sink
 
 
 class PlaybackProcessTests(unittest.TestCase):
@@ -15,7 +15,7 @@ class PlaybackProcessTests(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout="12 sink-a\ninvalid\n34 sink-b\n")
             return subprocess.CompletedProcess(command, 0)
 
-        with patch("playback_process.subprocess.run", side_effect=run):
+        with patch("robbo_obibok.playback_process.subprocess.run", side_effect=run):
             move_playback_to_sink("safe_sink")
 
         self.assertEqual(

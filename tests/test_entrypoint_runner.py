@@ -10,7 +10,7 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_app import build_default_intents, run_bot_entrypoint
+from robbo_obibok.entrypoint_app import build_default_intents, run_bot_entrypoint
 
 
 class EntrypointRunnerTests(unittest.TestCase):

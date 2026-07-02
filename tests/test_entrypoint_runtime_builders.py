@@ -6,24 +6,23 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_app import (
+from robbo_obibok.entrypoint_app import (
     build_entrypoint_runtime_callbacks,
     build_entrypoint_runtime_initializer,
 )
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
     ENTRYPOINT_MODULE_LEGACY_COMPAT_BINDINGS,
     ENTRYPOINT_MODULE_STABLE_BINDINGS,
 )
-from entrypoint_runtime_surface import (
+from robbo_obibok.entrypoint_runtime_surface import (
     ENTRYPOINT_STABLE_RUNTIME_SURFACE_ALIAS_BINDINGS,
     ENTRYPOINT_STABLE_RUNTIME_SURFACE_BINDINGS,
     EntrypointRuntimeStateSurface,
     EntrypointRuntimeSurface,
     build_runtime_surface,
 )
-from entrypoint_runtime_tasks import build_entrypoint_runtime_tasks
-
+from robbo_obibok.entrypoint_runtime_tasks import build_entrypoint_runtime_tasks
 from tests.test_entrypoint_runtime_fixtures import (
     build_runtime_callback_inputs,
     build_runtime_task_inputs,

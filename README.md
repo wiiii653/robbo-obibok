@@ -117,6 +117,8 @@ All archives are served from local disk — no external HTTP calls during playba
 
 ## Quick Start
 
+Supported Python versions: **3.11–3.13**.
+
 ### Ubuntu / Debian
 
 ```bash
@@ -197,7 +199,7 @@ Logged launcher path:
 
 ```bash
 # Canonical logged launcher module
-./venv/bin/python3 -u src/robbo_obibok_logged_launcher.py
+PYTHONPATH=src ./venv/bin/python3 -u -m robbo_obibok.robbo_obibok_logged_launcher
 ```
 
 > **Note for C64 SID playback:** GStreamer `siddec` plugin is bundled with `gstreamer1.0-plugins-bad`. If SIDs don't play, verify with: `gst-inspect-1.0 siddec`

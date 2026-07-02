@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
 import discord
-from archive_catalog import CollectionInfo
-from bot_dependencies import CommandDecoratorFactory, SearchTracksProtocol
-from bot_runtime import (
+
+from .archive_catalog import CollectionInfo
+from .bot_dependencies import CommandDecoratorFactory, SearchTracksProtocol
+from .bot_runtime import (
     BootstrapCallbacks,
     BotRuntime,
     CollectionCallbacks,
@@ -21,10 +22,10 @@ from bot_runtime import (
     RuntimeConfig,
     RuntimeState,
 )
-from collection_service import CollectionArchiveProtocol, CollectionService
-from domain_state import PlaylistState
-from playback_service import PlaybackService
-from runtime_protocols import (
+from .collection_service import CollectionArchiveProtocol, CollectionService
+from .domain_state import PlaylistState
+from .playback_service import PlaybackService
+from .runtime_protocols import (
     PlaySubsongCallable,
 )
 

@@ -7,16 +7,16 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Mapping
 
-from bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
-from bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
-from collection_service import CollectionArchiveProtocol
-from collection_specs import CollectionSpec
-from domain_services import AppServicesProtocol
-from entrypoint_bootstrap import EntrypointResources
-from entrypoint_callback_groups import AppEntrypointCallbacks
-from entrypoint_state import EntrypointRuntimeInitializerStateProtocol
-from playback_assets import PlaybackAssetRuntime
-from runtime_bootstrap import (
+from .app_services import AppServicesProtocol
+from .bot_dependencies import PlaybackHandlerDependencies, PlaybackHandlerMap
+from .bot_runtime import BotRuntime, RuntimeConfig, RuntimeState
+from .collection_service import CollectionArchiveProtocol
+from .collection_specs import CollectionSpec
+from .entrypoint_bootstrap import EntrypointResources
+from .entrypoint_callback_groups import AppEntrypointCallbacks
+from .entrypoint_state import EntrypointRuntimeInitializerStateProtocol
+from .playback_assets import PlaybackAssetRuntime
+from .runtime_bootstrap import (
     StartupEnvironment,
     acquire_process_lock,
     cleanup_temp_dir,
@@ -26,27 +26,28 @@ from runtime_bootstrap import (
     run_startup_steps,
     schedule_background_tasks,
 )
-from runtime_callback_builders import (
+from .runtime_callback_builders import (
     build_bootstrap_composition_callbacks,
     build_collection_composition_callbacks,
     build_library_composition_callbacks,
     build_playback_composition_callbacks,
 )
-from runtime_composition import AppCompositionCallbacks, ComposedRuntime, compose_runtime
-from runtime_protocols import (
+from .runtime_composition import AppCompositionCallbacks, ComposedRuntime, compose_runtime
+from .runtime_protocols import (
     ArchiveRuntimeProtocol,
     CollectionRuntimeProtocol,
     PlaybackRuntimeProtocol,
     ServiceFacadeProtocol,
     StreamRuntimeProtocol,
 )
-from runtime_service_facade import RuntimeServiceFacade
-from runtime_task_manager import TaskManager
+from .runtime_service_facade import RuntimeServiceFacade
+from .runtime_task_manager import TaskManager
 
 if TYPE_CHECKING:
     from discord.ext import commands
-    from entrypoint_app import EntrypointComponentAccess
-    from stream_runtime import MonitorAudioSource
+
+    from .entrypoint_app import EntrypointComponentAccess
+    from .stream_runtime import MonitorAudioSource
 
 
 @dataclass(slots=True)
@@ -327,7 +328,7 @@ class EntrypointRuntimeInitializer:
     _task_manager: TaskManager | None = None
 
     def build_startup_environment(self) -> StartupEnvironment:
-        from entrypoint_runtime import build_startup_env
+        from .entrypoint_runtime import build_startup_env
 
         return build_startup_env(
             bot_token=self.resources.app_cfg().bot_token,
@@ -336,7 +337,7 @@ class EntrypointRuntimeInitializer:
         )
 
     def build_runtime_configuration(self, lock_file: str) -> RuntimeConfig:
-        from entrypoint_runtime import build_runtime_config
+        from .entrypoint_runtime import build_runtime_config
 
         app_cfg = self.resources.app_cfg()
         return build_runtime_config(
@@ -360,7 +361,7 @@ class EntrypointRuntimeInitializer:
         )
 
     def build_runtime_state_bundle(self, shutdown_flag) -> RuntimeState:
-        from entrypoint_runtime import build_runtime_state
+        from .entrypoint_runtime import build_runtime_state
 
         component_bundle = self.components.require()
         return build_runtime_state(
@@ -385,7 +386,7 @@ class EntrypointRuntimeInitializer:
         return self._task_manager
 
     def build_app_callback_bundle(self):
-        from entrypoint_runtime import build_app_callbacks
+        from .entrypoint_runtime import build_app_callbacks
 
         component_bundle = self.components.require()
         app_cfg = self.resources.app_cfg()
@@ -405,7 +406,7 @@ class EntrypointRuntimeInitializer:
         )
 
     def create_app(self) -> AppAssembly:
-        from entrypoint_runtime import create_app as create_entry_app
+        from .entrypoint_runtime import create_app as create_entry_app
 
         self.components.require()
         assert self.state.service_facade is not None

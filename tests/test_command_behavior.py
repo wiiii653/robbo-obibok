@@ -10,19 +10,23 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import library_commands
-import playback_commands
-from collection_catalog import FLIP_SEQ as COLLECTION_FLIP_SEQ
-from domain_state import PlaylistState
 from test_runtime_context import command_test_context
 from test_support import FakeContext, RegistrationBot, patch, unittest
+
+from robbo_obibok import library_commands, playback_commands
+from robbo_obibok.collection_catalog import FLIP_SEQ as COLLECTION_FLIP_SEQ
+from robbo_obibok.domain_state import PlaylistState
 
 
 class AsyncTestCase(unittest.TestCase):
     def _callTestMethod(self, method):
         result = method()
         if asyncio.iscoroutine(result):
-            return asyncio.run(result)
+            async def inline_to_thread(operation, *args, **kwargs):
+                return operation(*args, **kwargs)
+
+            with patch.object(asyncio, "to_thread", inline_to_thread):
+                return asyncio.run(result)
         return result
 
 
@@ -79,26 +83,21 @@ class CommandBehaviorTests(AsyncTestCase):
                 play_current_track=play_current_track,
                 save_queue=lambda found_state: save_calls.append(list(found_state.queue)),
                 monitor_playback=monitor_playback,
+                task_manager=None,
             )
             fake_bot = RegistrationBot()
             library_commands.register_library_commands(fake_bot, deps)
             ctx = FakeContext()
-            scheduled = []
-            original_create_task = asyncio.create_task
-            def tracking_create_task(coro):
-                task = original_create_task(coro)
-                scheduled.append(coro)
-                return task
 
-            with patch.object(library_commands.random, "shuffle", lambda items: None), \
-                 patch("asyncio.create_task", side_effect=tracking_create_task):
+            with patch.object(library_commands.random, "shuffle", lambda items: None):
                 await fake_bot.commands["favplay"]["func"](ctx, number="")
+                await state.monitor_task
 
             self.assertEqual(state.collection_mode, "asma")
             self.assertEqual(state.queue, ["https://asma.atari.org/asma/A.sap", "https://asma.atari.org/asma/B.sap"])
             self.assertEqual(state.index, 0)
             self.assertEqual(save_calls, [state.queue])
-            self.assertEqual(len(scheduled), 1)
+            self.assertEqual(len(monitor_calls), 1)
             self.assertIn("Playing 2 favorites", ctx.sent[0].content)
 
     async def test_flip_advances_to_next_collection(self):

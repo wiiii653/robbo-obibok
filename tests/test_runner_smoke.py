@@ -33,7 +33,7 @@ class RunnerSmokeTests(unittest.TestCase):
 
     @staticmethod
     def _reset_runtime_modules() -> None:
-        sys.modules.pop("robbo_obibok_runtime", None)
+        sys.modules.pop("robbo_obibok.robbo_obibok_runtime", None)
         sys.modules.pop("robbo_obibok_main", None)
         sys.modules.pop("robbo_obibok_main_strict", None)
 
@@ -80,7 +80,7 @@ class RunnerSmokeTests(unittest.TestCase):
         assert spec.loader is not None
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             try:
@@ -140,7 +140,7 @@ class RunnerSmokeTests(unittest.TestCase):
         assert spec.loader is not None
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             try:
@@ -204,7 +204,7 @@ class RunnerSmokeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
         ):
@@ -270,7 +270,7 @@ class RunnerSmokeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
         ):
@@ -333,10 +333,10 @@ class RunnerSmokeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("robbo_obibok.robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             try:
                 runpy.run_path(str(module_path), run_name="__main__")
@@ -358,7 +358,7 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-import robbo_obibok_runtime
+from robbo_obibok import robbo_obibok_runtime
 runtime_calls = []
 assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
@@ -401,17 +401,17 @@ def fake_run_bot_entrypoint(**kwargs):
     kwargs["handle_signal"](2, "frame")
 
 with (
-    patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
-    patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
-    patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
+    patch("robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
+    patch("robbo_obibok.robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("robbo_obibok.runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
+    patch("robbo_obibok.entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
     robbo_obibok_runtime.main()
 
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
         env = dict(os.environ)
-        env["PYTHONPATH"] = f"{ROOT}/src/robbo_obibok:{ROOT}"
+        env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
         env["DISCORD_BOT_TOKEN"] = "runtime-token"
 
         result = subprocess.run(
@@ -436,7 +436,7 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-import robbo_obibok_runtime
+from robbo_obibok import robbo_obibok_runtime
 runtime_calls = []
 assembly = types.SimpleNamespace(
     providers=types.SimpleNamespace(),
@@ -476,7 +476,7 @@ assembly = types.SimpleNamespace(
 captured = {}
 
 def fake_run_bot_entrypoint(**kwargs):
-    import robbo_obibok_runtime
+    from robbo_obibok import robbo_obibok_runtime
     captured["token"] = kwargs["token_getter"]()
     captured["lock_file"] = kwargs["lock_file_getter"]()
     captured["bot_type"] = type(kwargs["bot"]).__name__
@@ -490,17 +490,17 @@ def fake_run_bot_entrypoint(**kwargs):
             captured["deprecated_internal_visibility"][name] = False
 
 with (
-    patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
-    patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
-    patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
+    patch("robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
+    patch("robbo_obibok.robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("robbo_obibok.runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
+    patch("robbo_obibok.entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
 ):
     robbo_obibok_runtime.main()
 
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
         env = dict(os.environ)
-        env["PYTHONPATH"] = f"{ROOT}/src/robbo_obibok:{ROOT}"
+        env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
         env["DISCORD_BOT_TOKEN"] = "runtime-token"
 
         result = subprocess.run(
@@ -534,7 +534,7 @@ from unittest.mock import patch
 from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
-import robbo_obibok_runtime
+from robbo_obibok import robbo_obibok_runtime
 
 runtime_calls = []
 assembly = types.SimpleNamespace(
@@ -577,15 +577,15 @@ def fake_run_bot_entrypoint(**kwargs):
     kwargs["handle_signal"](3, "frame")
 
 with (
-    patch("entrypoint_executable_assembly.build_entrypoint_executable_assembly", return_value=assembly),
-    patch("robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+    patch("robbo_obibok.entrypoint_executable_assembly.build_strict_entrypoint_executable_assembly", return_value=assembly),
+    patch("robbo_obibok.robbo_obibok_runtime.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
 ):
-    robbo_obibok_runtime.main()
+    robbo_obibok_runtime.main_strict()
 
 print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
 """
         env = dict(os.environ)
-        env["PYTHONPATH"] = f"{ROOT}/src/robbo_obibok:{ROOT}"
+        env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
         env["DISCORD_BOT_TOKEN"] = "runtime-token"
 
         result = subprocess.run(
@@ -619,7 +619,7 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
             os.chmod(launcher, 0o755)
 
             env = self._clean_env()
-            env["PYTHONPATH"] = f"{ROOT}/src/robbo_obibok:{ROOT}"
+            env["PYTHONPATH"] = f"{ROOT}/src:{ROOT}"
 
             result = subprocess.run(
                 ["bash", "run_bot.sh"],
@@ -665,7 +665,7 @@ print(json.dumps({"captured": captured, "runtime_calls": runtime_calls}))
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertEqual(
             captured_args,
-            ["-u", "src/robbo_obibok/robbo_obibok_launcher.py"],
+            ["-u", "-m", "robbo_obibok.robbo_obibok_launcher"],
         )
 
 

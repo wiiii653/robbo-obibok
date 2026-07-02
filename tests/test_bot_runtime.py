@@ -8,8 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import bot_runtime
-import domain_state
+from robbo_obibok import bot_runtime, domain_state
 
 
 class BotRuntimeTests(unittest.IsolatedAsyncioTestCase):

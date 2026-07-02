@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Awaitable, Callable, Iterable, Mapping, TypeVar
 
-from domain_archive_config import ArchiveRuntimeConfig
+from .domain_archive_config import ArchiveRuntimeConfig
 
 ArchivePaths = ArchiveRuntimeConfig
 
@@ -130,16 +130,16 @@ class ArchiveCatalog:
             if os.path.exists(self.paths.metadata_cache):
                 with open(self.paths.metadata_cache) as handle:
                     return json.load(handle)
-        except Exception:
-            pass
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError) as exc:
+            self.logger.warning("Ignoring unreadable metadata cache %s: %s", self.paths.metadata_cache, exc)
         return {}
 
     def save_metadata_cache(self, index: dict[str, dict[str, str]]) -> None:
         try:
             with open(self.paths.metadata_cache, "w") as handle:
                 json.dump(index, handle, indent=2)
-        except Exception:
-            pass
+        except (OSError, TypeError, ValueError) as exc:
+            self.logger.warning("Failed to save metadata cache %s: %s", self.paths.metadata_cache, exc)
 
     async def fetch_metadata_batch(
         self,
@@ -222,11 +222,11 @@ class ArchiveCatalog:
                         {"tracks": tracks, "durations": self.sid_durations, "downloaded": time.time()},
                         handle,
                     )
-            except Exception as exc:
+            except (OSError, TypeError, ValueError) as exc:
                 self.logger.warning("HVSC: cache write failed: %s", exc)
             self.logger.info("HVSC: loaded %d SID tracks", len(tracks))
             return tracks
-        except Exception as exc:
+        except (OSError, subprocess.SubprocessError, TypeError, ValueError) as exc:
             self.logger.error("HVSC index error: %s", exc)
             return None
 
@@ -249,7 +249,14 @@ class ArchiveCatalog:
                 self.logger.info("HVSC: restored %d durations from cache", len(cached_durs))
             self.logger.info("HVSC: loaded %d tracks from cache", len(tracks))
             return tracks
-        except Exception as exc:
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            TypeError,
+            ValueError,
+            AttributeError,
+        ) as exc:
             self.logger.warning("HVSC cache load error: %s", exc)
             return None
 
@@ -259,7 +266,7 @@ class ArchiveCatalog:
                 return None
             with open(cache_path) as handle:
                 return json.load(handle)
-        except Exception as exc:
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             self.logger.warning("Cache load error (%s): %s", os.path.basename(cache_path), exc)
             return None
 
@@ -304,7 +311,13 @@ class ArchiveCatalog:
             self.replace_modarchive_name_map(modarchive_name_map)
             self.logger.info("ModArchive: loaded %d tracks from cache (%d raw entries)", len(tracks), len(modules))
             return tracks
-        except Exception as exc:
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            TypeError,
+            AttributeError,
+        ) as exc:
             self.logger.warning("ModArchive cache load error: %s", exc)
             return None
 
@@ -325,7 +338,13 @@ class ArchiveCatalog:
             self.replace_snes_metadata(snes_metadata)
             self.logger.info("SNES: loaded %d game sets from cache", len(urls))
             return urls
-        except Exception as exc:
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            TypeError,
+            AttributeError,
+        ) as exc:
             self.logger.warning("SNES cache load error: %s", exc)
             return None
 

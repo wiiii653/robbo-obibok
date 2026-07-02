@@ -7,13 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
     ENTRYPOINT_DIRECT_EXPORT_BINDINGS,
     ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
 )
-from entrypoint_surface_assembly import (
+from robbo_obibok.entrypoint_surface_assembly import (
     EntrypointModuleSurface,
     EntrypointSurfaceExportAdapter,
     build_entrypoint_compat_registry_attrs,

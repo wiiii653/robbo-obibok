@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from collection_specs import CollectionSpec
+from .collection_specs import CollectionSpec
 
 FLIP_ORDER = ["hvsc", "asma", "modarchive", "ay", "ym", "tiny", "spc"]
 FLIP_SEQ = ["🟣HVSC", "🟢ASMA", "🟠Mod", "🔵AY", "🎹YM", "🎵Tiny", "🔴SNES"]

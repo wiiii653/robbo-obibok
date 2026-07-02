@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
-from domain_state import PlaylistState
-from runtime_protocols import PlaySubsongCallable
-from session_runtime import (
+from .domain_state import PlaylistState
+from .runtime_protocols import PlaySubsongCallable
+from .session_runtime import (
     auto_play_after_switch,
     fetch_metadata_background,
     play_current_track,
@@ -16,8 +16,9 @@ from session_runtime import (
 )
 
 if TYPE_CHECKING:
-    from bot_runtime import BotRuntime
     from discord.ext import commands
+
+    from .bot_runtime import BotRuntime
 
 
 @dataclass(slots=True)

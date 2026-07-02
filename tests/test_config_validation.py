@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from entrypoint_startup import load_config
+from robbo_obibok.entrypoint_startup import load_config
 
 
 class Logger:

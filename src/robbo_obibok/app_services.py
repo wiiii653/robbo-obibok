@@ -1,12 +1,12 @@
-"""Facade over app state and persistent user/library stores."""
+"""Application service facade over state and persistent stores."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable, Protocol
 
-from bot_persistence import CachedJsonStore, PlaylistLibraryStore
-from domain_state import AppRuntimeState, PlaylistState
+from .bot_persistence import CachedJsonStore, PlaylistLibraryStore
+from .domain_state import AppRuntimeState, PlaylistState
 
 
 class AppServicesProtocol(Protocol):

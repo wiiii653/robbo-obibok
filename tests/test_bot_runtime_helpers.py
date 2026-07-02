@@ -15,13 +15,14 @@ from test_support import install_discord_stubs
 
 install_discord_stubs()
 
-import runtime_support
-from archive_catalog import ArchiveCatalog
-from archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
-from entrypoint_glue import build_temp_path, place_track_in_queue
-from stream_runtime import StreamRuntime
 from test_runtime_context import build_runtime_test_context
-from test_support import patch, unittest
+from test_support import InlineToThreadAsyncTestCase, patch, unittest
+
+from robbo_obibok import runtime_support
+from robbo_obibok.archive_catalog import ArchiveCatalog
+from robbo_obibok.archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
+from robbo_obibok.entrypoint_glue import build_temp_path, place_track_in_queue
+from robbo_obibok.stream_runtime import StreamRuntime
 
 
 def build_archive_runtime_fixture(*, hvsc_base="https://hvsc.example/", ym_cache=""):
@@ -356,7 +357,7 @@ class RuntimeSupportTests(unittest.TestCase):
         path.unlink()
 
 
-class FetchMetadataBatchTests(unittest.IsolatedAsyncioTestCase):
+class FetchMetadataBatchTests(InlineToThreadAsyncTestCase):
     async def asyncSetUp(self):
         self.fixture = build_archive_runtime_fixture()
         self.metadata_index = self.fixture.archives.metadata_index

@@ -14,12 +14,13 @@ from typing import TYPE_CHECKING, Awaitable, Callable
 from urllib.parse import urljoin
 
 import aiohttp
-from archive_downloads import download_modarchive_module as archive_download_modarchive_module
-from archive_downloads import download_spc_rsn as archive_download_spc_rsn
-from domain_archive_config import ArchiveRuntimeConfig
+
+from .archive_downloads import download_modarchive_module as archive_download_modarchive_module
+from .archive_downloads import download_spc_rsn as archive_download_spc_rsn
+from .domain_archive_config import ArchiveRuntimeConfig
 
 if TYPE_CHECKING:
-    from archive_catalog import ArchiveCatalog
+    from .archive_catalog import ArchiveCatalog
 
 SAP_LINE_RE = re.compile(rb"^([A-Z]+)\s+(.+)")
 SAP_RE = re.compile(r'href="([^"]+\.sap)"', re.IGNORECASE)
@@ -61,7 +62,7 @@ class ArchiveRuntime:
         try:
             with open(filepath, "rb") as handle:
                 return self.parse_sap_metadata_bytes(handle.read(4096))
-        except Exception:
+        except OSError:
             return {}
 
     def parse_sap_metadata_bytes(self, data: bytes) -> dict[str, str]:
@@ -134,7 +135,7 @@ class ArchiveRuntime:
                 if resp.status != 200:
                     return {}
                 return self.parse_sap_metadata_bytes(await resp.content.read(4096))
-        except Exception:
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
             return {}
 
     async def fetch_metadata_batch(
@@ -170,7 +171,7 @@ class ArchiveRuntime:
             except asyncio.TimeoutError:
                 self.logger.warning("TIMEOUT %s", url)
                 return []
-            except Exception as exc:
+            except (aiohttp.ClientError, OSError) as exc:
                 self.logger.error("ERROR %s: %s", url, exc)
                 return []
 
@@ -212,7 +213,7 @@ class ArchiveRuntime:
             try:
                 with open(self.config.cache_file, "w") as handle:
                     json.dump(cache_data, handle, indent=2)
-            except Exception as exc:
+            except (OSError, TypeError, ValueError) as exc:
                 self.logger.warning("ASMA cache write failed: %s", exc)
 
         await asyncio.to_thread(save_cache)
@@ -228,7 +229,7 @@ class ArchiveRuntime:
             with open(self.config.cache_file) as handle:
                 data = json.load(handle)
             return data.get("tracks", [])
-        except Exception:
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, AttributeError):
             return None
 
     async def download_spc_rsn(self, rsn_url: str, spc_now: str, game_name: str) -> str | None:
@@ -258,12 +259,9 @@ class ArchiveRuntime:
         magic = data[0:4]
         if magic not in (b"PSID", b"RSID"):
             return meta
-        try:
-            meta["name"] = data[0x16:0x16 + 32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
-            meta["author"] = data[0x36:0x36 + 32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
-            meta["copyright"] = data[0x56:0x56 + 32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
-        except Exception:
-            pass
+        meta["name"] = data[0x16:0x16 + 32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
+        meta["author"] = data[0x36:0x36 + 32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
+        meta["copyright"] = data[0x56:0x56 + 32].rstrip(b"\x00").decode("ascii", errors="replace").strip()
         return meta
 
     def cleanup_orphan_players(self) -> None:

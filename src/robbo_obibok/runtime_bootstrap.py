@@ -72,7 +72,7 @@ def release_process_lock(lock_file: str) -> None:
     try:
         if descriptor is not None:
             os.unlink(lock_file)
-    except Exception:
+    except OSError:
         pass
     finally:
         if descriptor is not None:
@@ -86,7 +86,7 @@ def cleanup_temp_dir(temp_dir: str, *, logger) -> None:
         if os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
             logger.info("Cleaned up temp dir: %s", temp_dir)
-    except Exception as exc:
+    except OSError as exc:
         logger.warning("Temp cleanup failed: %s", exc)
 
 

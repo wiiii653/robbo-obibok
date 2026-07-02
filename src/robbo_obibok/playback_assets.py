@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 import aiohttp
-from download_safety import read_response_limited, resolve_existing_path
+
+from .download_safety import read_response_limited, resolve_existing_path
 
 MAX_SAP_DOWNLOAD_BYTES = 16 * 1024 * 1024
 
@@ -85,8 +86,8 @@ class PlaybackAssetRuntime:
                 timeout=15,
             )
             extract_ok = extract_result.returncode == 0
-        except Exception:
-            pass
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.logger.debug("YM archive extraction skipped for %s: %s", ym_path, exc)
 
         raw_ym = ym_path
         if extract_ok:
@@ -123,10 +124,10 @@ class PlaybackAssetRuntime:
                         continue
                     try:
                         os.remove(os.path.join(parent, name))
-                    except Exception:
-                        pass
+                    except OSError as exc:
+                        self.logger.debug("YM cleanup could not remove %s: %s", name, exc)
                 self.logger.info("YM cleanup: removed %s", parent)
-            except Exception as exc:
+            except OSError as exc:
                 self.logger.warning("YM cleanup error: %s", exc)
         self._ym_last_wav_path = None
 

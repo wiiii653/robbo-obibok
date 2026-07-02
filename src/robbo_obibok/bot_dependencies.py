@@ -6,14 +6,15 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Iterable, Protocol
 
-from archive_catalog import CollectionInfo
-from domain_state import PlaylistState
-from playback_lease import PlaybackLease
+from .archive_catalog import CollectionInfo
+from .domain_state import PlaylistState
+from .playback_lease import PlaybackLease
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
-    from playback_volume import VolumeController
-    from runtime_protocols import PlaybackProcessProtocol
+
+    from .playback_volume import VolumeController
+    from .runtime_protocols import PlaybackProcessProtocol
 
 
 CommandDecoratorFactory = Callable[[], Callable[[Any], Any]]

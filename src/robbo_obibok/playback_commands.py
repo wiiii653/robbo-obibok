@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 import aiohttp
 import discord
-from bot_dependencies import PlaybackCommandDependencies
 from discord.ext import commands
+
+from .bot_dependencies import PlaybackCommandDependencies
 
 if TYPE_CHECKING:
     class PlaybackContext(commands.Context[commands.Bot]):
@@ -155,7 +156,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
                 try:
                     with open(state.current_track_path, "rb") as handle:
                         meta = deps.parse_sid_header(handle.read(0x76))
-                except Exception:
+                except (OSError, TypeError, ValueError):
                     meta = {}
             else:
                 meta = deps.parse_sap_header(state.current_track_path)
@@ -194,7 +195,7 @@ def register_playback_commands(bot: commands.Bot, deps: PlaybackCommandDependenc
 
     @bot.command()
     async def volume(ctx: PlaybackContext, *, level: str = ""):
-        from playback_volume import VolumePolicy
+        from .playback_volume import VolumePolicy
 
         ctrl = deps.volume_controller
         policy = VolumePolicy()

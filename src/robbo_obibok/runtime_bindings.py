@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
-from archive_catalog import CollectionInfo
-from domain_state import PlaylistState
-from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
+from .archive_catalog import CollectionInfo
+from .domain_state import PlaylistState
+from .runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession

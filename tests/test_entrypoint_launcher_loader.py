@@ -8,12 +8,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_launcher_loader import (
+from robbo_obibok.entrypoint_launcher_loader import (
     EntrypointModuleLoader,
     EntrypointRuntimeController,
     EntrypointRuntimeStateAccess,
 )
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
     ENTRYPOINT_DIRECT_EXPORT_SPECS_BY_NAME,
 )
@@ -378,7 +378,7 @@ class EntrypointLauncherLoaderTests(unittest.TestCase):
         from unittest.mock import patch
 
         with patch(
-            "entrypoint_launcher_loader.build_entrypoint_legacy_bindings",
+            "robbo_obibok.entrypoint_launcher_loader.build_entrypoint_legacy_bindings",
             side_effect=lambda **kwargs: binding_calls.append(kwargs) or types.SimpleNamespace(resolve=lambda name: name),
         ):
             self.assertIs(loader.ensure_module(), module)

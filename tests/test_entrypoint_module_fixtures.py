@@ -1,6 +1,6 @@
 import types
 
-from entrypoint_module import (
+from robbo_obibok.entrypoint_module import (
     EntrypointModuleCollectionDeps,
     EntrypointModuleDeps,
     EntrypointModuleRuntimeDeps,

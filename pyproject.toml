@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "robbo-obibok"
 version = "0.1.0"
 description = "Discord chiptune radio bot"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "discord.py[voice]>=2.3,<3",
     "pynacl>=1.5,<2",
@@ -47,7 +47,7 @@ ignore = ["E501"]
 "scripts/*" = ["E402"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["robbo_obibok"]
 
 [tool.ruff.format]
 quote-style = "double"

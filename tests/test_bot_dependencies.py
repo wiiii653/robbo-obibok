@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from bot_dependencies import LibraryCommandDependencies
-from domain_services import AppServicesProtocol
+from robbo_obibok.app_services import AppServicesProtocol
+from robbo_obibok.bot_dependencies import LibraryCommandDependencies
 
 
 class BotDependenciesTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class BotDependenciesTests(unittest.TestCase):
         )
 
     def test_playback_command_dependencies_use_accessors_for_metadata_and_snes_maps(self):
-        from bot_dependencies import PlaybackCommandDependencies
+        from robbo_obibok.bot_dependencies import PlaybackCommandDependencies
 
         annotations = PlaybackCommandDependencies.__annotations__
 
@@ -42,7 +42,10 @@ class BotDependenciesTests(unittest.TestCase):
         self.assertNotIn("snes_metadata", annotations)
 
     def test_session_runtime_dependencies_use_callbacks_not_raw_maps(self):
-        from session_runtime import MetadataSessionDependencies, PlaybackSessionDependencies
+        from robbo_obibok.session_runtime import (
+            MetadataSessionDependencies,
+            PlaybackSessionDependencies,
+        )
 
         playback_annotations = PlaybackSessionDependencies.__annotations__
         metadata_annotations = MetadataSessionDependencies.__annotations__

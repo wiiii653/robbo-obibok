@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from robbo_obibok_launcher import (
+from robbo_obibok.robbo_obibok_launcher import (
     DEFAULT_ENTRY_SCRIPT,
     STRICT_ENTRY_SCRIPT,
     exec_runtime_entrypoint,
@@ -56,7 +56,7 @@ class RobboObibokLaunchTests(unittest.TestCase):
     def test_load_runtime_environment_accepts_explicit_env_with_token(self):
         env = {"DISCORD_BOT_TOKEN": "token"}
 
-        with patch("robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None):
+        with patch("robbo_obibok.robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None):
             resolved = load_runtime_environment(root=Path("/tmp/robbo"), env=env)
 
         self.assertIs(resolved, env)
@@ -77,7 +77,7 @@ class RobboObibokLaunchTests(unittest.TestCase):
         self.assertEqual(env["ROBBO_STRICT_COMPAT"], "1")
 
     def test_load_runtime_environment_rejects_missing_token(self):
-        with patch("robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None):
+        with patch("robbo_obibok.robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None):
             with self.assertRaises(SystemExit) as ctx:
                 load_runtime_environment(root=Path("/tmp/robbo"), env={})
 
@@ -88,9 +88,9 @@ class RobboObibokLaunchTests(unittest.TestCase):
         captured = {}
 
         with (
-            patch("robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None),
+            patch("robbo_obibok.robbo_obibok_launcher.load_dotenv_file", lambda _path, **_kwargs: None),
             patch(
-                "robbo_obibok_launcher.os.execvpe",
+                "robbo_obibok.robbo_obibok_launcher.os.execvpe",
                 side_effect=lambda exe, argv, runtime_env: captured.update(
                     exe=exe,
                     argv=argv,

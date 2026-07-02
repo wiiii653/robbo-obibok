@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import sys
+import importlib
 import os
+import sys
 
-# Add src/robbo_obibok/ to sys.path so flat imports work from the package
-_src = os.path.join(os.path.dirname(__file__), "src", "robbo_obibok")
+# Source-checkout compatibility; installed entry points do not need this.
+_src = os.path.join(os.path.dirname(__file__), "src")
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
-import robbo_obibok_runtime as _runtime
+_runtime = importlib.import_module("robbo_obibok.robbo_obibok_runtime")
 
 initialize_runtime = _runtime.initialize_runtime
 graceful_shutdown = _runtime.graceful_shutdown

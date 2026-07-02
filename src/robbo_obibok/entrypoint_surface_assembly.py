@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Callable, Mapping, Protocol
 
-from entrypoint_module_bindings import (
+from .entrypoint_module_bindings import (
     ENTRYPOINT_COMPAT_RUNTIME_BINDINGS,
     ENTRYPOINT_DIRECT_EXPORT_BINDINGS,
     ENTRYPOINT_EXECUTABLE_FALLBACK_ATTR_NAMES,
@@ -14,7 +14,7 @@ from entrypoint_module_bindings import (
     EntrypointDirectExportSpec,
     SurfaceExportResolver,
 )
-from entrypoint_runtime_surface import build_runtime_surface_bindings
+from .entrypoint_runtime_surface import build_runtime_surface_bindings
 
 
 @dataclass(slots=True)
@@ -36,8 +36,8 @@ class EntrypointModuleSurface:
 
 
 if TYPE_CHECKING:
-    from entrypoint_launcher_loader import LazyEntrypointLauncher
-    from entrypoint_state import EntrypointCompatStateProtocol
+    from .entrypoint_launcher_loader import LazyEntrypointLauncher
+    from .entrypoint_state import EntrypointCompatStateProtocol
 
 
 class _LazyCallableExport:

@@ -9,20 +9,24 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import bot_events
-import library_commands
-import playback_commands
-import playback_handlers
-import session_runtime
-from archive_catalog import ArchiveCatalog
-from archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
-from entrypoint_glue import build_single_guild_check
 from test_support import (
+    InlineToThreadAsyncTestCase,
     MagicMock,
     RegistrationBot,
     patch,
     unittest,
 )
+
+from robbo_obibok import (
+    bot_events,
+    library_commands,
+    playback_commands,
+    playback_handlers,
+    session_runtime,
+)
+from robbo_obibok.archive_catalog import ArchiveCatalog
+from robbo_obibok.archive_runtime import ArchiveRuntime, ArchiveRuntimeConfig
+from robbo_obibok.entrypoint_glue import build_single_guild_check
 
 
 def build_archive_runtime_fixture():
@@ -145,10 +149,10 @@ class CommandRegistrationTests(unittest.TestCase):
         self.assertEqual(info.footer, "ASMA Radio")
 
 
-class SessionRuntimeTests(unittest.IsolatedAsyncioTestCase):
+class SessionRuntimeTests(InlineToThreadAsyncTestCase):
     async def test_fetch_metadata_background_indexes_local_sap_headers(self):
         fixture = build_archive_runtime_fixture()
-        temp_dir = ROOT / "tmp" / "session_runtime"
+        temp_dir = ROOT / "tmp" / "robbo_obibok.session_runtime"
         temp_dir.mkdir(parents=True, exist_ok=True)
         sap_path = temp_dir / "track.sap"
         sap_path.write_text('SAP\nAUTHOR "Tester"\nNAME "Example"\n', encoding="utf-8")
@@ -181,7 +185,7 @@ class SessionRuntimeTests(unittest.IsolatedAsyncioTestCase):
         return None
 
 
-class EventRuntimeTests(unittest.IsolatedAsyncioTestCase):
+class EventRuntimeTests(InlineToThreadAsyncTestCase):
     async def test_register_core_events_registers_ready_and_voice_handlers(self):
         fake_bot = RegistrationBot()
         calls = []

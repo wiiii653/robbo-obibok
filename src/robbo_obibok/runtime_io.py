@@ -6,44 +6,45 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable
 
 import aiohttp
-from domain_state import PlaylistState
-from playback_process import (
+
+from .domain_state import PlaylistState
+from .playback_process import (
     audacious_play as runtime_audacious_play,
 )
-from playback_process import (
+from .playback_process import (
     audacious_song as runtime_audacious_song,
 )
-from playback_process import (
+from .playback_process import (
     audacious_stop as runtime_audacious_stop,
 )
-from playback_process import (
+from .playback_process import (
     audtool_output_length as runtime_audtool_output_length,
 )
-from playback_process import (
+from .playback_process import (
     audtool_song_length as runtime_audtool_song_length,
 )
-from playback_process import (
+from .playback_process import (
     ensure_audacious as runtime_ensure_audacious,
 )
-from playback_process import (
+from .playback_process import (
     is_playing as runtime_is_playing,
 )
-from playback_process import (
+from .playback_process import (
     move_playback_to_sink as runtime_move_playback_to_sink,
 )
-from playback_process import (
+from .playback_process import (
     set_volume_for_collection as runtime_set_volume_for_collection,
 )
-from playback_process import (
+from .playback_process import (
     setup_audacious_sid_config as runtime_setup_audacious_sid_config,
 )
-from playback_process import (
+from .playback_process import (
     setup_virtual_sink as runtime_setup_virtual_sink,
 )
-from playback_process import (
+from .playback_process import (
     stop_all_players as runtime_stop_all_players,
 )
-from runtime_protocols import PlaybackProcessProtocol  # noqa: F401 — structural protocol impl
+from .runtime_protocols import PlaybackProcessProtocol  # noqa: F401 — structural protocol impl
 
 # Re-export standalone functions for callers not using AudioProcessRuntime
 audtool_output_length: Callable[[], int] = runtime_audtool_output_length

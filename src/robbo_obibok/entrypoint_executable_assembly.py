@@ -5,35 +5,35 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Protocol
 
-from bot_events import register_core_events
-from bot_persistence import (
+from .bot_events import register_core_events
+from .bot_persistence import (
     filter_blacklisted_track_entries,
     filter_blacklisted_track_urls,
     load_user_tracks,
     toggle_user_track_entry,
 )
-from entrypoint_glue import mod_only
-from entrypoint_launcher_loader import LazyEntrypointLauncher, build_entrypoint_launcher
-from entrypoint_module import (
+from .entrypoint_glue import mod_only
+from .entrypoint_launcher_loader import LazyEntrypointLauncher, build_entrypoint_launcher
+from .entrypoint_module import (
     EntrypointModuleCollectionConfig,
     EntrypointModuleDeps,
     EntrypointModulePlaybackPolicyConfig,
     EntrypointModuleRegistrationConfig,
     build_entrypoint_module_deps,
 )
-from entrypoint_module_bindings import (
+from .entrypoint_module_bindings import (
     ALLOW_DEPRECATED,
     ENTRYPOINT_EXECUTABLE_LEGACY_CORE_COMPAT_ATTR_NAMES,
     ENTRYPOINT_EXPORT_GRAPH,
     build_entrypoint_compat_module_bindings,
     build_entrypoint_stable_module_bindings,
 )
-from entrypoint_startup import atomic_json_write, load_last_collection, save_last_collection
-from entrypoint_surface_assembly import EntrypointModuleSurface, build_entrypoint_module_surface
-from library_commands import register_library_commands
-from playback_commands import register_playback_commands
-from playback_handlers import build_playback_handlers
-from runtime_support import (
+from .entrypoint_startup import atomic_json_write, load_last_collection, save_last_collection
+from .entrypoint_surface_assembly import EntrypointModuleSurface, build_entrypoint_module_surface
+from .library_commands import register_library_commands
+from .playback_commands import register_playback_commands
+from .playback_handlers import build_playback_handlers
+from .runtime_support import (
     build_collection_state_update,
     classify_track_route,
     compute_timeout_seconds,

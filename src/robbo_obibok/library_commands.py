@@ -10,8 +10,9 @@ import time
 from typing import cast
 
 import discord
-from bot_dependencies import LibraryCommandDependencies
 from discord.ext import commands
+
+from .bot_dependencies import LibraryCommandDependencies
 
 
 def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
@@ -120,7 +121,13 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
 
     @bot.command(aliases=["fp"])
     async def favplay(ctx: commands.Context, *, number: str = ""):
-        favorites_data = await asyncio.to_thread(deps.load_favorites)
+        if number:
+            favorites_data = await asyncio.to_thread(deps.load_favorites)
+            blacklist = None
+        else:
+            favorites_data, blacklist = await asyncio.to_thread(
+                lambda: (deps.load_favorites(), deps.load_blacklist())
+            )
         user_favs = deps.load_user_tracks(favorites_data, ctx.author.id)
         if not user_favs:
             return await ctx.send("📭 **No favorites yet.** React to any Now Playing embed with an emoji to save tracks!")
@@ -136,7 +143,7 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
             except ValueError:
                 return await ctx.send("Usage: `!favplay <number>` or `!favplay` to play all.")
         else:
-            blacklist = await asyncio.to_thread(deps.load_blacklist)
+            assert blacklist is not None
             tracks_to_play = deps.filter_blacklisted_track_entries(list(user_favs), blacklist, ctx.author.id)
             random.shuffle(tracks_to_play)
         if not tracks_to_play:
@@ -203,9 +210,18 @@ def register_library_commands(bot, deps: LibraryCommandDependencies) -> None:
                 lines.append(
                     f"`{data.get('name', fname[:-5])}` — {len(data.get('tracks', []))} tracks{author_s} ({time.strftime('%Y-%m-%d', time.localtime(created))})"
                 )
-            except Exception:
+            except (OSError, UnicodeError, json.JSONDecodeError, TypeError, AttributeError) as exc:
+                deps.log.warning("Playlist metadata unreadable for %s: %s", path, exc)
+                try:
+                    size = os.path.getsize(path)
+                    modified = time.strftime(
+                        "%Y-%m-%d", time.localtime(os.path.getmtime(path))
+                    )
+                except OSError:
+                    size = "?"
+                    modified = "unknown"
                 lines.append(
-                    f"`{fname}` — {os.path.getsize(path)} bytes ({time.strftime('%Y-%m-%d', time.localtime(os.path.getmtime(path)))}) — ⚠️ parse error"
+                    f"`{fname}` — {size} bytes ({modified}) — ⚠️ parse error"
                 )
         message = "\n".join(lines)
         if len(message) <= 2000:

@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import domain_state
-from bot_persistence import load_queue_from_disk, save_queue_to_disk
+from robbo_obibok import domain_state
+from robbo_obibok.bot_persistence import load_queue_from_disk, save_queue_to_disk
 
 
 class AppRuntimeStateTests(unittest.TestCase):

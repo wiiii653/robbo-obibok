@@ -1,3 +1,0 @@
-[console_scripts]
-robbo-obibok = robbo_obibok.robbo_obibok_runtime:main
-robbo-obibok-strict = robbo_obibok.robbo_obibok_runtime:main_strict

@@ -4,4 +4,5 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-exec ./venv/bin/python3 -u src/robbo_obibok/robbo_obibok_launcher.py
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$PWD/src"
+exec ./venv/bin/python3 -u -m robbo_obibok.robbo_obibok_launcher

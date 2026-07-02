@@ -13,8 +13,8 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from collection_catalog import FLIP_ORDER, FLIP_SEQ
-from entrypoint_executable_assembly import build_entrypoint_executable_assembly
+from robbo_obibok.collection_catalog import FLIP_ORDER, FLIP_SEQ
+from robbo_obibok.entrypoint_executable_assembly import build_entrypoint_executable_assembly
 
 
 async def _command_prefix(_bot, _message):
@@ -44,7 +44,7 @@ def _get_lock_temp_dir() -> str:
 def build_live_runtime_bundle():
     os.environ.setdefault("DISCORD_BOT_TOKEN", "test-token")
     install_discord_stubs()
-    from entrypoint_runtime import build_startup_env as _orig_build_startup_env
+    from robbo_obibok.entrypoint_runtime import build_startup_env as _orig_build_startup_env
 
     def _patched_build_startup_env(*, bot_token, root_dir, validate_runtime_dependencies, lock_file=None):
         return _orig_build_startup_env(
@@ -55,9 +55,9 @@ def build_live_runtime_bundle():
         )
 
     with (
-        patch("runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
-        patch("entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
-        patch("entrypoint_runtime.build_startup_env", _patched_build_startup_env),
+        patch("robbo_obibok.runtime_support.validate_runtime_dependencies", lambda required_tools=None: None),
+        patch("robbo_obibok.entrypoint_executable_assembly.validate_runtime_dependencies", lambda required_tools=None: None),
+        patch("robbo_obibok.entrypoint_runtime.build_startup_env", _patched_build_startup_env),
     ):
         assembly = build_entrypoint_executable_assembly(
             module_path=str(ROOT / "robbo-obibok.py"),

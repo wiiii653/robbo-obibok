@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Mapping, MutableMapping, Sequence
 
-from runtime_support import load_dotenv_file
+from .runtime_support import load_dotenv_file
 
 ROOT = Path(__file__).resolve().parent.parent
 

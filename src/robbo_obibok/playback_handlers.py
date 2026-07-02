@@ -7,8 +7,9 @@ import os
 from pathlib import Path
 
 import discord
-from bot_dependencies import PlaybackHandlerDependencies
-from download_safety import read_response_limited
+
+from .bot_dependencies import PlaybackHandlerDependencies
+from .download_safety import read_response_limited
 
 MAX_SID_DOWNLOAD_BYTES = 16 * 1024 * 1024
 

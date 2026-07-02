@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Iterable, Protocol
 
-from archive_catalog import CollectionInfo
-from domain_state import PlaylistState
+from .archive_catalog import CollectionInfo
+from .domain_state import PlaylistState
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession

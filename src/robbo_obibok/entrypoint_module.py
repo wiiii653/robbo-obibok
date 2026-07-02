@@ -5,32 +5,32 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
-from bot_dependencies import (
+from .bot_dependencies import (
     CommandDecoratorFactory,
     PlaybackHandlerDependencies,
     PlaybackHandlerMap,
 )
-from domain_state import PlaylistState
-from entrypoint_app import (
+from .domain_state import PlaylistState
+from .entrypoint_app import (
     EntrypointApp,
     EntrypointRegistrationDeps,
     EntrypointRuntimePolicyDeps,
     build_entrypoint_app,
     create_bot,
 )
-from entrypoint_callback_groups import (
+from .entrypoint_callback_groups import (
     BootstrapStaticCallbacks,
     CollectionStaticCallbacks,
     EntrypointRawCallbacks,
     LibraryStaticCallbacks,
     PlaybackStaticCallbacks,
 )
-from entrypoint_components import EntrypointComponentDeps
-from entrypoint_glue import build_single_guild_check
-from entrypoint_launcher_loader import EntrypointSupport, build_entrypoint_support
-from playback_process import stop_all_players as runtime_stop_all_players
-from runtime_bindings import LegacyRuntimeBindings
-from runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
+from .entrypoint_components import EntrypointComponentDeps
+from .entrypoint_glue import build_single_guild_check
+from .entrypoint_launcher_loader import EntrypointSupport, build_entrypoint_support
+from .playback_process import stop_all_players as runtime_stop_all_players
+from .runtime_bindings import LegacyRuntimeBindings
+from .runtime_protocols import ArchiveRuntimeProtocol, PlaybackAssetsProtocol, ServiceFacadeProtocol
 
 if TYPE_CHECKING:
     from discord import Colour
@@ -313,7 +313,7 @@ def build_entrypoint_module_bootstrap(
         return support.guild_scope.get_override()
 
     def clear_predownload_state(state: PlaylistState, *, keep_file: bool = False) -> None:
-        from entrypoint_glue import clear_predownload_state as clear_state
+        from .entrypoint_glue import clear_predownload_state as clear_state
 
         clear_state(state, keep_file=keep_file)
 

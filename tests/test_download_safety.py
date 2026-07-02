@@ -3,7 +3,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from download_safety import read_response_limited, resolve_existing_path, safe_download_path
+from robbo_obibok.download_safety import (
+    read_response_limited,
+    resolve_existing_path,
+    safe_download_path,
+)
 
 
 class FakeContent:

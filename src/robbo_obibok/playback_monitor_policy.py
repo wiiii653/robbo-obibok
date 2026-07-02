@@ -6,10 +6,10 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable, Protocol, TypeVar
 
-from domain_state import PlaylistState
+from .domain_state import PlaylistState
 
 if TYPE_CHECKING:
-    from stream_runtime import MonitorAudioSource
+    from .stream_runtime import MonitorAudioSource
 
 T = TypeVar("T")
 

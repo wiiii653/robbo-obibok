@@ -10,10 +10,11 @@ if str(TESTS_DIR) not in sys.path:
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import playback_runtime
-from domain_state import PlaylistState
-from entrypoint_glue import clear_predownload_state
 from test_support import FakeVoiceClient, patch, unittest
+
+from robbo_obibok import playback_runtime
+from robbo_obibok.domain_state import PlaylistState
+from robbo_obibok.entrypoint_glue import clear_predownload_state
 
 
 class PredownloadStateTests(unittest.TestCase):

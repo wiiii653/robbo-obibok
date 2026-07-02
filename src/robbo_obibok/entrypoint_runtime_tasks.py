@@ -7,20 +7,21 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine
 
-from domain_config import AppConfig
-from domain_state import PlaylistState
-from entrypoint_callback_groups import EntrypointRawCallbacks
-from entrypoint_glue import EntrypointGlue
-from entrypoint_state import EntrypointRuntimeStateProtocol
-from runtime_io import (
+from .domain_config import AppConfig
+from .domain_state import PlaylistState
+from .entrypoint_callback_groups import EntrypointRawCallbacks
+from .entrypoint_glue import EntrypointGlue
+from .entrypoint_state import EntrypointRuntimeStateProtocol
+from .runtime_io import (
     audtool_output_length,
     audtool_song_length,
 )
 
 if TYPE_CHECKING:
     from discord.ext import commands
-    from entrypoint_app import EntrypointComponentAccess, EntrypointFacade
-    from stream_runtime import MonitorAudioSource
+
+    from .entrypoint_app import EntrypointComponentAccess, EntrypointFacade
+    from .stream_runtime import MonitorAudioSource
 
 
 async def monitor_playback_entry(
@@ -51,8 +52,8 @@ async def monitor_playback_entry(
     task_manager: Any | None = None,
     release_lease: Callable[[], None] | None = None,
 ) -> None:
-    from playback_runtime import MonitorDependencies
-    from playback_runtime import monitor_playback as runtime_monitor_playback
+    from .playback_runtime import MonitorDependencies
+    from .playback_runtime import monitor_playback as runtime_monitor_playback
 
     async def _run_sync(func, *args):
         return await asyncio.to_thread(func, *args)
@@ -95,8 +96,8 @@ async def health_watchdog_entry(
     setup_virtual_sink: Callable[[], None],
     logger: logging.Logger,
 ) -> None:
-    from playback_runtime import WatchdogDependencies
-    from playback_runtime import health_watchdog as runtime_health_watchdog
+    from .playback_runtime import WatchdogDependencies
+    from .playback_runtime import health_watchdog as runtime_health_watchdog
 
     async def _run_sync(func, *args):
         return await asyncio.to_thread(func, *args)

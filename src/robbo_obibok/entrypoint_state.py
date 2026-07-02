@@ -7,28 +7,28 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Iterable, Mapping, Protocol
 
-from archive_catalog import ArchiveCatalog
-from archive_runtime import ArchiveRuntime
-from bot_runtime import BotRuntime
-from collection_specs import CollectionSpec
-from domain_context import AppContext, ArchiveRegistryViews, BootstrappedApp
-from domain_services import AppServicesProtocol
-from domain_state import AppRuntimeState
-from playback_assets import PlaybackAssetRuntime
-from playback_helpers import NowPlayingDependencies
-from runtime_bootstrap import StartupEnvironment
-from runtime_io import AudioProcessRuntime
-from runtime_protocols import CollectionRuntimeProtocol, PlaybackRuntimeProtocol
-from runtime_service_facade import RuntimeServiceFacade
-from subsong_runtime import SubsongRuntime
+from .app_context import AppContext, ArchiveRegistryViews, BootstrappedApp
+from .app_services import AppServicesProtocol
+from .archive_catalog import ArchiveCatalog
+from .archive_runtime import ArchiveRuntime
+from .bot_runtime import BotRuntime
+from .collection_specs import CollectionSpec
+from .domain_state import AppRuntimeState
+from .playback_assets import PlaybackAssetRuntime
+from .playback_helpers import NowPlayingDependencies
+from .runtime_bootstrap import StartupEnvironment
+from .runtime_io import AudioProcessRuntime
+from .runtime_protocols import CollectionRuntimeProtocol, PlaybackRuntimeProtocol
+from .runtime_service_facade import RuntimeServiceFacade
+from .subsong_runtime import SubsongRuntime
 
 if TYPE_CHECKING:
-    from entrypoint_app import EntrypointComponents
-    from entrypoint_runtime import AppAssembly
-    from runtime_bindings import LegacyRuntimeBindings
-    from runtime_composition import ComposedRuntime
-    from runtime_registration import RuntimeRegistration
-    from stream_runtime import MonitorAudioSource, StreamRuntime
+    from .entrypoint_app import EntrypointComponents
+    from .entrypoint_runtime import AppAssembly
+    from .runtime_bindings import LegacyRuntimeBindings
+    from .runtime_composition import ComposedRuntime
+    from .runtime_registration import RuntimeRegistration
+    from .stream_runtime import MonitorAudioSource, StreamRuntime
 
 
 class EntrypointComponentAccessStateProtocol(Protocol):
@@ -553,7 +553,7 @@ class EntrypointState:
         return app
 
     def component_bundle(self) -> "EntrypointComponents":
-        from entrypoint_app import EntrypointComponents
+        from .entrypoint_app import EntrypointComponents
 
         assert self.app_services is not None
         assert self.service_facade is not None

@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from domain_archive_config import ArchiveRuntimeConfig
+from .domain_archive_config import ArchiveRuntimeConfig
 
 
 @dataclass(slots=True)

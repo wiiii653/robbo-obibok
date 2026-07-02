@@ -8,17 +8,18 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
 import discord
-import entrypoint_state as state_protocols
-from bot_dependencies import (
+from discord.ext import commands
+
+from . import entrypoint_state as state_protocols
+from .app_services import AppServicesProtocol
+from .bot_dependencies import (
     PlaybackHandlerDependencies,
     PlaybackHandlerMap,
 )
-from collection_specs import CollectionSpec
-from discord.ext import commands
-from domain_config import AppConfig
-from domain_services import AppServicesProtocol
-from domain_state import PlaylistState
-from entrypoint_callback_groups import (
+from .collection_specs import CollectionSpec
+from .domain_config import AppConfig
+from .domain_state import PlaylistState
+from .entrypoint_callback_groups import (
     AppEntrypointCallbacks,
     BootstrapEntrypointCallbacks,
     CollectionEntrypointCallbacks,
@@ -26,25 +27,25 @@ from entrypoint_callback_groups import (
     LibraryEntrypointCallbacks,
     PlaybackEntrypointCallbacks,
 )
-from entrypoint_components import (
+from .entrypoint_components import (
     EntrypointComponentDeps,
     apply_entrypoint_components,
     build_entrypoint_components,
 )
-from entrypoint_glue import EntrypointGlue
-from entrypoint_runtime import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
-from entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
-from entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
+from .entrypoint_glue import EntrypointGlue
+from .entrypoint_runtime import EntrypointRuntimeInitializer, RuntimeRegistrationHooks
+from .entrypoint_runtime_tasks import EntrypointRuntimeTasks, build_entrypoint_runtime_tasks
+from .entrypoint_surface_assembly import build_entrypoint_compat_registry_attrs
 
 if TYPE_CHECKING:
-    from entrypoint_launcher_loader import EntrypointSupport
-    from entrypoint_state import EntrypointCompatStateProtocol
-    from playback_assets import PlaybackAssetRuntime
-    from playback_helpers import NowPlayingDependencies
-    from runtime_bindings import LegacyRuntimeBindings
-    from runtime_protocols import ArchiveRuntimeProtocol, PlaybackRuntimeProtocol
-    from runtime_service_facade import RuntimeServiceFacade
-    from stream_runtime import MonitorAudioSource, StreamRuntime
+    from .entrypoint_launcher_loader import EntrypointSupport
+    from .entrypoint_state import EntrypointCompatStateProtocol
+    from .playback_assets import PlaybackAssetRuntime
+    from .playback_helpers import NowPlayingDependencies
+    from .runtime_bindings import LegacyRuntimeBindings
+    from .runtime_protocols import ArchiveRuntimeProtocol, PlaybackRuntimeProtocol
+    from .runtime_service_facade import RuntimeServiceFacade
+    from .stream_runtime import MonitorAudioSource, StreamRuntime
 
 
 @dataclass(slots=True)

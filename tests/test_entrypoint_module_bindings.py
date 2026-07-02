@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from entrypoint_app import EntrypointCompat
-from entrypoint_module import build_entrypoint_exports, build_entrypoint_module
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_app import EntrypointCompat
+from robbo_obibok.entrypoint_module import build_entrypoint_exports, build_entrypoint_module
+from robbo_obibok.entrypoint_module_bindings import (
     ENTRYPOINT_DIRECT_COLLECTION_BINDINGS,
     ENTRYPOINT_DIRECT_RUNTIME_BINDINGS,
     ENTRYPOINT_EXECUTABLE_COMPAT_ATTR_NAMES,
@@ -47,7 +47,6 @@ from entrypoint_module_bindings import (
     resolve_compat_entrypoint_module_attr,
     supported_executable_dict_attrs,
 )
-
 from tests.test_entrypoint_module_fixtures import (
     build_fake_module_bootstrap,
     build_fake_module_deps,
@@ -587,11 +586,11 @@ class EntrypointModuleSurfaceTests(unittest.TestCase):
         exports = {"monitor_playback": object()}
 
         with (
-            patch("entrypoint_module.build_entrypoint_module_bootstrap", return_value=bootstrap),
-            patch("entrypoint_module.build_module_component_deps", return_value=lambda: object()),
-            patch("entrypoint_module.build_module_raw_callbacks", return_value=object()),
-            patch("entrypoint_module.build_entrypoint_app", return_value=fake_app),
-            patch("entrypoint_module.build_entrypoint_exports", return_value=exports),
+            patch("robbo_obibok.entrypoint_module.build_entrypoint_module_bootstrap", return_value=bootstrap),
+            patch("robbo_obibok.entrypoint_module.build_module_component_deps", return_value=lambda: object()),
+            patch("robbo_obibok.entrypoint_module.build_module_raw_callbacks", return_value=object()),
+            patch("robbo_obibok.entrypoint_module.build_entrypoint_app", return_value=fake_app),
+            patch("robbo_obibok.entrypoint_module.build_entrypoint_exports", return_value=exports),
         ):
             module = build_entrypoint_module(
                 module_path="/tmp/robbo-obibok.py",

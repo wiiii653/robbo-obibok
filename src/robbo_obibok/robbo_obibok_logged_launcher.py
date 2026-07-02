@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import MutableMapping
 
-from robbo_obibok_launcher import (
+from .robbo_obibok_launcher import (
     load_runtime_environment,
     selected_entry_command,
     selected_entry_script_from_env,

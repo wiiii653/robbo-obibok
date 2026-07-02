@@ -44,7 +44,7 @@ def load_config(root_dir: str, logger) -> dict[str, Any]:
     try:
         with open(cfg_path) as handle:
             user_cfg = yaml.safe_load(handle) or {}
-    except Exception as exc:
+    except (OSError, UnicodeError, yaml.YAMLError) as exc:
         logger.error("Failed to parse config.yaml: %s", exc)
         raise ValueError(f"Failed to parse config.yaml: {exc}") from exc
     if not isinstance(user_cfg, dict):
@@ -203,7 +203,7 @@ def build_app_config(root_dir: str, logger):
         Moved from :mod:`domain_config`. Will be removed when callers
         are updated.
     """
-    from domain_config import derive_app_config
+    from .domain_config import derive_app_config
     config = load_config(root_dir, logger)
     app_config = derive_app_config(root_dir, config)
     prepare_app_environment(app_config, logger)

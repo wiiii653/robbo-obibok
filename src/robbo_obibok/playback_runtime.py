@@ -9,8 +9,8 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Protocol, TypeVar, cast
 
-from domain_state import PlaylistState
-from playback_monitor_policy import (
+from .domain_state import PlaylistState
+from .playback_monitor_policy import (
     MonitorPolicyDependencies,
     disconnect_for_empty_channel,
     handle_idle_state,
@@ -20,7 +20,8 @@ from playback_monitor_policy import (
 if TYPE_CHECKING:
     import discord
     from discord.ext import commands
-    from stream_runtime import MonitorAudioSource
+
+    from .stream_runtime import MonitorAudioSource
 
 
 T = TypeVar("T")

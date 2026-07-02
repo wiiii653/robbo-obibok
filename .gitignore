@@ -23,3 +23,5 @@ archiwum
 queues/
 tmp/
 build/
+dist/
+*.egg-info/

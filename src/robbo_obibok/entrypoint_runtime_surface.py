@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, cast
 
-import entrypoint_state as state_protocols
-from archive_runtime import ArchiveRuntimeConfig
-from domain_config import AppConfig
-from entrypoint_module_bindings import (
+from . import entrypoint_state as state_protocols
+from .archive_runtime import ArchiveRuntimeConfig
+from .domain_config import AppConfig
+from .entrypoint_module_bindings import (
     ENTRYPOINT_EXECUTABLE_STABLE_ALIAS_SPECS,
     ENTRYPOINT_MODULE_STABLE_BINDINGS,
 )

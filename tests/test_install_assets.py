@@ -64,6 +64,8 @@ class InstallAssetsTests(unittest.TestCase):
         self.assertIn("runtime facade", runtime_text)
         self.assertIn("launcher facade", entrypoint_text)
         self.assertIn("launcher facade", strict_entrypoint_text)
+        self.assertIn("main_strict()", strict_entrypoint_text)
+        self.assertNotIn("run_runtime_entrypoint()", strict_entrypoint_text)
 
     def test_launch_assets_are_consistent_across_entrypoints_docs_and_services(self):
         shell_text = (ROOT / "run_bot.sh").read_text(encoding="utf-8")
@@ -78,7 +80,7 @@ class InstallAssetsTests(unittest.TestCase):
         workflow_text = (ROOT / ".github" / "workflows" / "test-launchers.yml").read_text(encoding="utf-8")
         runtime_workflow_text = (ROOT / ".github" / "workflows" / "test-entrypoint-runtime.yml").read_text(encoding="utf-8")
 
-        self.assertIn("exec ./venv/bin/python3 -u src/robbo_obibok/robbo_obibok_launcher.py", shell_text)
+        self.assertIn("exec ./venv/bin/python3 -u -m robbo_obibok.robbo_obibok_launcher", shell_text)
         self.assertIn("tests.test_robbo_obibok_logged_launcher", launcher_script_text)
         self.assertNotIn("ENTRY_SCRIPT=", shell_text)
         self.assertIn("build_logged_launch_command", logged_launcher_text)

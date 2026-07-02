@@ -27,6 +27,7 @@ on:
 jobs:
   entrypoint-runtime:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -40,7 +41,7 @@ jobs:
       - name: Install requirements
         run: ./venv/bin/python -m pip install -r requirements.txt
       - name: Run entrypoint/runtime regression suite
-        run: PYTHONPATH=src/robbo_obibok ./venv/bin/python -m unittest -v \
+        run: PYTHONPATH=src ./venv/bin/python -m unittest -v \
           tests.test_entrypoint_executable_assembly \
           tests.test_entrypoint_launcher \
           tests.test_entrypoint_module_bindings \

@@ -13,7 +13,7 @@ from tests.test_support import install_discord_stubs
 
 install_discord_stubs()
 
-from entrypoint_module_bindings import (
+from robbo_obibok.entrypoint_module_bindings import (
     ALLOW_DEPRECATED,
     ENTRYPOINT_EXECUTABLE_STABLE_ATTR_NAMES,
 )
@@ -22,8 +22,8 @@ from entrypoint_module_bindings import (
 class RobboObibokRuntimeTests(unittest.TestCase):
     @staticmethod
     def _load_runtime_module():
-        sys.modules.pop("robbo_obibok_runtime", None)
-        return importlib.import_module("robbo_obibok_runtime")
+        sys.modules.pop("robbo_obibok.robbo_obibok_runtime", None)
+        return importlib.import_module("robbo_obibok.robbo_obibok_runtime")
 
     @staticmethod
     def _build_fake_assembly(*, init_calls=None, compat_calls=None, signal_calls=None):
@@ -70,7 +70,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
     def test_import_keeps_runtime_wiring_lazy(self):
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
         ) as build_assembly:
             module = self._load_runtime_module()
 
@@ -86,7 +86,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         assembly = self._build_fake_assembly(init_calls=init_calls, compat_calls=compat_calls)
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             module = self._load_runtime_module()
@@ -131,7 +131,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         assembly = self._build_fake_assembly(compat_calls=compat_calls)
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             module = self._load_runtime_module()
@@ -161,7 +161,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         assembly.bindings["_ensure_entrypoint_components"] = "hidden-helper"
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             module = self._load_runtime_module()
@@ -174,7 +174,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
         ):
@@ -189,7 +189,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
         ):
@@ -207,7 +207,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         assembly.compat_policy = ALLOW_DEPRECATED
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             module = self._load_runtime_module()
@@ -229,7 +229,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
         ):
@@ -253,7 +253,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         assembly = self._build_fake_assembly()
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             module = self._load_runtime_module()
@@ -267,7 +267,7 @@ class RobboObibokRuntimeTests(unittest.TestCase):
         assembly = self._build_fake_assembly()
 
         with patch(
-            "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+            "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
             return_value=assembly,
         ):
             module = self._load_runtime_module()
@@ -286,10 +286,10 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("robbo_obibok.entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             module = self._load_runtime_module()
             module.main()
@@ -311,10 +311,10 @@ class RobboObibokRuntimeTests(unittest.TestCase):
 
         with (
             patch(
-                "entrypoint_executable_assembly.build_strict_entrypoint_executable_assembly",
+                "robbo_obibok.entrypoint_executable_assembly.build_strict_entrypoint_executable_assembly",
                 return_value=assembly,
             ),
-            patch("entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
+            patch("robbo_obibok.entrypoint_app.run_bot_entrypoint", side_effect=fake_run_bot_entrypoint),
         ):
             module = self._load_runtime_module()
             module.main_strict()

@@ -15,9 +15,9 @@ import time
 from types import MappingProxyType
 from typing import Callable, Iterable, Mapping
 
-from domain_collection_state import CollectionState  # noqa: F401  re-exported
-from domain_guild_session import GuildSession  # noqa: F401  re-exported
-from domain_queue_state import PlaybackQueueState  # noqa: F401  re-exported
+from .domain_collection_state import CollectionState  # noqa: F401  re-exported
+from .domain_guild_session import GuildSession  # noqa: F401  re-exported
+from .domain_queue_state import PlaybackQueueState  # noqa: F401  re-exported
 
 # ── Composite (backward compatible) ─────────────────────────────────────────
 

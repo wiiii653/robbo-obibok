@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 import time
 from typing import Callable
 
-from runtime_support import (
+from .runtime_support import (
     build_playlist_record,
     ensure_directory,
     filter_blacklisted_urls,
@@ -20,6 +22,8 @@ from runtime_support import (
     summarize_playlists,
     toggle_user_track,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def load_json_collection(path: str, cache_state: dict[str, object]) -> dict:
@@ -114,14 +118,14 @@ def load_queue_from_disk(guild_id: int, queue_dir: str) -> dict | None:
         if not os.path.exists(path):
             return None
         with open(path, encoding="utf-8") as handle:
-            import json
             return normalize_queue_record(json.load(handle))
-    except Exception:
+    except (OSError, UnicodeError, json.JSONDecodeError, TypeError) as exc:
+        logger.warning("Ignoring unreadable queue %s: %s", path, exc)
         return None
 
 
 class CachedJsonStore:
-    """Thread-safe cached JSON file store for favorites/blacklist data."""
+    """Mtime-cached JSON file store for favorites and blacklist data."""
 
     def __init__(self, path: str, *, json_writer):
         self._path = path
@@ -151,7 +155,7 @@ class PlaylistLibraryStore:
     def ensure_playlist_dir(self) -> None:
         try:
             ensure_directory(self.playlists_dir)
-        except Exception as exc:
+        except OSError as exc:
             self._logger.error("Failed to create playlists dir: %s", exc)
 
     def save_playlist(self, name: str, tracks: list[dict], author_id: int, author_name: str) -> str:

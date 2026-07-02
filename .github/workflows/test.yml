@@ -17,8 +17,35 @@ on:
       - ".github/workflows/test.yml"
 
 jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build wheel
+        run: python -m pip wheel . --wheel-dir dist
+      - name: Install wheel
+        run: python -m pip install --force-reinstall dist/robbo_obibok-*.whl
+      - name: Load installed console entry points
+        run: |
+          cd /tmp
+          python - <<'PY'
+          import sys
+          from importlib.metadata import entry_points
+
+          scripts = {entry.name: entry for entry in entry_points(group="console_scripts")}
+          for name in ("robbo-obibok", "robbo-obibok-strict"):
+              target = scripts[name].load()
+              assert callable(target)
+          assert "domain_state" not in sys.modules
+          PY
+
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,6 +60,7 @@ jobs:
 
   unit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -46,4 +74,4 @@ jobs:
       - name: Install FFmpeg for the dependency smoke test
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Run full unit suite
-        run: PYTHONPATH=src/robbo_obibok python -m unittest discover -s tests -v
+        run: PYTHONPATH=src python -m unittest discover -s tests -v

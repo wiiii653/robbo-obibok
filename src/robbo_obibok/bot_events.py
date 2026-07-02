@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
-from playback_lease import PlaybackLease
+from .playback_lease import PlaybackLease
 
 
 @dataclass(slots=True)
