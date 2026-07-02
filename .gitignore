@@ -19,7 +19,6 @@ var/
 *_cache_local.json
 *_cache_old_urls.json
 *_cache.json
-archiwum
 queues/
 tmp/
 build/

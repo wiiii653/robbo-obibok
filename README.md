@@ -110,7 +110,7 @@ React with **any emoji** to a Now Playing embed to save the track to your favori
 | **HVSC** | `.sid` | 60 811 | Local `archiwum/hvsc/C64Music/` |
 | **AY** | `.ay` | 4 550 | Local `archiwum/ay/` |
 | **YM** | `.ym` | 7 266 | Local `archiwum/ym/` |
-| **ModArchive** | `.mod`, `.xm`, `.s3m`, `.it` | 175 000+ | Local `archiwum/modarchive_textfiles/` |
+| **ModArchive** | `.mod`, `.xm`, `.s3m`, `.it` | 175 000+ | Online API + local cache `archiwum/modarchive/` |
 | **SNES SPC** | `.spc` | 2 612 game sets | Local `archiwum/snes_spc/` (RSN mirror) |
 | **Tiny Music** | `.mod`, `.xm`, `.s3m`, `.it` | 548 | Local `archiwum/tiny/` |
 | **KGen** | `.mod`, `.xm`, `.s3m`, `.it` | 4 843 | Local `archiwum/kgen/` |
