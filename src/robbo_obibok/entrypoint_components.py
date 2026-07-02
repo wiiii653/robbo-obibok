@@ -88,6 +88,7 @@ def build_archive_runtime(
         temp_dir=temp_dir,
         build_temp_path=build_temp_path,
         get_shared_session=get_shared_session,
+        modarchive_cache_dir=config.modarchive_cache_dir,
         config=config,
     )
 

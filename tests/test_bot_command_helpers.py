@@ -44,11 +44,13 @@ def build_archive_runtime_fixture():
         temp_dir="/tmp",
         build_temp_path=lambda url: f"/tmp/{Path(url).name}",
         get_shared_session=lambda: None,
+        modarchive_cache_dir="",
         config=config,
     )
     return types.SimpleNamespace(
         archives=archives,
         archive_runtime=archive_runtime,
+        config=config,
     )
 
 

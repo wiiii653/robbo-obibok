@@ -35,6 +35,7 @@ class ArchiveRuntime:
     temp_dir: str
     build_temp_path: Callable[[str], str]
     get_shared_session: Callable[[], Awaitable[aiohttp.ClientSession]]
+    modarchive_cache_dir: str
     config: ArchiveRuntimeConfig
     _crawl_semaphore: asyncio.Semaphore = field(init=False)
 
@@ -254,6 +255,7 @@ class ArchiveRuntime:
             get_shared_session=self.get_shared_session,
             logger=self.logger,
             retries=retries,
+            cache_dir=self.modarchive_cache_dir or None,
         )
 
     def parse_sid_header(self, data: bytes) -> dict[str, str]:

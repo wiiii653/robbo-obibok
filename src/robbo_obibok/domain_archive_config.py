@@ -19,6 +19,7 @@ class ArchiveRuntimeConfig:
     kgen_cache: str = ""
     metadata_cache: str = ""
     modarchive_cache_file: str = ""
+    modarchive_cache_dir: str = ""
     snes_cache_file: str = ""
     tiny_cache: str = ""
     ym_cache: str = ""

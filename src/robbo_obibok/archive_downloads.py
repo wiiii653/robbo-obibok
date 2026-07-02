@@ -55,11 +55,12 @@ async def download_spc_rsn(rsn_url: str, spc_now: str, game_name: str, *, snes_s
         return None
 
 
-async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path, get_shared_session, logger, retries: int = 2) -> str:
+async def download_modarchive_module(url: str, *, temp_dir: str, build_temp_path, get_shared_session, logger, retries: int = 2, cache_dir: str | None = None) -> str:
     last_err: BaseException | None = None
 
-    # Persistent cache: archiwum/modarchive/cache/
-    cache_dir = os.path.join(os.path.dirname(os.path.normpath(temp_dir)), "archiwum", "modarchive", "cache")
+    # Persistent cache dir — configurable via archive.path or derived from temp_dir
+    if cache_dir is None:
+        cache_dir = os.path.join(os.path.dirname(os.path.normpath(temp_dir)), "archiwum", "modarchive", "cache")
     mod_id_match = re.search(r"moduleid=(\d+)", url)
     if mod_id_match:
         mod_id = mod_id_match.group(1)

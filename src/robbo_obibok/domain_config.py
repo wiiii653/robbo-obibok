@@ -49,6 +49,7 @@ class PathConfig:
     metadata_cache: str
     kgen_dir: str
     kgen_cache: str
+    archive_base: str
 
 
 @dataclass(slots=True)
@@ -168,6 +169,8 @@ class AppConfig:
     @property
     def kgen_cache(self) -> str: return self.paths.kgen_cache
     @property
+    def archive_base(self) -> str: return self.paths.archive_base
+    @property
     def archive_runtime_config(self) -> ArchiveRuntimeConfig: return self.archive.archive_runtime_config
 
 
@@ -184,16 +187,17 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
     command_prefix = config.get("command_prefix", "!")
     playback_loop = config.get("playback", {}).get("loop", True)
     playback_shuffle = config.get("playback", {}).get("shuffle", True)
+    archive_base = config.get("archive", {}).get("path", os.path.join(root_dir, "archiwum"))
 
-    ay_dir = os.path.join(root_dir, "archiwum", "ay")
+    ay_dir = os.path.join(archive_base, "ay")
     ay_cache = os.path.join(root_dir, "ay_cache.json")
-    ym_dir = os.path.join(root_dir, "archiwum", "ym")
+    ym_dir = os.path.join(archive_base, "ym")
     ym_cache = os.path.join(root_dir, "ym_cache.json")
     ym_temp_dir = os.path.join(ym_dir, "tmp_wav")
-    tiny_dir = os.path.join(root_dir, "archiwum", "tiny")
+    tiny_dir = os.path.join(archive_base, "tiny")
     tiny_cache = os.path.join(root_dir, "tiny_cache.json")
-    asma_dir = os.path.join(root_dir, "archiwum", "asma")
-    hvsc_dir = os.path.join(root_dir, "archiwum", "hvsc", "C64Music")
+    asma_dir = os.path.join(archive_base, "asma")
+    hvsc_dir = os.path.join(archive_base, "hvsc", "C64Music")
     asma_local_cache = os.path.join(root_dir, "asma_cache_local.json")
     hvsc_local_cache = os.path.join(root_dir, "hvsc_cache_local.json")
     favorites_file = os.path.join(root_dir, "favorites.json")
@@ -203,12 +207,12 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
 
     snes_base = "https://snesmusic.org/v2/"
     snes_cache_file = os.path.join(root_dir, "snes_cache.json")
-    snes_spc_dir = os.path.join(root_dir, "archiwum", "spc")
+    snes_spc_dir = os.path.join(archive_base, "spc")
     hvsc_base = config.get("hvsc", {}).get("base_url", "https://www.hvsc.c64.org/download/C64Music/")
     hvsc_songlengths_url = config.get("hvsc", {}).get("songlengths_url", "")
     hvsc_cache_ttl = config.get("hvsc", {}).get("cache_ttl", 168)
     hvsc_cache_file = os.path.join(root_dir, "hvsc_cache.json")
-    kgen_dir = os.path.join(root_dir, "archiwum", "kgen")
+    kgen_dir = os.path.join(archive_base, "kgen")
     kgen_cache = os.path.join(root_dir, "kgen_cache.json")
     default_collection_mode = "hvsc" if config.get("hvsc", {}).get("enabled", False) else "asma"
 
@@ -232,6 +236,7 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         hvsc_songlengths_url=hvsc_songlengths_url,
         metadata_cache=metadata_cache,
         modarchive_cache_file=modarchive_cache_file,
+        modarchive_cache_dir=os.path.join(archive_base, "modarchive", "cache"),
         snes_cache_file=snes_cache_file,
         tiny_cache=tiny_cache,
         ym_cache=ym_cache,
@@ -280,6 +285,7 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         metadata_cache=metadata_cache,
         kgen_dir=kgen_dir,
         kgen_cache=kgen_cache,
+        archive_base=archive_base,
     )
     archive = ArchiveConfig(
         asma_base=asma_base,

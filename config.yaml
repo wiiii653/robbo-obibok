@@ -37,6 +37,11 @@ modarchive:
   download_url: "https://api.modarchive.org/downloads.php"
   cache_file: "modarchive_cache.json"
 
+# Archive storage — base path for music file collections (ACID/ASMA/HVSC/YM/AY/KGen/SPC)
+# Defaults to <project_root>/archiwum/ when not set.
+archive:
+  path: "archiwum"
+
 # Audio settings
 audio:
   sink_name: "asma_bot"         # PulseAudio null-sink name
