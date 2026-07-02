@@ -502,10 +502,13 @@ def build_entrypoint_support(
     configure_logger: Callable[[str, str], logging.Logger] = _configure_entrypoint_logger,
 ) -> EntrypointSupport:
     root_dir = os.path.dirname(os.path.abspath(module_path))
-    # module is in src/, root is one level up
+    # module is in src/<package>/ or src/ directly — walk up past src/
     parent = os.path.dirname(root_dir)
     if os.path.basename(root_dir) in ("src", "src-"):
         root_dir = parent
+    elif os.path.basename(parent) in ("src", "src-"):
+        # module is in src/<package>/module.py — go up two levels
+        root_dir = os.path.dirname(parent)
     logger = configure_logger(root_dir, logger_name)
     session_runtime = SharedSessionRuntime()
     boot = build_entrypoint_bootstrap(
