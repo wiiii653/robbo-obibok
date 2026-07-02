@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from discord.ext import commands
 
     from .entrypoint_app import EntrypointComponentAccess, EntrypointFacade
+    from .entrypoint_launcher_loader import EntrypointSupport
+    from .runtime_task_manager import TaskManager
     from .stream_runtime import MonitorAudioSource
 
 
@@ -49,7 +51,7 @@ async def monitor_playback_entry(
     skip_to_next: Callable[[object], Awaitable[None]],
     stop_all_players: Callable[[], None],
     logger: logging.Logger,
-    task_manager: Any | None = None,
+    task_manager: TaskManager | None = None,
     release_lease: Callable[[], None] | None = None,
 ) -> None:
     from .playback_runtime import MonitorDependencies
@@ -134,7 +136,7 @@ class EntrypointRuntimeTasks:
     stop_all_players: Callable[[], None]
     ensure_audacious: Callable[[], None]
     setup_virtual_sink: Callable[[], None]
-    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
+    task_manager: TaskManager | None = None  # TaskManager (runtime_task_manager)
 
     async def monitor_playback(self, ctx: object, vc: object, guild_id: int) -> None:
         component_bundle = self.components.require()
@@ -188,10 +190,10 @@ class EntrypointRuntimeTasks:
 
 def build_entrypoint_runtime_tasks(
     *,
-    bot: Any,
-    support: Any,
+    bot: commands.Bot,
+    support: EntrypointSupport,
     app_cfg_getter: Callable[[], Any],
-    component_access: Any,
+    component_access: EntrypointComponentAccess,
     raw_callbacks: EntrypointRawCallbacks,
     compute_timeout_seconds: Callable[..., int],
     is_gme_format_path: Callable[[str | None], bool],
@@ -202,7 +204,7 @@ def build_entrypoint_runtime_tasks(
     should_start_predownload: Callable[..., bool],
     facade: EntrypointFacade,
     glue: EntrypointGlue,
-    task_manager: Any | None = None,
+    task_manager: TaskManager | None = None,
 ) -> EntrypointRuntimeTasks:
     return EntrypointRuntimeTasks(
         bot=bot,

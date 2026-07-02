@@ -12,6 +12,7 @@ modarchive_cache.json
 favorites.json
 last_collection.txt
 archiwum/
+archiwum
 blacklist.json
 .hermes/
 .vscode/
@@ -25,3 +26,4 @@ build/
 dist/
 playlists/
 *.egg-info/
+.coverage

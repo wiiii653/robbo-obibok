@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -23,7 +24,7 @@ class MonitorAudioSource(discord.AudioSource):
         audio_format: str,
         sample_rate: int,
         channels: int,
-        logger: Any,
+        logger: logging.Logger,
     ):
         self.buffer = b""
         self.sink_name = sink_name
@@ -104,7 +105,7 @@ class StreamRuntime:
     audio_format: str
     sample_rate: int
     channels: int
-    logger: Any
+    logger: logging.Logger
     clear_predownload_state: Callable[[Any], None]
     active_streams: dict[int, MonitorAudioSource] = field(default_factory=dict)
     _source_counter: int = 0

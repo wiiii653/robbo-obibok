@@ -35,7 +35,7 @@ class CoreEventDependencies:
     playback_lease: PlaybackLease | None = None
 
 
-async def _auto_connect(bot, deps: CoreEventDependencies, guild, voice_channel, *, member_name="system"):
+async def _auto_connect(bot, deps: CoreEventDependencies, guild, voice_channel, *, member_name="system") -> None:
     """Connect to a voice channel and start playback (shared by on_ready + voice_state_update)."""
     if guild.voice_client:
         return
@@ -84,7 +84,7 @@ async def _auto_connect(bot, deps: CoreEventDependencies, guild, voice_channel, 
         deps.log.error("Auto-start failed: %s", exc)
 
 
-def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, fetch_metadata_background):
+def register_core_events(bot, deps: CoreEventDependencies, *, health_watchdog, fetch_metadata_background) -> tuple[CoreEventDependencies, ...]:
     _on_ready_done = False
 
     @bot.event

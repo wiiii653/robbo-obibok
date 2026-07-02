@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from .playback_volume import VolumeController
     from .runtime_protocols import PlaybackProcessProtocol
+    from .runtime_task_manager import TaskManager
 
 
 CommandDecoratorFactory = Callable[[], Callable[[Any], Any]]
@@ -74,7 +75,7 @@ class PlaybackCommandDependencies:
     stop_all_players: Callable[[], None]
     stop_state_streams: Callable[[PlaylistState], Awaitable[None]]
     switch_collection: Callable[..., Awaitable[bool]]
-    task_manager: Any | None = None  # TaskManager (runtime_task_manager)
+    task_manager: TaskManager | None = None  # TaskManager (runtime_task_manager)
     playback_lease: PlaybackLease | None = None
     playback_process: PlaybackProcessProtocol | None = None
     volume_controller: VolumeController | None = None
@@ -105,7 +106,7 @@ class LibraryCommandDependencies:
     save_queue: Callable[[PlaylistState], None]
     skip_to_next: Callable[[object], Awaitable[None]]
     toggle_user_track_entry: Callable[[dict, int | str, dict], tuple[dict, bool]]
-    task_manager: Any | None = None  # TaskManager
+    task_manager: TaskManager | None = None  # TaskManager
 
 
 @dataclass(slots=True)

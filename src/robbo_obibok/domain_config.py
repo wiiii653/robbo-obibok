@@ -173,17 +173,17 @@ class AppConfig:
 
 def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
     bot_token = os.getenv("DISCORD_BOT_TOKEN", config.get("token", ""))
-    sink_name = config["audio"]["sink_name"]
+    sink_name = config.get("audio", {}).get("sink_name", "asma_bot")
     temp_dir = os.path.join(root_dir, "tmp")
-    asma_base = config["asma"]["base_url"]
-    crawl_timeout = config["asma"]["crawl_timeout"]
-    cache_ttl = config["asma"]["cache_ttl"]
+    asma_base = config.get("asma", {}).get("base_url", "https://asma.atari.org/asma/")
+    crawl_timeout = config.get("asma", {}).get("crawl_timeout", 15)
+    cache_ttl = config.get("asma", {}).get("cache_ttl", 24)
     cache_file = os.path.join(root_dir, "asma_cache.json")
-    top_level_dirs = list(config["asma"]["top_dirs"])
+    top_level_dirs = list(config.get("asma", {}).get("top_dirs", []))
     queue_dir = os.path.join(root_dir, "queues")
-    command_prefix = config["command_prefix"]
-    playback_loop = config["playback"]["loop"]
-    playback_shuffle = config["playback"]["shuffle"]
+    command_prefix = config.get("command_prefix", "!")
+    playback_loop = config.get("playback", {}).get("loop", True)
+    playback_shuffle = config.get("playback", {}).get("shuffle", True)
 
     ay_dir = os.path.join(root_dir, "archiwum", "ay")
     ay_cache = os.path.join(root_dir, "ay_cache.json")
@@ -240,7 +240,7 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         cache_ttl_hours=cache_ttl,
         cache_file=cache_file,
         top_level_dirs=top_level_dirs,
-        crawl_concurrency=config["asma"].get("crawl_concurrency", 5),
+        crawl_concurrency=config.get("asma", {}).get("crawl_concurrency", 5),
     )
 
     playback = PlaybackConfig(
@@ -249,9 +249,9 @@ def derive_app_config(root_dir: str, config: dict[str, Any]) -> AppConfig:
         command_prefix=command_prefix,
         playback_loop=playback_loop,
         playback_shuffle=playback_shuffle,
-        crossfade_secs=config["playback"].get("crossfade", 0),
-        auto_start_channel=config["auto"].get("start_channel", ""),
-        auto_empty_timeout=config["auto"].get("empty_timeout", 60),
+        crossfade_secs=config.get("playback", {}).get("crossfade", 0),
+        auto_start_channel=config.get("auto", {}).get("start_channel", ""),
+        auto_empty_timeout=config.get("auto", {}).get("empty_timeout", 60),
         guild_id=config.get("guild_id"),
     )
     paths = PathConfig(

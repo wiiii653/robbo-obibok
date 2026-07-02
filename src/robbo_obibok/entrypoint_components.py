@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from .stream_runtime import MonitorAudioSource
 
 
-def _build_now_playing_embed(**kwargs):
+def _build_now_playing_embed(**kwargs) -> discord.Embed:
     import discord
 
     return discord.Embed(**kwargs)
@@ -134,7 +134,8 @@ def build_now_playing_dependencies(
 def build_collection_loaders(
     *,
     archive_runtime: ArchiveRuntime,
-):
+) -> dict[str, CollectionSpec]:
+
     return build_collections(
         load_asma_local_cache=archive_runtime.load_asma_local_cache,
         load_hvsc_local_cache=archive_runtime.load_hvsc_local_cache,
