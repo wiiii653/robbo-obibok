@@ -70,7 +70,7 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!volume <0-200>` | Set playback volume |
 | `!clear` | Clear the queue |
 | **🎵 Collections** | |
-| `!flip` / `!switch` / `!toggle` / `!przelacz` / `!fl` | Rotate through all available collections |
+| `!flip` / `!switch` / `!toggle` / `!fl` | Rotate through all available collections |
 | `!status` / `!mode` / `!collection` | Show current collection and queue info |
 | `!search <query>` | Search tracks by name, directory, or author |
 | `!snes search <term>` | Search SNES collection by game/composer |
@@ -78,12 +78,11 @@ Named after a fusion of the 1989 Polish Atari classic *Robbo* and the avant-gard
 | `!asma` | Switch to **Atari SAP** (~6 300) |
 | `!mod` / `!modarchive` / `!modules` | Switch to **ModArchive tracker modules** (~175 000) |
 | `!ay` / `!spectrum` / `!zx` | Switch to **ZX Spectrum AY** (~4 500) |
-| `!ym` / `!st` / `!atarist` | Switch to **Atari ST YM** (~7 200) |
+| `!ym` / `!atarist` | Switch to **Atari ST YM** (~7 200) |
 | `!tiny` / `!tm` | Switch to **Tiny Music modules** (~418) |
 | `!snes` / `!spc` | Switch to **SNES SPC** (~60 000) |
-| `!play subsong <number>` | Play a specific subsong from current track (SID/SAP only) |
 | **❤️ Favorites & Blacklist** | |
-| `!favorites` / `!favs` / `!playlista` | Show your reaction-based favorites playlist |
+| `!favorites` / `!favs` | Show your reaction-based favorites playlist |
 | `!favplay` / `!fp` | Play favorites in shuffle mode |
 | `!favsave` / `!pls` | Save current favorites as a named playlist |
 | `!favload` / `!fpl` | Load and play a saved playlist |
